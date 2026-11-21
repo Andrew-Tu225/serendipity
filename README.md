@@ -22,28 +22,107 @@ The full concept, user story, and open design questions are in [docs/plan.md](do
 - **Frontend:** [Next.js 16](https://nextjs.org) (App Router, Turbopack) with React 19, TypeScript, and [Tailwind CSS v4](https://tailwindcss.com)
 - **Backend:** [FastAPI](https://fastapi.tiangolo.com) on Python 3.11+, managed with [uv](https://docs.astral.sh/uv/)
 
-The Next.js app proxies `/api/*` to the FastAPI server, so the browser only ever talks to one origin. Map library, database, auth, and image storage are still to be decided.
+The Next.js app proxies `/api/*` to FastAPI. Authentication uses Auth0 with server-managed sessions; PostgreSQL runs locally through Docker Compose. Map library and image storage are still to be decided.
 
 ## Getting started
 
-Requires Node.js 20.9+, Python 3.11+, and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+Requires Node.js 20.9+, Python 3.11+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and a running Docker Desktop/Engine.
+
+Copy the configuration examples once; preserve any existing local values:
+
+```bash
+cp backend/.env.example backend/.env
+cp .env.example .env.local
+npm install
+```
+
+Start Postgres and apply migrations:
+
+```bash
+docker compose --env-file backend/.env up -d db
+cd backend
+uv sync
+uv run alembic upgrade head
+```
+
+The default development database is `serendipity`, with username `serendipity` and password `serendipity_dev`, bound to `127.0.0.1:5433` (to avoid an existing Postgres server on port 5432). Keep `POSTGRES_*` and `DATABASE_URL` consistent if changing them. Port changes use `POSTGRES_PORT` with `--env-file` as shown above. The named volume preserves data across container restarts. `docker compose stop db` stops the database without deleting it. Database credentials are fixed when its volume is first initialized.
+
+### Auth0 setup
+
+Create an Auth0 account/development tenant and a **Regular Web Application** named **Serendipity Web**. Enable the database email/password connection and allow signup. Set these exact application URLs:
+
+| Auth0 setting | Local value |
+|---|---|
+| Allowed Callback URLs | `http://localhost:3000/api/auth/callback` |
+| Allowed Logout URLs | `http://localhost:3000/login` |
+| Application Login URI | `http://localhost:3000/api/auth/login` |
+
+Set `AUTH0_DOMAIN` (tenant hostname), `AUTH0_CLIENT_ID`, and `AUTH0_CLIENT_SECRET` in `backend/.env`. The backend requests `openid profile email`. This session-based version does not require a separate Auth0 API registration or frontend Auth0 SDK.
+
+For MCP-assisted provisioning, register the official server in Codex:
+
+```bash
+codex mcp add auth0 -- npx -y @auth0/auth0-mcp-server run
+```
+
+Authenticate the server using the official `npx -y @auth0/auth0-mcp-server init` flow (the current tool may also offer to configure a different MCP client; Codex is already registered by the command above). Restart Codex to load its tools, then create/configure the application through MCP. Account signup and browser authorization require your participation. Do not commit credentials or paste a client secret into chat.
+
+For deployment, set `APP_BASE_URL` to the public HTTPS origin and `COOKIE_SECURE=true`, update the Auth0 URLs, and provide a protected Postgres connection. Non-local HTTP or insecure cookies are rejected by configuration validation.
+
+### Run the app
 
 Run the backend and frontend in two terminals:
 
 ```bash
 # terminal 1: backend
 cd backend
-cp .env.example .env
 uv sync
 uv run fastapi dev app/main.py   # http://127.0.0.1:8000, API docs at /api/docs
 
 # terminal 2: frontend
-npm install
-cp .env.example .env.local
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). [http://localhost:3000/api/health](http://localhost:3000/api/health) should return `{"status":"ok"}` through the proxy.
+
+The login button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/success`. That page shows **Successful**, the verified Auth0 claims snapshot, the current user record queried from Postgres, and a **Sign out** button. Profile fields can be absent; email verification is not required in this initial version. Logout revokes the local session and ends Auth0's browser session.
+
+Sessions expire after 8 hours; temporary login attempts expire after 10 minutes. Expired rows are removed when a new login starts. A blocked/deleted Auth0 account does not automatically revoke an existing local session; immediate account-wide revocation can be added later.
+
+### Architecture
+
+```text
+UI → typed frontend API client → FastAPI router → service → repository → Postgres
+```
+
+Domain clients centralize HTTP, credentials, CSRF headers, and typed errors. Backend endpoint modules live in `backend/app/api/`; their routers validate requests/responses, services own business rules and commits, and repositories own SQLAlchemy queries. User creation starts at `GET /api/auth/callback` in `api/auth.py`, which calls the auth service and then the user repository. Auth0 HTTP integration is separate from database repositories. Future protected routes use `CurrentUser`; mutations also use `VerifiedMutation` and check ownership in their service. The same-origin proxy is transport, not an authorization boundary.
+
+See [docs/architecture.md](docs/architecture.md) for the full repository flow and guidance for adding features.
+
+| Endpoint | Behavior |
+|---|---|
+| `GET /api/auth/login` | Starts Auth0 login/signup |
+| `GET /api/auth/callback` | Validates callback, persists user/session, redirects |
+| `GET /api/auth/me` | Returns `{ auth0, user, csrf_token }`; requires a valid session |
+| `POST /api/auth/logout` | Requires matching Origin and X-CSRF-Token; revokes session and returns `{ logout_url }` |
+
+Auth responses use `Cache-Control: no-store`. Session cookies are HttpOnly, SameSite=Lax, host-only, and Secure in production. The page never renders the CSRF token. No passwords, raw ID/access tokens, or OAuth verifiers are returned by the session endpoint.
+
+### Tests
+
+```bash
+npm run lint
+npm run build
+npm run test:browser
+cd backend
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+```
+
+The backend suite uses isolated SQLite databases and a mocked OIDC provider with real RSA-signed tokens. To also run PostgreSQL concurrency tests, set `TEST_DATABASE_URL` to a PostgreSQL SQLAlchemy URL and run pytest. Those tests create and remove their own unique schema, leaving application tables untouched. A separate disposable database is recommended for testing migrations.
+
+Browser tests mock the auth API and run a dedicated Next.js server on port 3039 with `.next-auth-test` output. Install Chromium once with `npx playwright install chromium`. `TEST_BASE_URL` can target an existing test server. `SERENDIPITY_DIST_DIR` optionally isolates other Next.js builds from a running dev server.
 
 | Command | Description |
 |---------|-------------|
@@ -68,4 +147,4 @@ src/types/          shared domain types (Place, Experience, Bookmark, ...)
 
 ## Contributing
 
-Conventions for humans and AI coding agents live in [AGENTS.md](AGENTS.md) (read by Claude Code through [CLAUDE.md](CLAUDE.md)). Commit messages follow `<type>: <description>`, for example `feat: add bookmark toggle`.
+Conventions for humans and AI coding agents live in [AGENTS.md](AGENTS.md). Update the relevant files in `docs/` alongside every code, configuration, schema, or workflow change. Commit messages follow `<type>: <description>`, for example `feat: add bookmark toggle`.
