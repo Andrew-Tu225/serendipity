@@ -19,23 +19,31 @@ The full concept, user story, and open design questions are in [docs/plan.md](do
 
 ## Tech stack
 
-- [Next.js 16](https://nextjs.org) (App Router, Turbopack) with React 19 and TypeScript
-- [Tailwind CSS v4](https://tailwindcss.com)
-- ESLint 9
+- **Frontend:** [Next.js 16](https://nextjs.org) (App Router, Turbopack) with React 19, TypeScript, and [Tailwind CSS v4](https://tailwindcss.com)
+- **Backend:** [FastAPI](https://fastapi.tiangolo.com) on Python 3.11+, managed with [uv](https://docs.astral.sh/uv/)
 
-Map library, database, auth, and image storage are still to be decided.
+The Next.js app proxies `/api/*` to the FastAPI server, so the browser only ever talks to one origin. Map library, database, auth, and image storage are still to be decided.
 
 ## Getting started
 
-Requires Node.js 20.9 or later.
+Requires Node.js 20.9+, Python 3.11+, and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+Run the backend and frontend in two terminals:
 
 ```bash
+# terminal 1: backend
+cd backend
+cp .env.example .env
+uv sync
+uv run fastapi dev app/main.py   # http://127.0.0.1:8000, API docs at /api/docs
+
+# terminal 2: frontend
 npm install
-cp .env.example .env.local   # fill in any values
+cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). [http://localhost:3000/api/health](http://localhost:3000/api/health) should return `{"status":"ok"}` through the proxy.
 
 | Command | Description |
 |---------|-------------|
@@ -43,11 +51,14 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | Run ESLint |
+| `uv run pytest` (in `backend/`) | Run backend tests |
+| `uv run ruff check .` (in `backend/`) | Lint the backend |
 
 ## Project structure
 
 ```
 docs/               product plan and design notes
+backend/            FastAPI service (app/, tests/, pyproject.toml)
 src/app/            routes and layouts (App Router)
 src/components/     feature components; ui/ for generic primitives
 src/hooks/          client hooks
