@@ -1,4 +1,4 @@
-﻿import SerendipityApp from "@/components/serendipity/SerendipityApp";
+import SerendipityApp from "@/components/serendipity/SerendipityApp";
 
 export default function Home() {
   return <SerendipityApp />;

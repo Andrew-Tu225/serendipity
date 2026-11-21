@@ -1,15 +1,15 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Serendipity",
-  description: "Discover and share experiences with friends.",
+  description: "Discover the world through the experiences of people you trust.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en">
-      <body className="serendipity">{children}</body>
+    <html lang="en" className="h-full antialiased">
+      <body className="serendipity flex min-h-full flex-col">{children}</body>
     </html>
   );
 }
