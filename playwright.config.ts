@@ -14,7 +14,11 @@ export default defineConfig({
   webServer: process.env.TEST_BASE_URL ? undefined : {
     command: "npm run dev -- --hostname 127.0.0.1 --port 3039",
     url: `${baseURL}/login`,
-    env: { SERENDIPITY_DIST_DIR: ".next-auth-test" },
+    env: {
+      SERENDIPITY_DIST_DIR: ".next-auth-test",
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: "browser-test-key",
+      NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: "DEMO_MAP_ID",
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

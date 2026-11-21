@@ -22,7 +22,7 @@ The full concept, user story, and open design questions are in [docs/plan.md](do
 - **Frontend:** [Next.js 16](https://nextjs.org) (App Router, Turbopack) with React 19, TypeScript, and [Tailwind CSS v4](https://tailwindcss.com)
 - **Backend:** [FastAPI](https://fastapi.tiangolo.com) on Python 3.11+, managed with [uv](https://docs.astral.sh/uv/)
 
-The Next.js app proxies `/api/*` to FastAPI. Authentication uses Auth0 with server-managed sessions; PostgreSQL runs locally through Docker Compose. Map library and image storage are still to be decided.
+The Next.js app proxies `/api/*` to FastAPI. Authentication uses Auth0 with server-managed sessions; PostgreSQL runs locally through Docker Compose. Maps use Google Maps JavaScript API and Places API (New). Image storage is still to be decided.
 
 ## Getting started
 
@@ -89,7 +89,29 @@ The homepage at `/` shows the imported Figma discovery interface. Open [http://l
 
 Sessions expire after 8 hours; temporary login attempts expire after 10 minutes. Expired rows are removed when a new login starts. A blocked/deleted Auth0 account does not automatically revoke an existing local session; immediate account-wide revocation can be added later.
 
-### Architecture
+### Google discovery map
+
+Discover uses Google Maps JavaScript API with custom Advanced Markers and public place search
+through FastAPI's Places API (New) integration. Set these values before starting the servers:
+
+- `.env.local`: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`.
+- `backend/.env`: `BACKEND_API_KEY_GOOGLE` (server-only).
+
+Enable **Maps JavaScript API** and **Places API (New)** in a billing-enabled Google Cloud project.
+Restrict the browser key to Maps JavaScript API and your development/production website origins.
+Restrict the backend key to Places API (New), and server egress IPs where available. The browser
+key is intentionally public; never prefix the backend key with `NEXT_PUBLIC_`.
+
+Create a JavaScript **vector Map ID**, import [the map style](docs/google-map-style.json) into
+Google's cloud style editor, publish it, and associate it with that Map ID. See
+[the setup and behavior guide](docs/discovery-map.md) for details. Local development falls back
+to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production requires an explicit
+Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
+
+Search and details are available without login or a database. Demo friend activity is illustrative.
+There are no schema migrations for this feature. Photos, saving, social data, and filters are deferred.
+
+### Application layers
 
 ```text
 UI → typed frontend API client → FastAPI router → service → repository → Postgres
@@ -122,7 +144,7 @@ uv run ruff format --check .
 
 The backend suite uses isolated SQLite databases and a mocked OIDC provider with real RSA-signed tokens. To also run PostgreSQL concurrency tests, set `TEST_DATABASE_URL` to a PostgreSQL SQLAlchemy URL and run pytest. Those tests create and remove their own unique schema, leaving application tables untouched. A separate disposable database is recommended for testing migrations.
 
-Browser tests mock the auth API and run a dedicated Next.js server on port 3039 with `.next-auth-test` output. Install Chromium once with `npx playwright install chromium`. `TEST_BASE_URL` can target an existing test server. `SERENDIPITY_DIST_DIR` optionally isolates other Next.js builds from a running dev server.
+Browser tests mock the auth API, Google Maps SDK, and Places responses, and run a dedicated Next.js server on port 3039 with `.next-auth-test` output and dummy Maps credentials. Install Chromium once with `npx playwright install chromium`. `TEST_BASE_URL` can target an existing test server configured with a browser map key and Map ID. `SERENDIPITY_DIST_DIR` optionally isolates other Next.js builds from a running dev server.
 
 | Command | Description |
 |---------|-------------|

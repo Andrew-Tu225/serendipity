@@ -1,0 +1,19 @@
+import type { Coordinates, PlaceDetails, PlaceSuggestion } from "@/types/places";
+import { apiRequest } from "./client";
+
+export const placesClient = {
+  autocomplete(query: string, sessionToken: string, center: Coordinates, signal?: AbortSignal) {
+    const params = new URLSearchParams({
+      query,
+      session_token: sessionToken,
+      latitude: String(center.latitude),
+      longitude: String(center.longitude),
+    });
+    return apiRequest<{ suggestions: PlaceSuggestion[] }>(`/places/autocomplete?${params}`, { signal });
+  },
+
+  details(placeId: string, sessionToken: string, signal?: AbortSignal) {
+    const params = new URLSearchParams({ session_token: sessionToken });
+    return apiRequest<PlaceDetails>(`/places/${encodeURIComponent(placeId)}?${params}`, { signal });
+  },
+};

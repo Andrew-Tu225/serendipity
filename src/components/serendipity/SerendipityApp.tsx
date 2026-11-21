@@ -4,6 +4,8 @@ import Image from 'next/image'
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
+import DiscoverMap from '@/components/map/discover-map'
+import { FriendAvatar } from '@/components/map/friend-avatar'
 
 type IconName =
   | 'home'
@@ -60,6 +62,7 @@ const experienceCriteria: Record<string, string[]> = {
 
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
+  const [discovered, setDiscovered] = useState(false)
   const [activeFilter, setActiveFilter] = useState('For you')
   const [liked, setLiked] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -78,6 +81,7 @@ function App() {
       return
     }
     setSheet(null)
+    if (tab === 'Discover') setDiscovered(true)
     setActiveTab(tab)
   }
 
@@ -120,13 +124,14 @@ function App() {
         </header>
 
         <div className="app-content">
+          <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
+            {discovered && <DiscoverMap active={activeTab === 'Discover'} />}
+          </div>
           {activeTab === 'Buddy' ? (
             <BuddyView />
           ) : activeTab === 'Profile' ? (
             <ProfileView />
-          ) : activeTab === 'Discover' ? (
-            <DiscoverMap />
-          ) : (
+          ) : activeTab === 'Discover' ? null : (
             <>
               <section className="filters" aria-label="Experience categories">
                 {filters.map((filter) => (
@@ -331,93 +336,6 @@ function WorldwideLock() {
         <div><Icon name="globe" size={17}/><span><strong>Plan anywhere</strong><small>Your network travels with you</small></span></div>
       </div>
     </section>
-  )
-}
-
-const mapExperiences = [
-  { id: 1, top: '19%', left: '67%', category: 'Creative', title: 'Clay & rosé', time: 'Sat · 2:00 PM', distance: '1.2 mi', image: potteryImage },
-  { id: 2, top: '47%', left: '29%', category: 'Food', title: 'Rooftop supper', time: 'Fri · 7:30 PM', distance: '0.8 mi', image: rooftopImage },
-  { id: 3, top: '69%', left: '72%', category: 'Music', title: 'Sunday jazz club', time: 'Sun · 8:00 PM', distance: '1.7 mi', image: rooftopImage },
-]
-
-const friendVisits = [
-  { name: 'Elena', note: 'loved it', top: '28%', left: '34%', experienceId: 2, variant: 'one' },
-  { name: 'James', note: 'went Sat', top: '55%', left: '79%', experienceId: 3, variant: 'two' },
-  { name: 'Alex', note: 'saved this', top: '74%', left: '42%', experienceId: 1, variant: 'three' },
-]
-
-function DiscoverMap() {
-  const [selected, setSelected] = useState(mapExperiences[0])
-  const [category, setCategory] = useState('All')
-
-  return (
-    <section className="discover-view">
-      <div className="map-search"><Icon name="compass" size={18}/><input aria-label="Search the map" placeholder="Search experiences"/><button aria-label="Map filters"><span/><span/><span/></button></div>
-      <div className="map-categories">
-        {['All', 'Food', 'Creative', 'Music'].map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}
-      </div>
-      <div className="map-canvas">
-        <svg className="map-art" viewBox="0 0 390 510" preserveAspectRatio="none" aria-hidden="true">
-          <rect width="390" height="510" fill="#eeeaf1"/>
-          <path d="M-20 95C68 60 119 135 197 100s115-69 215-31" fill="none" stroke="#d7cddd" strokeWidth="17"/>
-          <path d="M-20 95C68 60 119 135 197 100s115-69 215-31" fill="none" stroke="#faf8fb" strokeWidth="13"/>
-          <path d="M70-20c8 88 5 154 45 230s64 155 42 320M272-20c-20 101 19 167 5 258s-39 164-7 292" fill="none" stroke="#d7cddd" strokeWidth="14"/>
-          <path d="M70-20c8 88 5 154 45 230s64 155 42 320M272-20c-20 101 19 167 5 258s-39 164-7 292" fill="none" stroke="#faf8fb" strokeWidth="10"/>
-          <path d="M-20 288c91-31 145-2 210 13s134 3 220-36M-20 420c107 23 170-21 225-14s108 43 205 27" fill="none" stroke="#ddd4e2" strokeWidth="11"/>
-          <path d="M-20 288c91-31 145-2 210 13s134 3 220-36M-20 420c107 23 170-21 225-14s108 43 205 27" fill="none" stroke="#fff" strokeWidth="7"/>
-          <path d="M302 326c32-27 62-22 97-8v105c-43 7-72-10-97-38Z" fill="#dbe6e1"/>
-          <path d="M6 147c36-16 65-4 81 21l-11 69c-29 11-53 3-75-17Z" fill="#e0e7da"/>
-        </svg>
-        <span className="map-label label-one">WILLIAMSBURG</span>
-        <span className="map-label label-two">GREENPOINT</span>
-        {mapExperiences.filter((item) => category === 'All' || item.category === category).map((experience) => (
-          <button key={experience.id} className={`map-pin ${selected.id === experience.id ? 'active' : ''}`} style={{ top: experience.top, left: experience.left }} onClick={() => setSelected(experience)} aria-label={`View ${experience.title}`}>
-            <span><Icon name={experience.category === 'Food' ? 'heart' : experience.category === 'Music' ? 'users' : 'sparkle'} size={15}/></span>
-          </button>
-        ))}
-        {friendVisits.map((friend) => (
-          <button
-            key={friend.name}
-            className="friend-map-pin"
-            style={{ top: friend.top, left: friend.left }}
-            onClick={() => setSelected(mapExperiences.find((experience) => experience.id === friend.experienceId) ?? mapExperiences[0])}
-            aria-label={`${friend.name} ${friend.note} nearby`}
-          >
-            <FriendAvatar variant={friend.variant}/>
-            <span><strong>{friend.name}</strong> {friend.note}</span>
-          </button>
-        ))}
-        <div className="friend-map-key"><span><FriendAvatar variant="one"/></span> Friends’ visits</div>
-        <button className="location-button" aria-label="Center on my location"><Icon name="compass" size={20}/></button>
-        <article className="map-preview">
-          <Image src={selected.image} sizes="61px" alt=""/>
-          <div><span>{selected.category}</span><h3>{selected.title}</h3><p>{selected.time} · {selected.distance}</p></div>
-          <button aria-label={`Open ${selected.title}`}><Icon name="arrow" size={18}/></button>
-        </article>
-      </div>
-    </section>
-  )
-}
-
-function FriendAvatar({ variant }: { variant: string }) {
-  return (
-    <svg className={`friend-avatar ${variant}`} viewBox="0 0 52 80" aria-hidden="true">
-      <ellipse cx="26" cy="76" rx="15" ry="3" fill="rgba(53,39,61,.18)"/>
-      <circle cx="26" cy="22" r="20" className="avatar-bg"/>
-      <path d="M19 54 17 72h8l2-18ZM28 54l1 18h8l-3-18Z" className="avatar-pants"/>
-      <path d="M16 71h10v5H14c0-2 .7-4 2-5ZM29 71h9c1.5 1 2.2 3 2 5H29Z" className="avatar-shoes"/>
-      <path d="M17 38c3-4 15-4 18 0l3 20H14Z" className="avatar-shirt"/>
-      <path d="m17 40-7 14M35 40l7 14" className="avatar-arm" fill="none" strokeWidth="5" strokeLinecap="round"/>
-      <circle cx="9.5" cy="55" r="3" className="avatar-skin"/>
-      <circle cx="42.5" cy="55" r="3" className="avatar-skin"/>
-      <rect x="23" y="31" width="6" height="7" rx="3" className="avatar-skin"/>
-      <path d="M15 21c0-10 4-16 11-16s11 6 11 16v10H15Z" className="avatar-hair"/>
-      <ellipse cx="26" cy="23" rx="9.5" ry="11.5" className="avatar-skin"/>
-      <circle cx="22.5" cy="22" r="1" fill="#3f303a"/>
-      <circle cx="29.5" cy="22" r="1" fill="#3f303a"/>
-      <path d="M23 27.5c2 1.7 4 1.7 6 0" fill="none" stroke="#9b565c" strokeWidth="1.3" strokeLinecap="round"/>
-      <path d="M15 19c4-1 5-7 7-11 3 6 8 7 15 8" fill="none" className="hair-detail" strokeWidth="5" strokeLinecap="round"/>
-    </svg>
   )
 }
 

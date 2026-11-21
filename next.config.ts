@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 const API_URL = process.env.API_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
+  // Keep the development badge away from the mobile bottom navigation.
+  devIndicators: { position: "top-left" },
   distDir: process.env.SERENDIPITY_DIST_DIR || ".next",
   cacheComponents: true,
   partialPrefetching: true,

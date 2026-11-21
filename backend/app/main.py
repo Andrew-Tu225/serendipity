@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import JSONResponse
 
-from app.api import auth, health
+from app.api import auth, health, places
 from app.config import get_settings
 
 settings = get_settings()
@@ -17,12 +17,13 @@ app = FastAPI(
 
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(places.router, prefix="/api")
 
 
 @app.middleware("http")
 async def protect_auth_responses(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path.startswith("/api/auth/"):
+    if request.url.path.startswith(("/api/auth/", "/api/places/")):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
         response.headers["Referrer-Policy"] = "no-referrer"

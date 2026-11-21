@@ -1,0 +1,26 @@
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface PlaceSuggestion {
+  place_id: string;
+  primary_text: string;
+  secondary_text: string;
+}
+
+export interface PlaceDetails {
+  place_id: string;
+  display_name: string;
+  address: string;
+  location: Coordinates;
+  viewport?: { low: Coordinates; high: Coordinates } | null;
+  google_maps_uri: string;
+  attributions: { provider: string; provider_uri?: string | null }[];
+}
+
+export interface MapPlace extends PlaceDetails {
+  source: "demo" | "google";
+  category?: "Food" | "Culture" | "Outdoors";
+  friend?: { name: string; note: string; variant: string };
+}

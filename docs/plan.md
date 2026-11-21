@@ -227,6 +227,20 @@ Ultimately, we want someone to open the app and think:
 
 **"I wonder what interesting places my friends have discovered around here."**
 
+## Current implementation
+
+The Discover tab uses Google Maps JavaScript API, Advanced Markers, and cloud styling, with public
+Places API (New) autocomplete and selected-place details provided through FastAPI. It starts in
+Toronto; device location is requested only when the user taps the location button. Search supports
+specific places and cities globally, biased toward the current map center. Six independently authored
+Toronto places demonstrate custom category pins and illustrated friend activity. Friend activity is
+labeled demo content, and Google search results do not claim friend recommendations.
+
+This iteration removes the prototype category/filter controls. Persistent Places, Bookmarks,
+Experiences, friendships, hidden-gem ranking, uploads, clustering, and discovery-by-category remain
+future work. The real social layer will determine which Places appear on the map; Google supplies
+the map and searchable place directory. Image storage is still undecided.
+
 ## 8. Open Questions and Ideas to Explore
 
 _These are intentionally unresolved and can be developed as the concept evolves._

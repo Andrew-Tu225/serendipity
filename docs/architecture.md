@@ -33,7 +33,33 @@ Group modules by domain within each layer. For example, an auth client belongs b
 
 UI components do not make ad hoc `fetch` calls or contain backend endpoint strings. Routers delegate application work to services. Database queries belong in repositories. Repositories do not commit transactions or create HTTP responses; the service controls the transaction so related writes succeed or fail together. Add schema changes through Alembic migrations in `backend/migrations/`.
 
-## Current authentication flow
+## Discovery map and public place search
+
+Discover loads the Maps JavaScript SDK only after the tab opens. Its client-side map adapter owns
+the Google map, geographic markers, location indicator, camera operations, and listener cleanup.
+React portals supply custom marker contents, including the shared illustrated friend avatars.
+The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
+cancels pending search/details requests. Home, Buddy, and Profile keep their existing behavior.
+
+Place search follows `UI → placesClient → /api proxy → places router → PlacesService → GooglePlacesClient`.
+The integration uses Google Places API **New**, separate from the browser Maps SDK. No repository,
+database connection, tables, or commits are involved in this read-only provider flow. Future saved
+places and social features must use the normal repository/PostgreSQL layers.
+
+`GET /api/places/autocomplete` validates the text, UUID session token, and optional paired coordinates.
+`GET /api/places/{place_id}` validates the provider ID and session token. The service applies process-wide
+sliding-window limits (120 autocomplete and 60 details calls/minute), normalizes provider data, and
+sanitizes failures. The provider integration fixes the Google origin, encodes IDs, sets field masks,
+and imposes a 10-second timeout. `429` responses include `Retry-After`; validation returns `422`;
+unconfigured or failed provider requests return `503`. Every Places response, including errors, is
+`Cache-Control: no-store`. These public, read-only routes do not require authentication or CSRF.
+
+Google search results live only in component memory. They are not persisted, stored in browser
+storage, or cached by the backend. Demo places use independently authored data and fake friend
+activity, clearly labeled in the interface. No Google photos or reviews are fetched. Required map
+attribution and returned provider attributions remain visible. See [discovery-map.md](discovery-map.md).
+
+## Authentication flow
 
 The user-creation entry point is `GET /api/auth/callback`. Its implementation follows this chain:
 
