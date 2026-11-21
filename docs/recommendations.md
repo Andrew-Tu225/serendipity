@@ -81,9 +81,9 @@ A user may log the same Place more than once; the recommender uses only the late
 |---|---|---|
 | `user_id` | User.id | PK part |
 | `category` | Category | PK part |
-| `score` | float | Σ `value(e)` over the user's latest logs in this category (2.2) |
+| `score` | float | Σ `value(e)` over the user's logs in this category (2.2) |
 
-Updated whenever an Experience is created, replaced, or deleted. Everything else in section 2 is computed per request.
+Updated whenever an Experience is created. Experiences are never edited or deleted. Everything else in section 2 is computed per request.
 
 ---
 
@@ -108,16 +108,16 @@ A log is **liked** when `value(e) > 0`.
 Each user has one score per category, stored in `TasteProfile`:
 
 ```
-c_u[k] = Σ value(e) over u's latest logs in category k
+c_u[k] = Σ value(e) over u's logs in category k
 ```
 
-It is maintained incrementally on writes:
+It is updated when a log is created, never recomputed:
 
-| Event | Update |
-|---|---|
-| New log at a Place `u` had not logged | `c_u[k] += value(e)` |
-| New log replaces `u`'s earlier log at the same Place | `c_u[k] += value(e_new) − value(e_old)` |
-| Log deleted (the latest one) | `c_u[k] −= value(e)`, then `+= value(previous log)` if one exists |
+```
+c_u[k] ← c_u[k] + value(e)      where k is the category of e's Place
+```
+
+Experiences are never edited or deleted, so this is the only update. A repeat visit to the same Place adds its value again.
 
 A user who visits many cafés and likes them gets a large positive café score; avoided visits push a category negative. Categories a user never logged are 0.
 
@@ -135,7 +135,7 @@ Example:
 taste_sim(u, v) = max( cosine(c_u, c_v), 0 )      # 0 if either vector is all zeros
 ```
 
-Cosine compares the shape of two profiles, not their size, so a heavy logger and a light logger with the same preferences still match. In the example, Viewer–Kai ≈ 0.94 and Viewer–Sam = 0.
+Cosine compares the shape of two profiles, not their size, so a heavy logger and a light logger with the same preferences still match. In the example, Viewer–Kai ≈ 0.97 and Viewer–Sam = 0.
 
 **Similar users** `N(u)` = the top 10 users `v` that `u` does not follow, with `taste_sim ≥ 0.2`. At demo scale this is a brute-force scan over all profiles; a vector index is listed in section 5.
 
