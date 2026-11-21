@@ -1,3 +1,6 @@
+'use client'
+
+import Image from 'next/image'
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
@@ -134,7 +137,7 @@ function App() {
               </section>
 
               <section className="hero-card">
-                <img src={potteryImage} alt="Friends shaping clay at a sunlit pottery workshop"/>
+                <Image src={potteryImage} sizes="(max-width: 430px) 100vw, 430px" alt="Friends shaping clay at a sunlit pottery workshop"/>
                 <div className="image-shade"/>
                 <div className="match-pill"><Icon name="sparkle" size={13}/> 96% your vibe</div>
                 <button className={`save-button ${saved ? 'selected' : ''}`} onClick={() => setSaved(!saved)} aria-label={saved ? 'Remove from saved' : 'Save experience'}>
@@ -161,7 +164,7 @@ function App() {
               </section>
 
               <article className="mini-card">
-                <img src={rooftopImage} alt="Friends sharing dinner on a rooftop at sunset"/>
+                <Image src={rooftopImage} sizes="430px" alt="Friends sharing dinner on a rooftop at sunset"/>
                 <div className="mini-copy">
                   <span className="category">FOOD & DRINK</span>
                   <h4>Secret rooftop supper</h4>
@@ -211,7 +214,7 @@ function App() {
                     <input type="file" accept="image/*,video/*" onChange={selectMedia}/>
                     {media ? (
                       <div className="media-preview">
-                        {media.type.startsWith('video/') ? <video src={media.url} controls/> : <img src={media.url} alt="Selected upload preview"/>}
+                        {media.type.startsWith('video/') ? <video src={media.url} controls/> : <Image src={media.url} unoptimized width={96} height={96} alt="Selected upload preview"/>}
                         <span>{media.name}</span>
                       </div>
                     ) : (
@@ -281,7 +284,7 @@ function BuddyView() {
             <div className="progress-track"><i/></div>
           </div>
           <div className="buddy-card">
-            <div className="buddy-photo"><img src={rooftopImage} alt="Alex, a suggested taste buddy"/><span>94% match</span></div>
+            <div className="buddy-photo"><Image src={rooftopImage} sizes="430px" alt="Alex, a suggested taste buddy"/><span>94% match</span></div>
             <div className="buddy-info">
               <div><h2>Alex, 28</h2><p>Brooklyn · 2 mi away</p></div>
               <span className="verified"><Icon name="sparkle" size={15}/></span>
@@ -387,7 +390,7 @@ function DiscoverMap() {
         <div className="friend-map-key"><span><FriendAvatar variant="one"/></span> Friends’ visits</div>
         <button className="location-button" aria-label="Center on my location"><Icon name="compass" size={20}/></button>
         <article className="map-preview">
-          <img src={selected.image} alt=""/>
+          <Image src={selected.image} sizes="61px" alt=""/>
           <div><span>{selected.category}</span><h3>{selected.title}</h3><p>{selected.time} · {selected.distance}</p></div>
           <button aria-label={`Open ${selected.title}`}><Icon name="arrow" size={18}/></button>
         </article>
