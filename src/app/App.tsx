@@ -1,7 +1,9 @@
+use client
+
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
-
+use client 
 type IconName =
   | 'home'
   | 'compass'
