@@ -15,6 +15,34 @@ const session = {
   csrf_token: "private-csrf-token-for-test",
 };
 
+test("the Figma homepage remains available alongside authentication", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("What feels fun?");
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(
+    () => page.locator(".hero-card img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+    { timeout: 15_000 },
+  ).toBe(true);
+  await page.screenshot({ path: "test-results/figma-home-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Discover");
+  await page.goto("/login");
+  await expect(page.getByRole("button", { name: "Sign in / Sign up" })).toBeVisible();
+});
+
+test("auth pages keep their dark theme beside the Figma shell", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.route("**/api/auth/me", (route) => route.fulfill({ json: session }));
+  await page.goto("/login");
+  await expect(page.getByRole("button", { name: "Sign in / Sign up" })).toBeVisible();
+  await page.screenshot({ path: "test-results/login-dark.png", fullPage: true });
+  await page.goto("/success");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Successful");
+  await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/success-dark.png", fullPage: true });
+});
+
 test("login starts full browser navigation through the API client", async ({ page }) => {
   await page.route("**/api/auth/login", (route) => route.fulfill({
     contentType: "text/html", body: "<h1>Auth0 hosted login</h1>",

@@ -85,7 +85,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). [http://localhost:3000/api/health](http://localhost:3000/api/health) should return `{"status":"ok"}` through the proxy.
 
-The login button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/success`. That page shows **Successful**, the verified Auth0 claims snapshot, the current user record queried from Postgres, and a **Sign out** button. Profile fields can be absent; email verification is not required in this initial version. Logout revokes the local session and ends Auth0's browser session.
+The homepage at `/` shows the imported Figma discovery interface. Open [http://localhost:3000/login](http://localhost:3000/login) to test authentication. Its login button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/success`. That page shows **Successful**, the verified Auth0 claims snapshot, the current user record queried from Postgres, and a **Sign out** button. Profile fields can be absent; email verification is not required in this initial version. Logout revokes the local session and ends Auth0's browser session.
 
 Sessions expire after 8 hours; temporary login attempts expire after 10 minutes. Expired rows are removed when a new login starts. A blocked/deleted Auth0 account does not automatically revoke an existing local session; immediate account-wide revocation can be added later.
 

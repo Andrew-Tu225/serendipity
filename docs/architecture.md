@@ -14,6 +14,8 @@ UI component or hook
 
 Responses travel back through those layers to the UI. FastAPI owns data validation, authentication, and business logic. Next.js renders the interface and proxies API traffic.
 
+The Figma discovery interface is mounted at `/`. The authentication entry point is `/login`, and `/success` displays the verified identity and stored user after authentication. The homepage does not redirect to login. Keep the Figma shell's styling alongside the shared auth color tokens; auth pages use their own light/dark backgrounds so their text and buttons remain readable.
+
 ## Layer responsibilities
 
 | Layer | Location | Responsibility |

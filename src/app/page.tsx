@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import SerendipityApp from "@/components/serendipity/SerendipityApp";
 
 export default function Home() {
-  redirect("/login");
+  return <SerendipityApp />;
 }
