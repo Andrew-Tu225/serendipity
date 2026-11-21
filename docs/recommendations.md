@@ -164,10 +164,10 @@ Keep Places with `score(p) > 0` and sort descending. A Place whose trusted logs 
 With `L = limit`:
 
 1. **Main slots** (`round(0.8 · L)`): the top-scoring Places from 2.5.
-2. **Explore slots** (the rest): random picks among Places in the bbox that have at least one liked log from anyone, excluding Places already picked and Places `u` logged or bookmarked. These are the "something new" pins and are still backed by a real log.
+2. **Explore slots** (the rest): random picks among **hidden gems**, Places in the bbox that have at least one liked log, no log from a followed or similar user, and that `u` has not logged or bookmarked. These are the "something new" pins and are still backed by a real log. Requiring no log from a weighted author keeps a Place the viewer's circle disliked from coming back as a gem.
 3. If either pool runs short, the other fills the remaining slots.
 
-The random generator is seeded with `hash(user_id, current UTC date)` so results are stable within a day and reproducible in tests.
+The random generator is seeded with the first 8 bytes of `sha256(user_id + ":" + date)`, so results are stable within a day and across processes (Python's `hash()` is salted per process), and reproducible in tests.
 
 ### 2.7 Cold start
 
