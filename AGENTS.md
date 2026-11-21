@@ -35,16 +35,19 @@ Map markers distinguish a Place's relationship to the viewer: recommended by fri
 
 ## Stack
 
-- Next.js 16 (App Router, Turbopack), React 19, TypeScript (strict)
+- **Frontend:** Next.js 16 (App Router, Turbopack), React 19, TypeScript (strict)
 - Tailwind CSS v4 (configured in `src/app/globals.css`, no `tailwind.config`)
 - ESLint 9 via `eslint-config-next`
-- Not chosen yet: map library, database/backend, auth, image storage. Do not add one without confirming with the team; record the choice here once made.
+- **Backend:** Python 3.11+ FastAPI in `backend/`, managed with `uv`; Pydantic for request/response models, pytest and ruff for tests and lint. All API routes live under `/api`; Next.js proxies `/api/*` to it (`API_URL`, see `next.config.ts`), so do not add Next.js route handlers or Server Actions for data — business logic and validation belong in FastAPI.
+- Not chosen yet: map library, database, auth, image storage. Do not add one without confirming with the team; record the choice here once made.
 
 ## Layout
 
 ```
 docs/               product plan and design notes
-src/app/            routes, layouts, route handlers (App Router)
+backend/app/        FastAPI app: main.py, config.py, routers/ (one module per domain)
+backend/tests/      pytest suite
+src/app/            routes and layouts (App Router)
 src/components/     feature components; src/components/ui/ for generic primitives
 src/hooks/          client hooks (use* prefix)
 src/lib/            framework-agnostic helpers and service clients
@@ -56,15 +59,24 @@ Group feature code by domain (`components/map/`, `components/experience/`) rathe
 ## Commands
 
 ```bash
+# frontend (repo root)
 npm run dev     # http://localhost:3000
 npm run build   # production build; must pass before merging
 npm run lint
+
+# backend (cd backend)
+uv sync                                   # install deps into backend/.venv
+uv run fastapi dev app/main.py            # http://127.0.0.1:8000, docs at /api/docs
+uv run pytest
+uv run ruff check . && uv run ruff format --check .
 ```
+
+Run both dev servers during development; the frontend reaches the backend through `/api/*`.
 
 ## Conventions
 
 - Server Components by default; add `"use client"` only for interactivity (the map, forms, bookmark toggles).
-- Secrets go in `.env.local` (git-ignored). Document every variable in `.env.example`. Only `NEXT_PUBLIC_*` values reach the browser; map tile keys may be public, database keys must not be.
-- Validate user input (reviews, ratings, uploads, coordinates) at the server boundary.
+- Frontend secrets go in `.env.local`, backend secrets in `backend/.env` (both git-ignored). Document every variable in the matching `.env.example`. Only `NEXT_PUBLIC_*` values reach the browser; map tile keys may be public, database keys must not be.
+- Validate user input (reviews, ratings, uploads, coordinates) in FastAPI with Pydantic models; the frontend validation is for UX only.
 - Commit messages: `<type>: <description>` with types feat, fix, refactor, docs, test, chore, perf, ci.
 - Hackathon scope: ship the core loop end to end before polishing any single feature. Prefer seeded demo data (e.g. Toronto places and a few fake friends) over building features the demo will not show.
