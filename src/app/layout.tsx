@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@/components/map/discovery-map.css";
 import { SessionProvider } from "@/components/auth/session-provider";
 
 export const metadata: Metadata = {

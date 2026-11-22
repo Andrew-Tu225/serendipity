@@ -283,6 +283,9 @@ marker-layer updates stay aligned with the shared map adapter. Search, nearby lo
 clustering keep their existing implementations; profile, Buddy, and onboarding changes remain in
 place. Recommendation mapping supplies the followed author's ID to the merged friend type.
 
-When checking a map restoration locally, verify the served stylesheet as well as source files:
-the development CSS cache can retain the earlier marker rules while JavaScript has updated.
-The compiled stylesheet must include `.discovery-pin-caption` and the `data-layer` colour rules.
+Map styles live in `src/components/map/discovery-map.css`, imported after `globals.css` in the
+root layout. This plain stylesheet bypasses the Tailwind compiler, whose development cache was
+observed returning old map rules after a branch switch even though marker JavaScript had updated.
+Keep map geometry, compact captions, and relationship colours together in this stylesheet.
+Verify served CSS as well as source when checking local restorations; the compiled map stylesheet
+must include `.discovery-pin-caption` and the `data-layer` colour rules.
