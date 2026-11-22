@@ -213,9 +213,10 @@ Onboarding uses the same 430px phone frame, desktop rounded corners/shadow, and 
 
 Home mounts the new `HomeDiscoveryFeed`, with the landmark carousel, category filters, and
 Experience feed. Its images have explicit dimensions and fit their carousel/card containers,
-without absolute `fill` positioning. Discover retains the live Google map, global place search,
-preview, nearby queue, caching, and recommendation overlays from commit `927ec90`, including
-stable cluster rendering. Home styles are added alongside those map styles. Login and onboarding gate entry to the app.
+without absolute `fill` positioning. Discover uses the updated merged preview with descriptions,
+review photos/placeholders, ratings, and recommendation evidence. It retains the live Google map,
+global place search, nearby queue, caching, and recommendation overlays from commit `927ec90`,
+including stable cluster rendering. Home styles are added alongside those map styles. Login and onboarding gate entry to the app.
 Profile uses Auth0 name/avatar with an initials fallback and real database counts; mock scores,
 activity, and character customization are removed. The unrelated Buddy prototype remains.
 
