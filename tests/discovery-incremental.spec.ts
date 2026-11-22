@@ -39,7 +39,7 @@ test("pan requests the full viewport, preserves shared markers, and caches exact
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
 });
 
-test("a place leaving recommendations returns to the blue review layer without replacing its marker", async ({ page }) => {
+test("a place leaving recommendations returns to the white review layer without replacing its marker", async ({ page }) => {
   let calls = 0;
   await ranked(page, () => ({ items: [recommendation(appPlaces[calls++ === 0 ? 0 : 1])] }));
   await open(page);
@@ -69,6 +69,7 @@ test("expired recommendation evidence updates quietly without replacing its mark
   await page.clock.fastForward(61_000);
   await expect.poll(() => calls).toBe(2);
   await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "recommendation");
+  await expect(marker(page)).toHaveAttribute("data-priority", "20");
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
   await expect(page.getByText("Loading recommendations…")).toHaveCount(0);
   await marker(page).click();

@@ -1,4 +1,5 @@
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
+import type { MarkerLayer } from "./layers";
 import type { Coordinates, PlaceDetails } from "@/types/places";
 import type { MapBounds } from "@/types/discovery";
 
@@ -12,7 +13,8 @@ export interface MapHandle {
   onPick(callback: (position: Coordinates) => void): () => void;
   focus(place: Pick<PlaceDetails, "location" | "viewport">): void;
   locate(position: Coordinates): void;
-  marker(position: Coordinates, element: HTMLElement, title: string, onClick: () => void, cluster?: boolean): {
+  marker(position: Coordinates, element: HTMLElement, title: string, onClick: () => void, cluster?: boolean, layer?: MarkerLayer): {
+    layer(value: MarkerLayer): void;
     select(selected: boolean): void;
     title(value: string): void;
     remove(): void;
@@ -60,7 +62,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       const content = document.createElement("span");
       content.className = "discovery-cluster";
       content.textContent = String(count);
-      return new AdvancedMarkerElement({ position, content, title: `Zoom to ${count} places`, zIndex: 500 });
+      return new AdvancedMarkerElement({ position, content, title: `Zoom to ${count} places`, zIndex: 500, collisionBehavior: google.maps.CollisionBehavior.REQUIRED_AND_HIDES_OPTIONAL });
     },
   } });
   let frame = 0;
@@ -116,25 +118,38 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       if (locationMarker) locationMarker.map = null;
       const dot = document.createElement("span");
       dot.className = "discovery-location-dot";
-      locationMarker = new AdvancedMarkerElement({ map, position: latLng(position), content: dot, title: "Your location", zIndex: 2000 });
+      locationMarker = new AdvancedMarkerElement({ map, position: latLng(position), content: dot, title: "Your location", zIndex: 2000, collisionBehavior: google.maps.CollisionBehavior.REQUIRED_AND_HIDES_OPTIONAL });
       map.setZoom(15);
       map.panTo(latLng(position));
     },
-    marker(position, element, title, onClick, cluster = true) {
-      const marker = new AdvancedMarkerElement({ map, position: latLng(position), content: element, title, zIndex: 1, collisionBehavior: google.maps.CollisionBehavior.REQUIRED });
+    marker(position, element, title, onClick, cluster = true, initialLayer = "review") {
+      let layer = initialLayer;
       let selection = false;
+      const priorities: Record<MarkerLayer, number> = { place: 1, review: 10, recommendation: 20, friend: 30 };
+      function visibility() {
+        return {
+          zIndex: selection ? 1000 : priorities[layer],
+          collisionBehavior: !selection && layer === "place"
+            ? google.maps.CollisionBehavior.OPTIONAL_AND_HIDES_LOWER_PRIORITY
+            : google.maps.CollisionBehavior.REQUIRED_AND_HIDES_OPTIONAL,
+        };
+      }
+      const marker = new AdvancedMarkerElement({ map, position: latLng(position), content: element, title, ...visibility() });
+      function applyVisibility() {
+        const options = visibility();
+        marker.zIndex = options.zIndex;
+        marker.collisionBehavior = options.collisionBehavior;
+      }
       if (cluster) { clusters.addMarker(marker, true); renderClusters(); }
       const listener = marker.addListener("click", onClick);
       return {
+        layer(value) { if (layer !== value) { layer = value; applyVisibility(); } },
         title(value) { marker.title = value; },
         select(selected) {
           if (selection === selected) return;
           selection = selected;
           element.classList.toggle("is-selected", selected);
-          marker.zIndex = selected ? 1000 : 1;
-          marker.collisionBehavior = selected
-            ? google.maps.CollisionBehavior.REQUIRED_AND_HIDES_OPTIONAL
-            : google.maps.CollisionBehavior.REQUIRED;
+          applyVisibility();
           if (cluster) {
             if (selected) { selectedMarkers.add(marker); clusters.removeMarker(marker, true); marker.map = map; }
             else { selectedMarkers.delete(marker); clusters.addMarker(marker, true); }

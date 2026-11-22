@@ -8,7 +8,7 @@ const places = appPlaces.slice(0, 3).map((place, i) => ({ ...place,
   google_place_id: i === 1 ? "linked-google-place" : null,
 }));
 
-test("reviews, recommendations, and friend recommendations have distinct colours over the original map", async ({ page }) => {
+test("white reviews and recommendation colours retain priority while grey pins can yield to overlaps", async ({ page }) => {
   await mockGoogleMaps(page); await mockDiscovery(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("**/api/discovery/places?**", (route) => route.fulfill({ json: { places, next_cursor: null } }));
@@ -41,9 +41,30 @@ test("reviews, recommendations, and friend recommendations have distinct colours
   expect(nearbyCalls).toBeGreaterThan(0);
   const colours = await Promise.all([friendPin, personalPin, reviewPin, nearbyPin].map((pin) => pin.locator('.discovery-pin-icon, .discovery-friend-avatar').evaluate((element) => getComputedStyle(element).backgroundColor)));
   expect(new Set(colours).size).toBe(4);
+  expect(colours[2]).toBe("rgb(255, 255, 255)");
+  const friendMarker = page.getByRole("button", { name: `View ${places[0].name}`, exact: true });
+  const personalMarker = page.getByRole("button", { name: `View ${places[1].name}`, exact: true });
+  const reviewMarker = page.getByRole("button", { name: `View ${places[2].name}`, exact: true });
+  const nearbyMarker = page.getByRole("button", { name: "View Nearby park", exact: true });
+  await expect(nearbyMarker).toHaveAttribute("data-collision-behavior", "optional");
+  for (const marker of [friendMarker, personalMarker, reviewMarker]) await expect(marker).toHaveAttribute("data-collision-behavior", "required");
+  await expect(friendMarker).toHaveAttribute("data-priority", "30");
+  await expect(personalMarker).toHaveAttribute("data-priority", "20");
+  await expect(reviewMarker).toHaveAttribute("data-priority", "10");
   await page.getByRole("button", { name: `View ${places[1].name}`, exact: true }).click();
   await expect(personalPin).toHaveClass(/is-selected/);
   expect(await personalPin.locator('.discovery-pin-icon').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(colours[1]);
-  await expect(page.getByRole("group", { name: "Map marker colours" })).toHaveText("PlacesReviewsFor youFriends");
+  await expect(page.getByRole("group", { name: "Map marker colours" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Close place preview" }).click();
+  const identity = await nearbyMarker.getAttribute("data-marker-id");
+  await nearbyMarker.focus(); await nearbyMarker.press("Enter");
+  await expect(nearbyMarker).toHaveAttribute("data-collision-behavior", "required");
+  await expect(nearbyMarker).toHaveAttribute("data-priority", "1000");
+  await page.getByRole("button", { name: "Close place preview" }).click();
+  await expect(nearbyMarker).toHaveAttribute("data-collision-behavior", "optional");
+  await expect(nearbyMarker).toHaveAttribute("data-priority", "1");
+  await expect(nearbyMarker).toHaveAttribute("data-marker-id", identity!);
+  await reviewMarker.focus(); await reviewMarker.press("Enter");
+  expect(await reviewPin.locator('.discovery-pin-icon, .discovery-friend-avatar').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(255, 255, 255)");
   await page.screenshot({ path: "test-results/map-colour-layers-mobile.png", fullPage: true });
 });

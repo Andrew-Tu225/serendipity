@@ -231,17 +231,18 @@ Ultimately, we want someone to open the app and think:
 
 Discover fills the phone above navigation, with floating search, location controls, and place previews.
 Google supplies the basemap, global search, and nearby destinations through FastAPI. The original
-map remains visible: smaller neutral grey nearby pins and blue reviewed Places, including low-rated,
+map remains visible: smaller neutral grey nearby pins and white reviewed Places, including low-rated,
 self-reviewed, and bookmarked Places. The recommendations API overlays amber personalized picks and
 purple friends' recommendations. Friend > personalized recommendation > base review determines
 each app Place's colour; exact provider IDs remove duplicate nearby pins. A followed-user review
-alone does not make a Place purple. A compact legend explains the colours, which persist on selection.
+alone does not make a Place purple. The legend is removed; selection preserves the marker’s appearance.
 
 Reviewed-place coverage and temporary nearby search cells retain their original caches and provider
 budgets. Ranked results use separate one-minute snapshots for the full viewport; panning/zooming
 refetches rankings rather than combining strips. Empty or failed rankings leave the base map
-available. A new review updates the blue base layer and refetches recommendation eligibility.
-Dense locations cluster rather than being dropped. London, Ontario is the initial camera position; location
+available. A new review updates the white base layer and refetches recommendation eligibility.
+Dense locations cluster; overlapping grey nearby pins yield to reviews and recommendation highlights.
+London, Ontario is the initial camera position; location
 permission is requested only on tap.
 
 The app requires sign-in before showing Home or Discover. New and existing incomplete accounts must choose at least one of the 14 place-category interests once before entering. Interests seed recommendation similarity separately from review scores; Auth0 continues to manage identity. Returning accounts go straight home. Public backend read APIs retain public access. Signed-in viewers see the

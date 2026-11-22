@@ -47,9 +47,12 @@ map. App-reviewed Places and friend snippets come from the discovery API; dense 
 A separate `useRecommendations` hook requests 30 ranked Places per full visible bbox, with up to
 8 exact viewport snapshots cached for one minute. `mergeMapLayers` combines provider results,
 review summaries, and recommendation metadata by app UUID/exact provider ID. Friend recommendations
-are purple, personal recommendations amber, reviews blue, and nearby unreviewed results grey. A
-compact legend and colour-preserving selection expose those relationships. Followed-user reviews
-alone remain blue. Empty/failed rankings leave the independently loaded base layers available.
+are purple, personal recommendations amber, reviews white, and nearby unreviewed results grey. A
+colour-preserving selection and marker tooltips expose those relationships; there is no legend. Followed-user reviews
+alone remain white. Empty/failed rankings leave the independently loaded base layers available.
+The map adapter makes grey nearby markers optional for collision handling, while reviews,
+recommendations, clusters, and selected Places hide overlapping optional markers. Layer changes
+update priority in place. The map canvas isolates marker stacking below the floating controls.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
 cancels pending search/details/discovery requests and suspends refresh timers. Fresh discovery
 coverage is reused on return, and session changes invalidate personalized cached data. Home, Buddy,

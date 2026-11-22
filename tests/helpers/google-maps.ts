@@ -79,10 +79,14 @@ const sdk = String.raw`
       this.node.setAttribute('aria-label', options.title);
       this.node.dataset.position = JSON.stringify(options.position);
       this.node.style.cssText = 'position:absolute;border:0;background:transparent;left:40%;top:35%';
+      this.collisionBehavior = options.collisionBehavior;
+      this.zIndex = options.zIndex ?? 0;
       if (options.content) this.node.append(options.content);
       markers.add(this);
       this.map = options.map;
     }
+    set collisionBehavior(value) { this.node.dataset.collisionBehavior = String(value); }
+    set zIndex(value) { this.node.dataset.priority = String(value); this.node.style.zIndex = String(value); }
     set title(value) { this.node.setAttribute('aria-label', value); }
     set map(map) {
       if (!map) { this.node.remove(); return; }
@@ -99,7 +103,7 @@ const sdk = String.raw`
   }
   const maps = window.google.maps;
   maps.ControlPosition = { RIGHT_CENTER: 'right-center' };
-  maps.CollisionBehavior = { REQUIRED_AND_HIDES_OPTIONAL: 'required', REQUIRED: 'always' };
+  maps.CollisionBehavior = { REQUIRED_AND_HIDES_OPTIONAL: 'required', REQUIRED: 'always', OPTIONAL_AND_HIDES_LOWER_PRIORITY: 'optional' };
   maps.LatLng = LatLng;
   maps.LatLngBounds = LatLngBounds;
   maps.OverlayView = OverlayView;

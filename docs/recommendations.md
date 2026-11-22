@@ -282,8 +282,8 @@ bboxes and deduplicate by app Place ID. These results highlight the original rev
 map rather than replacing its background results.
 
 `friend` results are purple; `similar_taste` and `explore` results are amber. Reviewed Places outside
-recommendations are blue, and unreviewed nearby results remain neutral grey. A followed-user review
-alone stays blue. Results merge into existing app Places by UUID, retaining available aggregate
+recommendations are white, and unreviewed nearby results remain neutral grey. A followed-user review
+alone stays white. Results merge into existing app Places by UUID, retaining available aggregate
 ratings and exact provider identity; supporting recommendation logs remain visible in the preview.
 Friend recommendations take precedence over personal recommendations and base reviews.
 

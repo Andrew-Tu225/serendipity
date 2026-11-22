@@ -16,9 +16,9 @@ place previews clear the raised Add button and Google's attribution. The desktop
 Previews and search suggestions scroll internally when needed. Selecting a Google result fits its
 viewport or centers at zoom 16. Unknown Google Places remain temporary markers, displaying
 provider name/address/link and returned attributions without invented app activity.
-A compact legend distinguishes grey Places, blue Reviews, amber For you, and purple Friends.
+Reviewed Places retain their original white pins; personal recommendations are amber and friends’ recommendations purple. No legend is shown.
 Recommended and base Places merge by UUID, preserving aggregate ratings. Exact Google IDs suppress
-duplicate provider pins. A followed-user review is blue unless the recommendations API classifies
+duplicate provider pins. A followed-user review is white unless the recommendations API classifies
 the Place as a friend recommendation. Selection retains its layer colour. Empty or failed ranking
 requests leave the original results visible. Optional Google controls, including zoom buttons and keyboard
 shortcuts, are disabled; touch gestures and the custom location button remain available. Google's
@@ -34,13 +34,24 @@ it leaves the selected place and map position intact. A UUID groups suggestions 
 details request into a Google autocomplete session, then is discarded. Superseded requests are
 aborted and stale responses ignored. Provider billing still follows Google's requested-field SKUs.
 
+## Overlapping nearby pins
+
+Grey nearby markers are optional and yield to overlaps. Reviews, recommendation highlights, clusters,
+and selected Places remain visible and hide overlapping grey pins. Layer priority is selected Place,
+friends’ recommendation, personal recommendation, review, then nearby Place. A selected nearby pin
+stays visible until deselection, then returns to optional collision handling. The map adapter applies
+policy changes in place as recommendation membership changes. White review pins keep their original
+purple details; amber and purple highlight colours remain distinct. No legend is displayed.
+
+Google documents the supported modes in [collision behaviour](https://developers.google.com/maps/documentation/javascript/advanced-markers/collision-behavior).
+
 ## Recommendation overlay
 
 `GET /api/recommendations` supplies up to 30 results per exact visible bbox, preserving kind, score,
 positive supporting logs, and relation labels. Full rankings replace only the recommendation
 membership, with one-minute exact-view snapshots and stale-response cancellation. The original
 review/nearby layers continue loading independently. Pins leaving recommendations revert to their
-base colour without replacing stable markers. A successful review updates the blue base layer and
+base colour without replacing stable markers. A successful review updates the white base layer and
 invalidates rankings. See [discovery-data.md](discovery-data.md) for colour precedence and caching.
 
 ## Nearby places without app reviews

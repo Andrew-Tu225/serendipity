@@ -165,10 +165,6 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           </svg>
         </button>
       </div>
-      {map && <div className="discovery-legend" role="group" aria-label="Map marker colours">
-        <span data-layer="place">Places</span><span data-layer="review">Reviews</span>
-        <span data-layer="recommendation">For you</span><span data-layer="friend">Friends</span>
-      </div>}
       {!map && !mapError && <div className="discovery-map-message" role="status">Finding your next favorite corner…</div>}
       {mapError && <div className="discovery-map-message" role="alert"><strong>The map couldn’t load</strong><p>{mapError}</p><button type="button" onClick={() => { setMap(null); setMapError(""); setAttempt((n) => n + 1); }}>Try again</button></div>}
       {map && <>

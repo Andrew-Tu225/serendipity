@@ -114,15 +114,16 @@ to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production re
 Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
 
 Discover initially centers on London, Ontario and keeps the original results visible beneath
-recommendation highlights. The legend uses neutral grey for nearby places, blue for reviews,
+recommendation highlights. Pins use neutral grey for nearby places, white for reviews,
 amber for personalized recommendations, and purple for friends' recommendations. Recommendation
 colours come from `GET /api/recommendations` (`limit=30` per visible bbox), preserving its supporting
-reviews. A followed-user review alone stays blue. App UUIDs and exact Google IDs prevent duplicate
-pins, and selection preserves a pin's colour.
+reviews. A followed-user review alone stays white. App UUIDs and exact Google IDs prevent duplicate
+pins, and selection preserves a pin's colour. Overlapping grey pins hide while reviews and
+recommendation highlights remain visible. No legend is displayed.
 
 Base database review queries and temporary Google nearby searches continue independently. Ranked
 responses highlight those results; an empty or failed ranking leaves the original map available.
-A successful review updates the blue base marker and refetches rankings. Recommendation snapshots
+A successful review updates the white base marker and refetches rankings. Recommendation snapshots
 stay fresh for one minute; the original base coverage cache and nearby request budget remain.
 Use Add to name a new Place and choose its map point, or Write a review on a selected Place.
 

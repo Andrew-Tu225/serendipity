@@ -30,12 +30,16 @@ export const PlaceMarker = memo(function PlaceMarker({ map, place, selected, onS
   const id = place.place_id;
   const cluster = true;
   const layer = markerLayer(place);
-  useEffect(() => { element.setAttribute("data-layer", layer); element.setAttribute("title", markerLayerLabels[layer]); }, [element, layer]);
+  useEffect(() => {
+    element.setAttribute("data-layer", layer);
+    element.setAttribute("title", markerLayerLabels[layer]);
+    marker.current?.layer(layer);
+  }, [element, layer]);
   useEffect(() => { element.classList.toggle("is-unreviewed", place.source === "google"); }, [element, place.source]);
   useEffect(() => {
     const handle = map.marker({ latitude, longitude }, element, `View ${latest.current.place.display_name}`, () => {
       latest.current.onSelect(latest.current.place);
-    }, cluster);
+    }, cluster, markerLayer(latest.current.place));
     marker.current = handle;
     return () => { handle.remove(); marker.current = null; };
   }, [map, id, latitude, longitude, cluster, element]);

@@ -10,21 +10,28 @@ An empty or failed recommendation request leaves the base results available.
 | Colour | Meaning | Source |
 |---|---|---|
 | Neutral grey, smaller pin | Nearby place without an app review | Google Nearby Search |
-| Blue | Reviewed Place, including self-reviewed/bookmarked Places and followed-user reviews | Discovery API |
+| White | Reviewed Place, including self-reviewed/bookmarked Places and followed-user reviews | Discovery API |
 | Amber | Personalized recommendation (`similar_taste` or `explore`) | Recommendations API |
 | Purple | Friends' recommendation (`friend`) | Recommendations API |
 
-A compact Places / Reviews / For you / Friends legend explains these colours. Selection preserves
-the marker's layer colour. A followed user's review alone stays blue; purple requires the API's
+No legend is shown. Selection preserves
+the marker's layer colour. A followed user's review alone stays white; purple requires the API's
 friend recommendation classification. App UUIDs deduplicate reviewed and recommended results;
 exact Google IDs suppress duplicate provider pins. Recommendation metadata overlays the app's
 existing aggregate rating/identity. Each Place has one marker, with friend recommendation first,
 then personalized recommendation, then base review, then an unreviewed provider result.
 
+Grey nearby pins use Google’s optional collision handling: they hide when overlapping a higher-priority
+marker or another grey pin. Reviews, personal recommendations, friends’ recommendations, clusters,
+and the selected place hide overlapping optional pins. Priority is selected Place > friends > personal
+recommendation > review > grey nearby Place; selection always keeps a grey Place visible. Changing
+a Place’s layer updates its SDK collision policy without recreating its marker. Reviews retain white
+backgrounds and purple glyphs/initials, including while selected. Clustering and all data sources remain.
+
 Ranked results request up to 30 Places per exact visible bbox after a 250 ms idle debounce. Date-line
 views use two ordinary bboxes and deduplicate IDs. Up to eight exact-view snapshots stay fresh for
 one minute. Full rankings replace recommendation membership, while base review coverage remains
-independent. A Place leaving recommendations returns to its blue review marker rather than
+independent. A Place leaving recommendations returns to its white review marker rather than
 vanishing. Supporting logs and relations remain visible in the selected preview; an aggregate
 rating is shown when available, otherwise the supporting log rating is labelled as such.
 
@@ -98,7 +105,7 @@ The form requires sign-in before submission. Its fields survive save errors; it 
 clicks and closing during a pending save. Success is shown only after the API confirms the write,
 then the selected card and viewport ratings refresh. A new reviewed Place therefore appears in the base review layer and remains available after reload.
 The ranking is also invalidated: the API excludes the viewer’s logged/bookmarked Places from
-recommendations, so these remain blue rather than being forced into a recommendation highlight. No photo/video storage provider is introduced.
+recommendations, so these remain white rather than being forced into a recommendation highlight. No photo/video storage provider is introduced.
 After Auth0 sign-in, incomplete accounts choose category interests at `/onboarding`; completed accounts reach Home. Home recommendation cards open real discovery details and focus the map without resetting the camera when switching tabs.
 
 `CurrentUser` supplies the author. `VerifiedMutation` enforces CSRF and origin checking. Pydantic
