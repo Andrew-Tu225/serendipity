@@ -169,6 +169,7 @@ Reviewer names/portraits and recommendation authors on Discover open a public pr
 viewer’s connection rows do the same. Public profiles show names, character portraits, mutual
 follow status, counts and paginated Experiences, with links back to their Places on the map.
 Follower/following lists support nested profiles. Returning preserves prior lists, pagination
-and map selection, restoring keyboard focus. All public content comes from existing social
+and map selection, restoring keyboard focus. Escape also works after pagination removes the
+focused button, because the active public profile stack handles it at document capture time. All public content comes from existing social
 endpoints; profiles do not expose saved Places, Auth0 identities or email addresses.
 These screens are read-only; the Home feed remains the existing prototype.

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import DiscoverMap from '@/components/map/discover-map'
 import { ReviewComposer } from '@/components/experience/review-composer'
 import { HomeDiscoveryFeed } from '@/components/home/home-discovery-feed'
@@ -67,11 +67,23 @@ function App() {
     setPersonScreens(current => [...current, screen])
   }
 
-  function backPerson() {
+  const backPerson = useCallback(() => {
     const screen = personScreens[personScreens.length - 1]
     setPersonScreens(current => current.slice(0, -1))
     requestAnimationFrame(() => screen?.returnFocus?.focus())
-  }
+  }, [personScreens])
+
+  useEffect(() => {
+    if (!personScreens.length) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      backPerson()
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
+  }, [personScreens.length, backPerson])
 
   function openPersonConnections(userId: string, direction: ConnectionDirection, name: string) {
     const screen: PersonScreen = { kind: direction, userId, name, key: personSequence.current++, returnFocus: document.activeElement instanceof HTMLElement ? document.activeElement : null }

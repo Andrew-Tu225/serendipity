@@ -84,7 +84,7 @@ test("recovers a failed profile request and handles a missing person", async ({ 
   let missing = true;
   await page.route("**/api/users/author-0", route => missing ? route.fulfill({ status: 404, json: { detail: "User not found" } }) : route.fulfill({ json: profile }));
   await openFromMap(page);
-  await expect(page.getByRole("alert")).toContainText("This profile is no longer available.");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("This profile is no longer available.");
   missing = false;
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await expect(page.getByText("You follow each other")).toBeVisible();
