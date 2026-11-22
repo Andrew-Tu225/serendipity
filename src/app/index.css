@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
 @import 'tailwindcss';
 @import '../components/buddy/buddy-deck.css';
+@import '../components/profile/profile-experiences.css';
 
 @layer base {
   :root {
@@ -389,12 +390,6 @@
 .profile-stats div + div { border-left: 1px solid #eee8f1; }
 .profile-stats strong { color: #493750; font-size: 15px; }
 .profile-stats span { color: #9b909f; font-size: 8px; }
-.taste-panel { margin-top: 12px; padding: 16px; border: 1px solid #e8e0ec; border-radius: 21px; background: #fff; }
-.panel-heading { display: flex; align-items: start; justify-content: space-between; }
-.panel-heading h3 { font-family: 'DM Serif Display', serif; margin-top: 2px; font-size: 19px; font-weight: 400; }
-.panel-heading > span { padding: 4px 7px; color: #76588a; background: #f0e8f5; border-radius: 99px; font-size: 8px; font-weight: 700; }
-.panel-intro { margin: 5px 0 2px; color: #998e9d; font-size: 9px; }
-.experience-panel { margin-bottom: 2px; background: #f5f0f8; }
 .calendar-card { margin-top: 12px; padding: 17px 16px 15px; border: 1px solid #e8e0ec; border-radius: 21px; background: #fff; }
 .calendar-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
 .calendar-heading h3 { margin-top: 2px; font-family: 'DM Serif Display', serif; font-size: 20px; font-weight: 400; }

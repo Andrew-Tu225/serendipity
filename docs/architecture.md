@@ -277,8 +277,9 @@ Profile uses Auth0 name/avatar with an initials fallback and real database count
 activity, and character customization are removed. The unrelated Buddy prototype remains.
 
 The Figma preview source (`src/app/App.tsx`, `main.tsx`, and `vite.config.ts`) remains separate from
-the Next.js app entry. Its image imports accept both Vite URL strings and Next.js image metadata
-so the shared repository compiles under Next.js as well as the Figma preview tooling.
+the Next.js app entry. Both entry points share the Profile ratings panels and styles. The preview
+uses the sample ratings and loads thumbnails from Vite asset URLs. The Next.js entry renders
+thumbnails with its image component and loads ratings for the signed-in account.
 
 The map marker markup and map-specific CSS are restored from `e199a8a` after the Figma merge
 overwrote them. Compact circular pins, decluttered place captions, relationship colours, and

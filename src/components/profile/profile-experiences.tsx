@@ -1,5 +1,5 @@
-import Image, { type StaticImageData } from "next/image";
-import { useEffect, useRef, useState } from "react";
+import type { StaticImageData } from "next/image";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { PlaceGlyph } from "@/components/map/place-marker";
 import pottery from "@/components/serendipity/assets/pottery-workshop.png";
 import rooftop from "@/components/serendipity/assets/rooftop-dinner.png";
@@ -21,6 +21,13 @@ type Entry = {
   image?: StaticImageData;
   glyph?: string;
 };
+
+type ExperienceImage = ComponentType<{
+  src: StaticImageData;
+  alt: string;
+  fill: boolean;
+  sizes: string;
+}>;
 
 const demoHistory: Entry[] = [
   { id: "jazz", place: "Violet Note", title: "After-hours jazz", category: "Music", detail: "Lower East Side", date: "2025-06-27", rating: 5, note: "Loved it", image: jazz },
@@ -56,7 +63,10 @@ function profileEntry(experience: ProfileExperiences["recent"][number]): Entry {
   };
 }
 
-export function ProfileExperiencePanels({ data }: { data?: ProfileExperiences }) {
+export function ProfileExperiencePanels({ data, Image }: {
+  data?: ProfileExperiences;
+  Image: ExperienceImage;
+}) {
   const favorites = data ? data.favorites.map(profileEntry) : demoFavorites;
   const recent = data ? data.recent.map(profileEntry) : demoHistory.slice(0, 4);
   const [expanded, setExpanded] = useState(false);
@@ -104,7 +114,7 @@ export function ProfileExperiencePanels({ data }: { data?: ProfileExperiences })
           <ol className="profile-favorite-grid" role="list">
             {favorites.map((entry, index) => (
               <li key={entry.id}>
-                <ExperienceThumbnail entry={entry} rank={index + 1} />
+                <ExperienceThumbnail entry={entry} Image={Image} rank={index + 1} />
                 <p className="profile-favorite-name">{entry.place}</p>
                 <p className="profile-favorite-detail">{entry.detail}</p>
               </li>
@@ -133,7 +143,7 @@ export function ProfileExperiencePanels({ data }: { data?: ProfileExperiences })
           <ul id="profile-rating-list" className="profile-rating-list" role="list">
             {ratings.map((entry) => (
               <li className="profile-rating-row" key={entry.id}>
-                <ExperienceThumbnail entry={entry} />
+                <ExperienceThumbnail entry={entry} Image={Image} />
                 <div className="profile-rating-copy">
                   <p className="profile-rating-meta">{entry.category} <span aria-hidden="true">·</span> <time dateTime={entry.date}>{dateFormat.format(new Date(entry.date))}</time></p>
                   <p className="profile-rating-title">{entry.title}</p>
@@ -160,7 +170,7 @@ export function ProfileExperiencePanels({ data }: { data?: ProfileExperiences })
   );
 }
 
-function ExperienceThumbnail({ entry, rank }: { entry: Entry; rank?: number }) {
+function ExperienceThumbnail({ entry, Image, rank }: { entry: Entry; Image: ExperienceImage; rank?: number }) {
   return (
     <div className="profile-experience-thumbnail" data-glyph={entry.glyph} aria-hidden="true">
       {entry.image ? <Image src={entry.image} alt="" fill sizes={rank ? "100px" : "46px"} /> : <PlaceGlyph category={entry.glyph} />}

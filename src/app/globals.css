@@ -2,6 +2,7 @@
 
 @import 'tailwindcss';
 @import '../components/buddy/buddy-deck.css';
+@import '../components/profile/profile-experiences.css';
 
 :root {
   --background: #ffffff;
@@ -514,65 +515,6 @@ a.place-list-arrow:hover { background: #f2eaf7; }
 .buddy-composer button { min-height: 39px; }
 .buddy-composer button:disabled { opacity: .6; cursor: default; }
 .buddy-composer > p { padding-bottom: 6px; color: #883853; font-size: 12px; }
-.profile-experience-panel {
-  margin-top: 12px;
-  padding: 14px 12px;
-  border: 1px solid #e8e0ec;
-  border-radius: 21px;
-  background: #fff;
-}
-.profile-experience-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
-.profile-experience-heading h3 { margin-top: 2px; color: #292136; font: 400 21px/1.15 'DM Serif Display', serif; }
-.profile-favorite-sparkle { color: #76588a; font-size: 20px; line-height: 1; }
-.profile-favorite-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.profile-favorite-grid li { min-width: 0; }
-.profile-experience-thumbnail {
-  position: relative;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 10px;
-  color: #694780;
-  background: linear-gradient(145deg, #eee5f4, #e4d5ee);
-}
-.profile-experience-thumbnail img { object-fit: cover; }
-.profile-experience-thumbnail[data-glyph='Food'] { color: #75512c; background: linear-gradient(145deg, #f8eee0, #ecd5be); }
-.profile-experience-thumbnail[data-glyph='Outdoors'] { color: #3b634d; background: linear-gradient(145deg, #e8f0e4, #c9dfc9); }
-.profile-experience-thumbnail[data-glyph='Culture'] { color: #7b4c59; background: linear-gradient(145deg, #f7e8ec, #edcfda); }
-.profile-favorite-grid .profile-experience-thumbnail { aspect-ratio: 10 / 11; }
-.profile-favorite-rank {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  color: #573961;
-  background: #fff;
-  font-size: 9px;
-  font-weight: 700;
-}
-.profile-favorite-name, .profile-favorite-detail { overflow-wrap: anywhere; line-height: 1.25; }
-.profile-favorite-name { margin-top: 7px; color: #4c3659; font-size: clamp(9px, 2.7vw, 11px); font-weight: 700; }
-.profile-favorite-detail { margin-top: 2px; color: #786b82; font-size: 9px; text-transform: capitalize; }
-.profile-history-button { flex-shrink: 0; min-height: 30px; color: #664480; font-size: 11px; font-weight: 700; }
-.profile-history-button:hover { text-decoration: underline; }
-.profile-history-button:focus-visible { border-radius: 3px; outline: 2px solid #9e7bb8; outline-offset: 3px; }
-.profile-history-button:disabled { color: #776a82; cursor: wait; }
-.profile-rating-row { display: grid; grid-template-columns: 43px minmax(0, 1fr) 38px; align-items: center; gap: 9px; padding: 7px 0; }
-.profile-rating-row + .profile-rating-row { border-top: 1px solid #eee8f1; }
-.profile-rating-row:last-child { padding-bottom: 0; }
-.profile-rating-row .profile-experience-thumbnail { width: 43px; height: 43px; }
-.profile-rating-copy { overflow-wrap: anywhere; }
-.profile-rating-meta { color: #765d82; font-size: 8px; letter-spacing: .035em; text-transform: uppercase; }
-.profile-rating-title { margin-top: 1px; color: #372341; font-size: 12px; font-weight: 700; line-height: 1.25; }
-.profile-rating-note { margin-top: 2px; color: #765d82; font-size: 9px; }
-.profile-rating-score { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #fff; background: #77558e; font: 400 14px/1 'DM Serif Display', serif; }
-.profile-rating-score small { font: 600 8px/1 'DM Sans', sans-serif; }
-.profile-experience-message { padding: 10px 0; color: #6f6179; font-size: 12px; }
-.profile-history-footer { margin-top: 8px; padding-top: 4px; border-top: 1px solid #eee8f1; color: #6f6179; font-size: 11px; text-align: center; }
 .calendar-card { margin-top: 12px; padding: 17px 16px 15px; border: 1px solid #e8e0ec; border-radius: 21px; background: #fff; }
 .calendar-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
 .calendar-heading h3 { margin-top: 2px; font-family: 'DM Serif Display', serif; font-size: 20px; font-weight: 400; }

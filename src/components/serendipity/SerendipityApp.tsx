@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useRef, useState, type ReactNode } from 'react'
 import DiscoverMap from '@/components/map/discover-map'
 import { ReviewComposer } from '@/components/experience/review-composer'
@@ -393,8 +394,8 @@ function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacte
         </>}
       </div>
 
-      {profile.status === 'demo' && <><ProfileExperiencePanels /><ActivityCalendar /></>}
-      {profile.status === 'ready' && <ProfileExperiencePanels data={profile.data} />}
+      {profile.status === 'demo' && <><ProfileExperiencePanels Image={Image} /><ActivityCalendar /></>}
+      {profile.status === 'ready' && <ProfileExperiencePanels Image={Image} data={profile.data} />}
       {draft && <CharacterCustomizer value={draft} onChange={setDraft} onClose={() => setDraft(null)}
         onSave={saveCharacter} saving={saving} error={saveError}/>}
     </section>

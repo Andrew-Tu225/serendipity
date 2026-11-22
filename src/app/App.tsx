@@ -3,6 +3,7 @@ import potteryAsset from './assets/pottery-workshop.png'
 import rooftopAsset from './assets/rooftop-dinner.png'
 import ridgeAsset from '@/components/profile/assets/ridge-hike.webp'
 import { describeBuddyInterests } from '@/components/buddy/buddy-interests'
+import { ProfileExperiencePanels } from '@/components/profile/profile-experiences'
 
 // Vite serves imported images as URLs. Next.js type checks them as image metadata.
 function imageUrl(asset: string | { src: string }) {
@@ -593,9 +594,11 @@ function FriendAvatar({ variant }: { variant: string }) {
   )
 }
 
+function PreviewExperienceImage({ src, alt }: { src: string | { src: string }; alt: string }) {
+  return <img src={imageUrl(src)} alt={alt} loading="lazy" decoding="async"/>
+}
+
 function ProfileView() {
-  const [tastes, setTastes] = useState({ Sweet: 4, Spicy: 3, Umami: 5 })
-  const [experienceStyle, setExperienceStyle] = useState({ Adventurous: 5, Chill: 4 })
   const [customizing, setCustomizing] = useState(false)
   const [character, setCharacter] = useState<CharacterOptions>({
     features: 'feminine',
@@ -623,20 +626,7 @@ function ProfileView() {
         </div>
       </div>
 
-      <div className="taste-panel">
-        <div className="panel-heading"><div><p className="eyebrow">TASTE BUDS</p><h3>Your flavor profile</h3></div><span>1–5</span></div>
-        <p className="panel-intro">Tap a number to tune your matches and recommendations.</p>
-        {Object.entries(tastes).map(([label, value]) => (
-          <ScaleRating key={label} label={label} value={value} onChange={(rating) => setTastes((current) => ({ ...current, [label]: rating }))}/>
-        ))}
-      </div>
-
-      <div className="taste-panel experience-panel">
-        <div className="panel-heading"><div><p className="eyebrow">EXPERIENCE ENERGY</p><h3>How you like to go out</h3></div><span>1–5</span></div>
-        {Object.entries(experienceStyle).map(([label, value]) => (
-          <ScaleRating key={label} label={label} value={value} onChange={(rating) => setExperienceStyle((current) => ({ ...current, [label]: rating }))}/>
-        ))}
-      </div>
+      <ProfileExperiencePanels Image={PreviewExperienceImage} />
 
       <ActivityCalendar />
       {customizing && <CharacterCustomizer value={character} onChange={setCharacter} onClose={() => setCustomizing(false)}/>}

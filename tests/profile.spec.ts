@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { CharacterAppearance } from "../src/types/character";
+import { signedIn } from "./helpers/discovery";
 
 test("shows demo favorites in one row and expands the latest four ratings", async ({ page }) => {
   await page.setViewportSize({ width: 348, height: 820 });
@@ -32,6 +33,7 @@ test("shows demo favorites in one row and expands the latest four ratings", asyn
 });
 
 test("uses the signed-in viewer's ratings and loads their older entries on demand", async ({ page }) => {
+  await page.route("**/api/auth/me", (route) => route.fulfill({ json: signedIn }));
   const entry = {
     id: "first", place_name: "River Trail", category: "trail", rating: 4.5,
     verdict: "recommend", rated_on: "2026-10-18",
@@ -54,6 +56,7 @@ test("uses the signed-in viewer's ratings and loads their older entries on deman
   await recent.getByRole("button", { name: "See all" }).click();
   await expect(page.getByRole("region", { name: "All ratings" }).getByText("Tea house")).toBeVisible();
   await expect(page.getByText("Mia Morgan")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /flavou?r profile|how you like to go out/i })).toHaveCount(0);
 });
 
 test("opens the lists screen and shows each saved place's name and location", async ({ page }) => {
