@@ -20,6 +20,7 @@ export const signedIn = {
 };
 
 export async function mockDiscovery(page: Page) {
+  await page.route("**/api/places/nearby?**", (route) => route.fulfill({ json: { places: [] } }));
   await page.route("**/api/auth/me", (route) => route.fulfill({ status: 401, json: { detail: "Sign in to continue" } }));
   await page.route("**/api/discovery/places?**", (route) => {
     const [west, south, east, north] = new URL(route.request().url()).searchParams.get("bbox")!.split(",").map(Number);

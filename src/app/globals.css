@@ -324,6 +324,12 @@
 .discovery-pin-rating { margin-top: 2px; padding: 2px 5px; border-radius: 5px; color: #654577; background: #fffffff2; font-size: 9px; font-weight: 600; white-space: nowrap; }
 .discovery-pin.is-selected .discovery-pin-icon { color: white; background: #76548f; transform: rotate(-45deg) scale(1.12); }
 .discovery-pin.is-selected .discovery-pin-label { background: #76548f; color: white; }
+.discovery-pin.is-unreviewed { color: #897b95; }
+.discovery-pin.is-unreviewed .discovery-pin-icon { width: 30px; height: 30px; border-width: 2px; background: #f6f2f8; box-shadow: 0 2px 6px #39284326; }
+.discovery-pin.is-unreviewed .discovery-pin-icon svg { width: 16px; height: 16px; }
+.discovery-pin.is-unreviewed .discovery-pin-label { color: #786985; font-weight: 500; font-size: 9px; }
+.discovery-pin.is-unreviewed.is-selected .discovery-pin-icon { color: white; background: #76548f; }
+.discovery-pin.is-unreviewed.is-selected .discovery-pin-label { color: white; }
 .discovery-location-dot { display: block; width: 17px; height: 17px; border: 3px solid white; border-radius: 50%; background: #427de0; box-shadow: 0 0 0 7px #427de02e; }
 .discovery-preview { position: absolute; z-index: 4; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: 58px; display: flex; gap: 10px; padding: 13px 35px 13px 12px; max-height: min(48%, calc(100% - 190px - env(safe-area-inset-top, 0px))); overflow-y: auto; background: #fff; border: 1px solid #dfd6e4; border-radius: 17px; box-shadow: 0 9px 25px #36263f24; }
 .discovery-place-art { display: grid; place-items: center; flex: 0 0 44px; height: 50px; color: #805b97; border-radius: 12px; background: #eee5f4; }

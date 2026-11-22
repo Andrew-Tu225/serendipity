@@ -1,11 +1,12 @@
 # Discovery map
 
 Discover is a live Google map with custom markers and place search. The tab loads the SDK on first
-use and begins at London, Ontario (42.9849, -81.2453), zoom 13. Browsing pins come from app-reviewed Places
-in PostgreSQL, with Serendipity ratings and friends' reviews. Dense pins cluster. Existing pins persist
+use and begins at London, Ontario (42.9849, -81.2453), zoom 13. Browsing pins combine app-reviewed Places
+in PostgreSQL with temporary Google Nearby Search results. All use our custom marker design: smaller,
+neutral category pins for Google places, ratings and friend highlights for app Places. Dense pins cluster. Existing pins persist
 across viewport updates; nearby areas are prefetched and newly exposed rectangles load in the
 background. There are no
-hard-coded demo pins or demo fallback on errors. Selecting a marker opens its app reviews; closing
+hard-coded demo pins or demo fallback on errors. Selecting a marker checks/opens its app reviews; closing
 the preview keeps the marker available. See [discovery-data.md](discovery-data.md) for database
 queries, review submission, public browsing, and exact Google-ID matching.
 
@@ -13,7 +14,7 @@ Discover fills the phone frame above navigation. The simulated status bar and pa
 Search floats at the top with safe-area spacing, with a crosshair location button to its right, and
 place previews clear the raised Add button and Google's attribution. The desktop phone frame stays.
 Previews and search suggestions scroll internally when needed. Selecting a Google result fits its
-viewport or centers at zoom 16. Unknown Google Places remain temporary search markers, displaying
+viewport or centers at zoom 16. Unknown Google Places remain temporary markers, displaying
 provider name/address/link and returned attributions without invented app activity.
 The ratings/friends legend is removed. Optional Google controls, including zoom buttons and keyboard
 shortcuts, are disabled; touch gestures and the custom location button remain available. Google's
@@ -28,6 +29,36 @@ supports arrows, Enter, Escape, and pointer selection. Clearing the input resets
 it leaves the selected place and map position intact. A UUID groups suggestions and the selected
 details request into a Google autocomplete session, then is discarded. Superseded requests are
 aborted and stale responses ignored. Provider billing still follows Google's requested-field SKUs.
+
+## Nearby places without app reviews
+
+`GET /api/places/nearby?latitude=…&longitude=…&radius=…` calls Places API (New) Nearby Search
+through the existing typed client, router, service, and provider integration. No database access or
+schema migration is involved. The server limits the radius to 50–5,000 m and requests at most 20
+distance-ranked results, including food/drink, parks/trails, culture, activities, and selected shops.
+Utilities, offices, and residential addresses are not requested. The field mask excludes Google
+ratings, reviews, and photos. Names, coordinates, categories, links, and attributions support display.
+
+After a 500 ms map-idle pause, the UI searches newly encountered fixed zoom-13 geographic cells.
+Up to nine visible cells are eligible; larger views show app-reviewed Places and invite zooming in
+when empty. Each cell uses a circle enclosing it, so overlapping results are expected and deduplicated
+by Google Place ID. This is a sample of destinations, not an exhaustive listing of all Google places.
+Results merge incrementally; unchanged markers retain their SDK objects. App Places with matching
+Google IDs take precedence. Names or coordinate proximity never establish identity.
+
+Search cells are reused for five minutes in mounted-map memory (up to 48 cells / 960 provider rows).
+Expired results refresh without first clearing visible pins; stale results may remain for up to 15
+minutes if refreshing fails. No provider content is persisted, put in browser storage, shared with
+other users, or written into the app-data cache. Hiding Discover or the browser cancels pending
+requests; work resumes on return. Failures preserve reviewed pins and offer retry; background retries
+back off for a minute. Explicit retry runs immediately. Larger-scale deployment needs shared quotas.
+
+Selecting a Google marker checks the database by its Google ID before showing an empty-review
+message. A database failure is shown as an error rather than "no reviews". Existing app records open
+their real reviews; unknown places use the existing first-review flow with a user-authored name and
+chosen map point. Required Google attribution remains visible; provider attribution appears in cards.
+Nearby Search is billed separately from map loads and autocomplete. Configure Google quotas/alerts
+before public use; small-pan reuse reduces calls but does not eliminate paid searches.
 
 The location button uses browser geolocation on tap, with a 10-second timeout. Success shows a blue
 location indicator and centers at zoom 15; denial leaves search and the camera usable. Switching
@@ -58,11 +89,11 @@ or navigation; compile and runtime errors still surface.
    importing the JSON file into this repository alone does not apply it to Google's map.
 
 Set project quotas and billing alerts to match your budget. Backend limits are intentionally basic:
-120 autocomplete and 60 details requests per rolling minute **per process**, shared by all visitors.
+120 autocomplete, 60 details, and 60 nearby requests per rolling minute **per process**, shared by all visitors.
 They reset on restart and multiply across workers. Configure provider quotas for a project-wide cap;
 use a shared limiter before scaling to multiple application workers. Invalid requests do not consume
 provider calls. Provider failures are returned as sanitized `503` errors; request-limit errors are
-`429` with `Retry-After`. No automatic provider retries incur additional calls.
+`429` with `Retry-After`. The backend never retries provider calls; the nearby UI backs off after failures.
 
 Google's logo/legal attribution stays on the map's bottom edge, below the preview card. The search
 dropdown includes text attribution to Google Maps, and previews render any returned provider
@@ -84,4 +115,5 @@ References: [Maps loader](https://developers.google.com/maps/documentation/javas
 [Advanced Markers](https://developers.google.com/maps/documentation/javascript/advanced-markers/overview),
 [cloud styles](https://developers.google.com/maps/documentation/javascript/cloud-customization/overview),
 [Places session tokens](https://developers.google.com/maps/documentation/places/web-service/place-session-tokens),
+[Nearby Search](https://developers.google.com/maps/documentation/places/web-service/nearby-search),
 [Places policies](https://developers.google.com/maps/documentation/places/web-service/policies).

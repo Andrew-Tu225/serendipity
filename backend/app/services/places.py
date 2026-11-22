@@ -11,6 +11,8 @@ from app.integrations.google_places import GooglePlacesClient
 from app.schemas.places import (
     AutocompleteQuery,
     AutocompleteResponse,
+    NearbyQuery,
+    NearbyResponse,
     PlaceAttribution,
     PlaceDetails,
     PlaceSuggestion,
@@ -21,7 +23,11 @@ class PlacesRateLimiter:
     """Bounded, process-wide sliding windows; intentionally independent of proxy IP headers."""
 
     def __init__(self):
-        self.requests: dict[str, deque[float]] = {"autocomplete": deque(), "details": deque()}
+        self.requests: dict[str, deque[float]] = {
+            "autocomplete": deque(),
+            "details": deque(),
+            "nearby": deque(),
+        }
 
     def check(self, operation: str):
         now = monotonic()
@@ -47,6 +53,41 @@ class PlacesService:
         if not self.provider.api_key:
             raise HTTPException(503, "Place search is not configured")
         self.limiter.check(operation)
+
+    async def nearby(self, query: NearbyQuery) -> NearbyResponse:
+        self.prepare("nearby")
+        try:
+            data = await self.provider.nearby(
+                {"latitude": query.latitude, "longitude": query.longitude}, query.radius
+            )
+            return NearbyResponse(
+                places=[self.normalize(item) for item in data.get("places", [])[:20]]
+            )
+        except (
+            httpx.HTTPError,
+            ValidationError,
+            ValueError,
+            KeyError,
+            TypeError,
+            AttributeError,
+        ) as error:
+            raise HTTPException(503, "Nearby places are unavailable. Please try again.") from error
+
+    @staticmethod
+    def normalize(data: dict) -> PlaceDetails:
+        return PlaceDetails(
+            place_id=data["id"],
+            display_name=data["displayName"]["text"],
+            address=data.get("formattedAddress", ""),
+            location=data["location"],
+            viewport=data.get("viewport"),
+            google_maps_uri=data["googleMapsUri"],
+            types=data.get("types", []),
+            attributions=[
+                PlaceAttribution(provider=item["provider"], provider_uri=item.get("providerUri"))
+                for item in data.get("attributions", [])
+            ],
+        )
 
     async def autocomplete(self, query: AutocompleteQuery) -> AutocompleteResponse:
         self.prepare("autocomplete")
@@ -78,19 +119,6 @@ class PlacesService:
         self.prepare("details")
         try:
             data = await self.provider.details(place_id, str(session_token))
-            return PlaceDetails(
-                place_id=data["id"],
-                display_name=data["displayName"]["text"],
-                address=data.get("formattedAddress", ""),
-                location=data["location"],
-                viewport=data.get("viewport"),
-                google_maps_uri=data["googleMapsUri"],
-                attributions=[
-                    PlaceAttribution(
-                        provider=item["provider"], provider_uri=item.get("providerUri")
-                    )
-                    for item in data.get("attributions", [])
-                ],
-            )
+            return self.normalize(data)
         except (httpx.HTTPError, ValidationError, ValueError, KeyError, TypeError) as error:
             raise HTTPException(503, "Place details are unavailable. Please try again.") from error

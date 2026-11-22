@@ -5,7 +5,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.places import get_places_service
-from app.integrations.google_places import AUTOCOMPLETE_FIELDS, DETAIL_FIELDS, GooglePlacesClient
+from app.integrations.google_places import (
+    AUTOCOMPLETE_FIELDS,
+    DETAIL_FIELDS,
+    EXPERIENCE_TYPES,
+    NEARBY_FIELDS,
+    GooglePlacesClient,
+)
 from app.main import app
 from app.services.places import PlacesRateLimiter, PlacesService
 
@@ -189,3 +195,85 @@ def test_rate_limit_and_expiry(places_client, monkeypatch, operation, limit):
     assert not requests
     now[0] += 61
     assert client.get(path, params=params).status_code == 200
+
+
+def test_nearby_is_public_bounded_and_normalized_without_session_or_database(places_client):
+    import json
+
+    client, requests, state, *_ = places_client
+    state["body"] = {"places": [{**DETAIL, "types": ["park"]}]}
+    response = client.get(
+        "/api/places/nearby", params={"latitude": 43, "longitude": -81, "radius": 2400}
+    )
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json()["places"][0]["types"] == ["park"]
+    assert response.json()["places"][0]["attributions"][0]["provider"] == "Provider"
+    request = requests[0]
+    assert request.url.path == "/v1/places:searchNearby"
+    assert request.headers["x-goog-fieldmask"] == NEARBY_FIELDS
+    body = json.loads(request.content)
+    assert body["locationRestriction"]["circle"] == {
+        "center": {"latitude": 43, "longitude": -81},
+        "radius": 2400,
+    }
+    assert body["includedTypes"] == EXPERIENCE_TYPES
+    assert body["maxResultCount"] == 20
+    assert body["rankPreference"] == "DISTANCE"
+    assert "sessionToken" not in body
+    assert "rating" not in NEARBY_FIELDS and "reviews" not in NEARBY_FIELDS
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"latitude": 91},
+        {"longitude": -181},
+        {"radius": 5001},
+        {"radius": 0},
+        {"radius": "nan"},
+        {"latitude": "inf"},
+    ],
+)
+def test_invalid_nearby_does_not_call_provider(places_client, changes):
+    client, requests, *_ = places_client
+    response = client.get(
+        "/api/places/nearby", params={"latitude": 43, "longitude": -81, "radius": 2000, **changes}
+    )
+    assert response.status_code == 422
+    assert response.headers["cache-control"] == "no-store"
+    assert not requests
+
+
+@pytest.mark.parametrize("body", [{}, {"places": []}])
+def test_empty_nearby_results(places_client, body):
+    client, _, state, *_ = places_client
+    state["body"] = body
+    assert client.get(
+        "/api/places/nearby", params={"latitude": 43, "longitude": -81, "radius": 2000}
+    ).json() == {"places": []}
+
+
+@pytest.mark.parametrize("failure", ["status", "timeout", "malformed", "missing-key", "rate"])
+def test_nearby_failure_is_sanitized(places_client, failure):
+    client, requests, state, limiter, provider = places_client
+    if failure == "status":
+        state["status"] = 403
+    elif failure == "timeout":
+        state["timeout"] = True
+    elif failure == "malformed":
+        state["body"] = {"places": [{"id": "private-provider-error"}]}
+    elif failure == "missing-key":
+        provider.api_key = ""
+    else:
+        for _ in range(60):
+            limiter.check("nearby")
+    response = client.get(
+        "/api/places/nearby", params={"latitude": 43, "longitude": -81, "radius": 2000}
+    )
+    assert response.status_code == (429 if failure == "rate" else 503)
+    assert response.headers["cache-control"] == "no-store"
+    assert "private-google-key" not in response.text
+    assert "private-provider-error" not in response.text
+    if failure in {"missing-key", "rate"}:
+        assert not requests

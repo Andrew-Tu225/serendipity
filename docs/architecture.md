@@ -52,6 +52,12 @@ and Profile keep their existing behavior.
 Place search follows `UI → placesClient → /api proxy → places router → PlacesService → GooglePlacesClient`.
 The integration uses Google Places API **New**, separate from the browser Maps SDK. No repository,
 database connection, tables, or commits are involved in this read-only provider flow.
+Nearby discovery follows this same flow through `GET /api/places/nearby`, with validated coordinates
+and a 50–5,000 m radius. The provider filters experience destinations and returns at most 20 places
+per search. `useNearbyPlaces` reuses bounded geographic search cells in temporary display memory,
+separately from the app's reviewed-place cache. Google IDs deduplicate results and let app Places
+take precedence. Nearby markers use our custom category glyphs, with no Google ratings or reviews.
+See [discovery-map.md](discovery-map.md) for sampling, freshness, density, and billing limits.
 
 Discovery follows `UI → discoveryClient → discovery router → DiscoveryService → DiscoveryRepository
 → PostgreSQL`. It queries every app-reviewed Place within visible bounds, paginates results, and
@@ -66,13 +72,13 @@ summaries use no-store headers, including on error. See [discovery-data.md](disc
 
 `GET /api/places/autocomplete` validates the text, UUID session token, and optional paired coordinates.
 `GET /api/places/{place_id}` validates the provider ID and session token. The service applies process-wide
-sliding-window limits (120 autocomplete and 60 details calls/minute), normalizes provider data, and
+sliding-window limits (120 autocomplete, 60 details, and 60 nearby calls/minute), normalizes provider data, and
 sanitizes failures. The provider integration fixes the Google origin, encodes IDs, sets field masks,
 and imposes a 10-second timeout. `429` responses include `Retry-After`; validation returns `422`;
 unconfigured or failed provider requests return `503`. Every Places response, including errors, is
 `Cache-Control: no-store`. These public, read-only routes do not require authentication or CSRF.
 
-Google search results live only in component memory. They are not persisted, stored in browser
+Google search and nearby results live only in mounted-UI memory. They are not persisted, stored in browser
 storage, or cached by the backend. App Places persist user-authored names and user-chosen map
 points, plus optional provider IDs. Google search names/addresses/coordinates are not copied into
 app records. Hard-coded demo discovery pins are removed. No Google photos or reviews are fetched. Required map

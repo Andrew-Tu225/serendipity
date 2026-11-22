@@ -6,6 +6,32 @@ AUTOCOMPLETE_FIELDS = (
     "suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat"
 )
 DETAIL_FIELDS = "id,displayName,formattedAddress,location,viewport,googleMapsUri,attributions"
+NEARBY_FIELDS = ",".join(f"places.{field}" for field in (DETAIL_FIELDS + ",types").split(","))
+# Experience destinations, rather than utilities, offices, or residential addresses.
+EXPERIENCE_TYPES = [
+    "restaurant",
+    "cafe",
+    "bakery",
+    "bar",
+    "park",
+    "hiking_area",
+    "tourist_attraction",
+    "museum",
+    "art_gallery",
+    "performing_arts_theater",
+    "movie_theater",
+    "library",
+    "gym",
+    "sports_complex",
+    "bowling_alley",
+    "amusement_park",
+    "zoo",
+    "aquarium",
+    "book_store",
+    "clothing_store",
+    "shopping_mall",
+    "spa",
+]
 
 
 class GooglePlacesClient:
@@ -37,4 +63,18 @@ class GooglePlacesClient:
             f"/v1/places/{quote(place_id, safe='')}",
             DETAIL_FIELDS,
             params={"sessionToken": session_token, "languageCode": "en"},
+        )
+
+    async def nearby(self, center: dict, radius: float) -> dict:
+        return await self.request(
+            "POST",
+            "/v1/places:searchNearby",
+            NEARBY_FIELDS,
+            json={
+                "includedTypes": EXPERIENCE_TYPES,
+                "maxResultCount": 20,
+                "rankPreference": "DISTANCE",
+                "languageCode": "en",
+                "locationRestriction": {"circle": {"center": center, "radius": radius}},
+            },
         )

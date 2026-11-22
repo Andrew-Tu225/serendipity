@@ -1,10 +1,13 @@
 # App-reviewed places on the map
 
-Google supplies the background map and location search. The browsing markers come from PostgreSQL,
+Google supplies the background map, location search, and temporary nearby destination markers.
+Reviewed browsing markers come from PostgreSQL,
 through `UI → discoveryClient → FastAPI router → DiscoveryService → DiscoveryRepository → PostgreSQL`.
 The discovery layer includes every reviewed Place within the visible area, across the existing category
 taxonomy. Neutral, low-rated, self-reviewed, and bookmarked Places remain eligible. Recommendation
-ranking and its positive-log requirements are a separate API and remain unchanged.
+ranking and its positive-log requirements are a separate API and remain unchanged. Google nearby
+results use the same custom marker design with smaller neutral category icons and no invented ratings.
+They remain separate from the app-data cache/database; see [discovery-map.md](discovery-map.md).
 
 ## Browsing
 
@@ -34,8 +37,9 @@ labels update their React portal contents. Click handlers read the latest Place.
 are recreated only when identity, coordinates, or map change; title changes update in place. App and
 selected markers share one keyed list, so a selected pin stays alive when it moves between the
 visible results and selection fallback. The existing clusterer receives incremental membership
-changes batched into an animation frame. Selection updates are idempotent. Search-only Google
-markers and the device location dot remain outside the app-place clusterer.
+changes batched into an animation frame. Selection updates are idempotent. Google destination
+markers join the clusterer; the device location dot remains separate. Selected markers are pinned
+outside clusters. App Places override Google markers with the same linked provider ID.
 
 The cache targets 32 completed regions and 5,000 Place records, evicting least-recently-used offscreen
 coverage/data first. Active-area results are protected even if they exceed these soft budgets; no

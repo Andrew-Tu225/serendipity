@@ -6,6 +6,7 @@ import type { Coordinates, MapPlace } from "@/types/places";
 import { discoveryClient } from "@/lib/api-client/discovery";
 import { ApiError } from "@/lib/api-client/client";
 import { useDiscovery } from "@/hooks/use-discovery";
+import { useNearbyPlaces } from "@/hooks/use-nearby-places";
 import { mapPlace, type PlaceExperiences } from "@/types/discovery";
 import { PlaceGlyph, PlaceMarker } from "./place-marker";
 import { PlaceSearch } from "./place-search";
@@ -35,19 +36,21 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [resolveError, setResolveError] = useState("");
+  const [reviewLookup, setReviewLookup] = useState<"" | "checking" | "empty">("");
   const resolveRequest = useRef<AbortController | null>(null);
   const discovery = useDiscovery(map, active, revision, reviewedPlace);
+  const nearby = useNearbyPlaces(map, active && !picking);
   const selected = selectedInput?.source === "app"
     ? discovery.getPlace(selectedInput.place_id) ?? { ...selectedInput, friend: undefined, friend_count: 0 }
     : selectedInput;
-  const markerPlaces = new Map(discovery.places.map((place) => [`app:${place.place_id}`, place]));
+  const markerPlaces = new Map(nearby.places.map((place) => [`google:${place.place_id}`, place]));
+  for (const place of discovery.places) markerPlaces.set(`app:${place.place_id}`, place);
   if (selected?.source === "app") markerPlaces.set(`app:${selected.place_id}`, selected);
   if (searchPlace) {
-    for (const [key, place] of markerPlaces) {
-      if (place.google_place_id === searchPlace.place_id) markerPlaces.delete(key);
-    }
     markerPlaces.set(`google:${searchPlace.place_id}`, searchPlace);
   }
+  const appGoogleIds = new Set([...markerPlaces.values()].filter((place) => place.source === "app").map((place) => place.google_place_id));
+  for (const [key, place] of markerPlaces) if (place.source === "google" && appGoogleIds.has(place.place_id)) markerPlaces.delete(key);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,27 +88,36 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   useEffect(() => () => { resolveRequest.current?.abort(); }, [active]);
 
   const getCenter = useCallback(() => mapRef.current?.center() ?? LONDON, []);
-  const selectPlace = useCallback((place: MapPlace) => {
-    resolveRequest.current?.abort();
-    onSelect(place);
-  }, [onSelect]);
-  const selectSearch = useCallback((place: MapPlace) => {
+  const resolvePlace = useCallback((place: MapPlace) => {
     resolveRequest.current?.abort();
     const controller = new AbortController();
     resolveRequest.current = controller;
     setResolveError("");
+    setReviewLookup("checking");
     setSearchPlace(place);
     onSelect(place);
-    mapRef.current?.focus(place);
     discoveryClient.resolve(place.place_id, controller.signal).then((appPlace) => {
       if (controller.signal.aborted) return;
       setSearchPlace(null);
+      setReviewLookup("");
       onSelect(mapPlace(appPlace));
     }).catch((error) => {
-      if (controller.signal.aborted || (error instanceof ApiError && error.status === 404)) return;
-      setResolveError("App reviews could not be checked for this search result.");
+      if (controller.signal.aborted) return;
+      if (error instanceof ApiError && error.status === 404) { setReviewLookup("empty"); return; }
+      setReviewLookup("");
+      setResolveError("App reviews could not be checked for this place.");
     });
   }, [onSelect]);
+  const selectPlace = useCallback((place: MapPlace) => {
+    if (place.source === "google") { resolvePlace(place); return; }
+    resolveRequest.current?.abort();
+    setResolveError(""); setReviewLookup(""); setSearchPlace(null);
+    onSelect(place);
+  }, [onSelect, resolvePlace]);
+  const selectSearch = useCallback((place: MapPlace) => {
+    mapRef.current?.focus(place);
+    resolvePlace(place);
+  }, [resolvePlace]);
 
   function locate() {
     if (!navigator.geolocation) { setLocationError("Location is not available in this browser."); return; }
@@ -147,12 +159,13 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
         </div> : <>
           {discovery.loading && <div className="discovery-data-status" role="status">Loading app-reviewed places…</div>}
           {discovery.error && <div className="discovery-data-status" role="alert">{discovery.error} <button onClick={discovery.retry}>Reload places</button></div>}
-          {discovery.complete && !discovery.loading && !discovery.error && !discovery.hasVisiblePlaces && <div className="discovery-data-status" role="status">No app reviews in this area yet. <button onClick={() => onReview(null)}>Review a place</button></div>}
+          {nearby.error && !discovery.error && <div className="discovery-data-status" role="alert">{nearby.error} <button onClick={nearby.retry}>Retry nearby places</button></div>}
+          {discovery.complete && !discovery.loading && !discovery.error && !nearby.error && !discovery.hasVisiblePlaces && nearby.places.length === 0 && <div className="discovery-data-status" role="status">No app reviews in this area yet. {nearby.zoomIn && "Zoom in to discover nearby places."} <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}
       {selected && !picking && <article className="discovery-preview" aria-label="Selected place">
         <div className="discovery-place-art" aria-hidden="true"><PlaceGlyph category={selected.category}/></div>
-        <div className="discovery-preview-copy"><span>{selected.source === "app" ? `${selected.app_category} · Serendipity` : "Place"}</span>
+        <div className="discovery-preview-copy"><span>{selected.source === "app" ? `${selected.app_category} · Serendipity` : selected.category ?? "Place"}</span>
           <h2>{selected.display_name}</h2><p>{selected.address}</p>
           {selected.rating_summary && <p className="discovery-rating-summary">
             <strong>★ {selected.rating_summary.average.toFixed(1)}/5</strong> · {selected.rating_summary.count} reviewers · Serendipity
@@ -160,6 +173,8 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           {selected.friend && <p className="discovery-friend-note">{selected.friend.name} {selected.friend.note}{(selected.friend_count ?? 0) > 1 ? ` · ${selected.friend_count} friends reviewed` : ""}</p>}
           {selected.app_id && active && discovery.identityReady && <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id}/>}
           {resolveError && selected.source === "google" && <p role="alert">{resolveError}</p>}
+          {selected.source === "google" && reviewLookup === "checking" && <p role="status">Checking app reviews…</p>}
+          {selected.source === "google" && reviewLookup === "empty" && <p>No Serendipity reviews yet. Be the first to review it.</p>}
           <button className="discovery-review-button" onClick={() => onReview(selected)}>Write a review</button>
           <a href={externalUrl(selected.google_maps_uri)} target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>
           {selected.attributions.map((attribution, index) => <small key={`${attribution.provider}-${index}`}>

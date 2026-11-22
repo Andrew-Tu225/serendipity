@@ -17,6 +17,7 @@ export interface PlaceDetails {
   viewport?: { low: Coordinates; high: Coordinates } | null;
   google_maps_uri: string;
   attributions: { provider: string; provider_uri?: string | null }[];
+  types?: string[];
 }
 
 export interface MapPlace extends PlaceDetails {
@@ -25,7 +26,7 @@ export interface MapPlace extends PlaceDetails {
   google_place_id?: string;
   app_category?: import("./discovery").PlaceCategory;
   friend_count?: number;
-  category?: "Food" | "Culture" | "Outdoors";
+  category?: "Food" | "Culture" | "Outdoors" | "Activity" | "Shop";
   rating_summary?: { average: number; count: number };
   friend?: { name: string; note: string; review: string; variant: string };
 }

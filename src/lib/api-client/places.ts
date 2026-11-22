@@ -2,6 +2,10 @@ import type { Coordinates, PlaceDetails, PlaceSuggestion } from "@/types/places"
 import { apiRequest } from "./client";
 
 export const placesClient = {
+  nearby(center: Coordinates, radius: number, signal?: AbortSignal) {
+    const params = new URLSearchParams({ latitude: String(center.latitude), longitude: String(center.longitude), radius: String(radius) });
+    return apiRequest<{ places: PlaceDetails[] }>(`/places/nearby?${params}`, { signal });
+  },
   autocomplete(query: string, sessionToken: string, center: Coordinates, signal?: AbortSignal) {
     const params = new URLSearchParams({
       query,

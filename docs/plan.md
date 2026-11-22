@@ -230,7 +230,11 @@ Ultimately, we want someone to open the app and think:
 ## Current implementation
 
 Discover fills the phone above navigation, with floating search, location controls, and place previews.
-Google supplies the basemap and global place/city search through FastAPI. App-reviewed Places come
+Google supplies the basemap, global place/city search, and nearby experience destinations through FastAPI.
+Unreviewed destinations use smaller neutral custom category pins matching the app. Nearby searches
+sample neighborhood areas as users explore; they do not guarantee every Google listing. App markers
+take precedence for matching Google IDs. Provider results remain temporary and create no database rows.
+App-reviewed Places come
 from PostgreSQL for the visible map area after initial load, panning, zooming, search, or geolocation.
 Every reviewed Place is eligible, including low ratings; recommendation ranking remains separate.
 Pins remain stable while moving around the map. Buffered app-data coverage is cached in memory,

@@ -8,6 +8,8 @@ export function PlaceGlyph({ category }: { category?: string }) {
     {category === "Food" ? <><path d="M5 3v7M9 3v7M5 7h4M7 10v11M18 3c-4 3-4 9 0 9V3Zm0 9v9"/></>
       : category === "Outdoors" ? <><path d="m12 3 7 10h-4l5 6H4l5-6H5L12 3ZM12 19v3"/></>
       : category === "Culture" ? <><path d="m3 8 9-5 9 5H3Zm2 3v7m7-7v7m7-7v7M3 21h18"/></>
+      : category === "Shop" ? <><path d="M5 8h14l2 13H3L5 8ZM8 8V6a4 4 0 0 1 8 0v2"/></>
+      : category === "Activity" ? <><path d="m4 8 4-4m8 16 4-4M3 6l3-3m12 18 3-3M6 9l9 9M9 6l9 9M4 11l7-7m2 16 7-7"/></>
       : <><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></>}
   </svg>;
 }
@@ -25,7 +27,8 @@ export const PlaceMarker = memo(function PlaceMarker({ map, place, selected, onS
   useEffect(() => { latest.current = { place, onSelect }; }, [place, onSelect]);
   const { latitude, longitude } = place.location;
   const id = place.place_id;
-  const cluster = place.source === "app";
+  const cluster = true;
+  useEffect(() => { element.classList.toggle("is-unreviewed", place.source === "google"); }, [element, place.source]);
   useEffect(() => {
     const handle = map.marker({ latitude, longitude }, element, `View ${latest.current.place.display_name}`, () => {
       latest.current.onSelect(latest.current.place);

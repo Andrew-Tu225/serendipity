@@ -6,7 +6,14 @@ from fastapi import APIRouter, Depends, Query
 
 from app.config import Settings, get_settings
 from app.integrations.google_places import GooglePlacesClient
-from app.schemas.places import AutocompleteQuery, AutocompleteResponse, PlaceDetails, PlaceId
+from app.schemas.places import (
+    AutocompleteQuery,
+    AutocompleteResponse,
+    NearbyQuery,
+    NearbyResponse,
+    PlaceDetails,
+    PlaceId,
+)
 from app.services.places import PlacesRateLimiter, PlacesService
 
 router = APIRouter(prefix="/places", tags=["places"])
@@ -30,6 +37,11 @@ Service = Annotated[PlacesService, Depends(get_places_service)]
 @router.get("/autocomplete", response_model=AutocompleteResponse)
 async def autocomplete(query: Annotated[AutocompleteQuery, Query()], service: Service):
     return await service.autocomplete(query)
+
+
+@router.get("/nearby", response_model=NearbyResponse)
+async def nearby(query: Annotated[NearbyQuery, Query()], service: Service):
+    return await service.nearby(query)
 
 
 @router.get("/{place_id}", response_model=PlaceDetails)

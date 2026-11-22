@@ -24,6 +24,10 @@ class Coordinates(BaseModel):
     longitude: float = Field(ge=-180, le=180)
 
 
+class NearbyQuery(Coordinates):
+    radius: float = Field(ge=50, le=5000, allow_inf_nan=False)
+
+
 class Viewport(BaseModel):
     low: Coordinates
     high: Coordinates
@@ -52,3 +56,8 @@ class PlaceDetails(BaseModel):
     viewport: Viewport | None = None
     google_maps_uri: str
     attributions: list[PlaceAttribution] = []
+    types: list[str] = []
+
+
+class NearbyResponse(BaseModel):
+    places: list[PlaceDetails]
