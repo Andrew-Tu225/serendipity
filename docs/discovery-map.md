@@ -18,7 +18,8 @@ provider name/address/link and returned attributions without invented app activi
 The ratings/friends legend is removed. Optional Google controls, including zoom buttons and keyboard
 shortcuts, are disabled; touch gestures and the custom location button remain available. Google's
 required logo, map attribution, and legal notices remain visible along the bottom edge.
-The location button has a 48 px touch target and a "Use my current location" tooltip. It is disabled
+The search and location controls share one two-column row: search uses the remaining width and the
+location button reserves 48 px, with a 10 px gap. The location button has a 48 px touch target and a "Use my current location" tooltip. It is disabled
 while the map is loading or a location request is pending; location is still requested only on tap.
 
 Search waits for two trimmed characters and a 300 ms pause, then requests up to five suggestions,
