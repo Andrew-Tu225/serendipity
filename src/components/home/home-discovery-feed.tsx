@@ -5,23 +5,25 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import potteryImage from '@/components/serendipity/assets/pottery-workshop.png'
 import rooftopImage from '@/components/serendipity/assets/rooftop-dinner.png'
 import { CharacterPortrait } from '@/components/profile/character-portrait'
+import coventGardenImage from './assets/covent-garden-market.jpg'
+import victoriaParkImage from './assets/victoria-park.jpg'
 
 const heroSlides = [
   {
-    image: '/london-covent-market.svg',
+    image: coventGardenImage,
     place: 'Covent Garden Market',
     eyebrow: 'LONDON, ONTARIO',
     title: 'A little local goes a long way.',
     description: 'See what your people found downtown.',
-    alt: 'Illustration of the clock tower at Covent Garden Market in London, Ontario',
+    alt: 'Covent Garden Market’s red-brick clock tower and outdoor market in London, Ontario',
   },
   {
-    image: '/london-victoria-park.svg',
+    image: victoriaParkImage,
     place: 'Victoria Park',
     eyebrow: 'RIGHT AROUND THE CORNER',
     title: 'Your next favourite place is out there.',
     description: 'Start with the places your friends love.',
-    alt: 'Illustration of a leafy path and historic park gate at Victoria Park',
+    alt: 'Tree-lined paths, lawns, and benches at Victoria Park in London, Ontario',
   },
 ]
 
@@ -50,13 +52,13 @@ const experiences: FeedExperience[] = [
     id: 'elena-market', author: 'Elena Rivera', time: '2h',
     place: 'Covent Garden Market', area: 'Downtown London', category: 'Food',
     rating: '4.8', verdict: 'good', review: 'Went for one thing, left with a whole afternoon of little discoveries.',
-    image: '/london-covent-market.svg', imageAlt: 'Covent Garden Market clock tower', likes: 24, comments: 3,
+    image: coventGardenImage, imageAlt: 'Covent Garden Market clock tower in London, Ontario', likes: 24, comments: 3,
   },
   {
     id: 'james-park', author: 'James Wu', time: 'Yesterday',
     place: 'Victoria Park', area: 'Central London', category: 'Outdoors',
     rating: '4.5', verdict: 'good', review: 'The long way around is the best way around. Take a coffee and wander.',
-    image: '/london-victoria-park.svg', imageAlt: 'A quiet path through Victoria Park', likes: 18, comments: 5,
+    image: victoriaParkImage, imageAlt: 'A path through Victoria Park in London, Ontario', likes: 18, comments: 5,
   },
   {
     id: 'maya-studio', author: 'Maya Patel', time: 'Yesterday',
@@ -137,7 +139,7 @@ export function HomeDiscoveryFeed() {
       <section className="landmark-carousel" aria-label="Local places to discover">
         {heroSlides.map((slide, index) => (
           <div className={`landmark-slide${index === activeSlide ? ' is-active' : ''}`} key={slide.place} aria-hidden={index !== activeSlide}>
-            <Image src={slide.image} alt={slide.alt} width={430} height={270} sizes="(max-width: 430px) 100vw, 430px" priority={index === 0} unoptimized/>
+            <Image src={slide.image} alt={slide.alt} fill sizes="(max-width: 430px) 100vw, 430px" priority={index === 0}/>
             <div className="landmark-shade"/>
             <div className="landmark-copy">
               <span className="landmark-eyebrow">{slide.eyebrow}</span>
@@ -181,7 +183,7 @@ export function HomeDiscoveryFeed() {
             <p className="post-area">{item.area}</p>
             <p className="post-review">{item.review}</p>
             <div className="post-media">
-              <Image src={item.image} alt={item.imageAlt} width={390} height={264} sizes="(max-width: 430px) 92vw, 390px" unoptimized={typeof item.image === 'string' && item.image.endsWith('.svg')}/>
+              <Image src={item.image} alt={item.imageAlt} fill sizes="(max-width: 430px) 92vw, 390px"/>
               {item.mediaType === 'video' && <span className="post-video"><Icon name="play" size={17}/><span>0:18</span></span>}
               <span className="post-media-place">{item.place}</span>
             </div>
