@@ -113,6 +113,9 @@ Users can add friends, view their profiles, and explore places they've reviewed 
 
 Over time, a user's profile becomes a collection of their real-world experiences.
 
+The profile shows the four highest-rated Experiences side by side and the four most recently rated
+Experiences in a vertical list. Users can open their rating history from the recent list.
+
 For example, someone who's passionate about hiking might have a collection of trails, viewpoints, and outdoor destinations they've visited.
 
 Another friend might be known for discovering interesting restaurants and cafés.

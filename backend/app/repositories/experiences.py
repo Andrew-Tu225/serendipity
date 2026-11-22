@@ -1,9 +1,11 @@
+from collections.abc import Sequence
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Experience, TasteProfile
+from app.models import Experience, Place, TasteProfile
 
 
 class ExperienceRepository:
@@ -13,6 +15,29 @@ class ExperienceRepository:
     async def add(self, experience: Experience) -> None:
         self.session.add(experience)
         await self.session.flush()
+
+    async def list_by_author(
+        self, user_id: UUID, *, limit: int, offset: int = 0, highest_rated: bool = False
+    ) -> Sequence[tuple[Experience, Place]]:
+        order = (Experience.created_at.desc(), Experience.id.desc())
+        if highest_rated:
+            order = (Experience.rating.desc(), *order)
+        statement = (
+            select(Experience, Place)
+            .join(Place, Place.id == Experience.place_id)
+            .where(Experience.user_id == user_id)
+            .order_by(*order)
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = await self.session.execute(statement)
+        return [(experience, place) for experience, place in rows]
+
+    async def count_by_author(self, user_id: UUID) -> int:
+        statement = (
+            select(func.count()).select_from(Experience).where(Experience.user_id == user_id)
+        )
+        return (await self.session.execute(statement)).scalar_one()
 
 
 class TasteProfileRepository:

@@ -9,6 +9,8 @@ import { ReviewComposer } from '@/components/experience/review-composer'
 import { mapPlace, type PlaceExperiences } from '@/types/discovery'
 import type { Coordinates, MapPlace } from '@/types/places'
 import { FriendAvatar } from '@/components/map/friend-avatar'
+import { ProfileExperiencePanels } from '@/components/profile/profile-experiences'
+import { useProfileExperiences } from '@/hooks/use-profile-experiences'
 
 type IconName =
   | 'home'
@@ -106,7 +108,7 @@ function App() {
   }
 
   const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : 'Good morning, Mia'
-  const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Taste profile' : activeTab === 'Discover' ? 'Discover' : 'What feels fun?'
+  const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Profile' : activeTab === 'Discover' ? 'Discover' : 'What feels fun?'
 
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
@@ -305,8 +307,7 @@ function WorldwideLock() {
 }
 
 function ProfileView() {
-  const [tastes, setTastes] = useState({ Sweet: 4, Spicy: 3, Umami: 5 })
-  const [experienceStyle, setExperienceStyle] = useState({ Adventurous: 5, Chill: 4 })
+  const { profile, retry } = useProfileExperiences()
   const [customizing, setCustomizing] = useState(false)
   const [character, setCharacter] = useState<CharacterOptions>({
     features: 'feminine',
@@ -325,31 +326,30 @@ function ProfileView() {
           <CharacterFigure options={character} compact/>
           <span><Icon name="sparkle" size={13}/></span>
         </button>
-        <div className="profile-name"><h2>Mia Morgan</h2><p>@miatastes · Brooklyn, NY</p></div>
-        <p className="profile-bio">Always looking for tiny restaurants, tactile workshops, and plans worth crossing town for.</p>
-        <div className="profile-stats">
-          <div><strong>38</strong><span>Experiences</span></div>
-          <div><strong>126</strong><span>Saved</span></div>
-          <div><strong>24</strong><span>Buddies</span></div>
+        {profile.status === 'demo' ? <>
+          <div className="profile-name"><h2>Mia Morgan</h2><p>@miatastes · Brooklyn, NY</p></div>
+          <p className="profile-bio">Always looking for tiny restaurants, tactile workshops, and plans worth crossing town for.</p>
+          <div className="profile-stats">
+            <div><strong>38</strong><span>Experiences</span></div>
+            <div><strong>126</strong><span>Saved</span></div>
+            <div><strong>24</strong><span>Buddies</span></div>
+          </div>
+        </> : profile.status === 'ready' && (
+          <div className="profile-name">
+            <h2>{profile.data.display_name || 'Your profile'}</h2>
+            <p>{profile.data.total} {profile.data.total === 1 ? 'experience' : 'experiences'} rated</p>
+          </div>
+        )}
+      </div>
+
+      {profile.status === 'demo' && <><ProfileExperiencePanels /><ActivityCalendar /></>}
+      {profile.status === 'ready' && <ProfileExperiencePanels data={profile.data} />}
+      {profile.status === 'loading' && <p className="profile-experience-message" role="status">Loading your experiences…</p>}
+      {profile.status === 'error' && (
+        <div className="profile-experience-message" role="alert">
+          Couldn’t load your experiences. <button type="button" className="profile-history-button" onClick={retry}>Try again</button>
         </div>
-      </div>
-
-      <div className="taste-panel">
-        <div className="panel-heading"><div><p className="eyebrow">TASTE BUDS</p><h3>Your flavor profile</h3></div><span>1–5</span></div>
-        <p className="panel-intro">Tap a number to tune your matches and recommendations.</p>
-        {Object.entries(tastes).map(([label, value]) => (
-          <ScaleRating key={label} label={label} value={value} onChange={(rating) => setTastes((current) => ({ ...current, [label]: rating }))}/>
-        ))}
-      </div>
-
-      <div className="taste-panel experience-panel">
-        <div className="panel-heading"><div><p className="eyebrow">EXPERIENCE ENERGY</p><h3>How you like to go out</h3></div><span>1–5</span></div>
-        {Object.entries(experienceStyle).map(([label, value]) => (
-          <ScaleRating key={label} label={label} value={value} onChange={(rating) => setExperienceStyle((current) => ({ ...current, [label]: rating }))}/>
-        ))}
-      </div>
-
-      <ActivityCalendar />
+      )}
       {customizing && <CharacterCustomizer value={character} onChange={setCharacter} onClose={() => setCustomizing(false)}/>}
     </section>
   )
@@ -467,19 +467,6 @@ function ActivityCalendar() {
       </div>
       <p className="calendar-summary"><strong>7 nights out</strong> this month · your most social month yet</p>
     </section>
-  )
-}
-
-function ScaleRating({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return (
-    <div className="scale-row">
-      <span>{label}</span>
-      <div role="radiogroup" aria-label={`${label} rating`}>
-        {[1, 2, 3, 4, 5].map((rating) => (
-          <button key={rating} className={rating <= value ? 'selected' : ''} onClick={() => onChange(rating)} role="radio" aria-checked={rating === value} type="button">{rating}</button>
-        ))}
-      </div>
-    </div>
   )
 }
 

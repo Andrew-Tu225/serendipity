@@ -46,8 +46,7 @@ Discover occupies the full phone area above navigation, with search and previews
 map. App-reviewed Places and friend snippets come from the discovery API; dense pins are clustered.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
 cancels pending search/details/discovery requests and suspends refresh timers. Fresh discovery
-coverage is reused on return, and session changes invalidate personalized cached data. Home, Buddy,
-and Profile keep their existing behavior.
+coverage is reused on return, and session changes invalidate personalized cached data.
 
 Place search follows `UI → placesClient → /api proxy → places router → PlacesService → GooglePlacesClient`.
 The integration uses Google Places API **New**, separate from the browser Maps SDK. No repository,
@@ -83,6 +82,16 @@ storage, or cached by the backend. App Places persist user-authored names and us
 points, plus optional provider IDs. Google search names/addresses/coordinates are not copied into
 app records. Hard-coded demo discovery pins are removed. No Google photos or reviews are fetched. Required map
 attribution and returned provider attributions remain visible. See [discovery-map.md](discovery-map.md).
+
+## Profile experience history
+
+The Profile tab fetches `GET /api/profile/experiences` through `profileClient`. `CurrentUser` supplies
+the author, and `ExperienceService` asks `ExperienceRepository` for that user's highest-rated and
+most recently created Experiences. Ties in favorites use creation time and then ID. Recent activity
+shows four rows initially and uses offset pagination to open the rest of the user's rating history.
+Every response uses `Cache-Control: no-store`. A signed-out visitor sees the illustrated demo
+profile. Accounts with no ratings see empty states, and database-backed entries use category icons
+for thumbnails.
 
 ## Authentication flow
 
