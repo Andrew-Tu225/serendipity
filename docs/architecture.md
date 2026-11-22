@@ -90,6 +90,35 @@ The browser authenticates API requests with an HttpOnly session cookie. Auth0 cr
 
 Future protected routes use `CurrentUser`. State-changing routes additionally use `VerifiedMutation` for CSRF and origin checks. Services must check resource ownership using the authenticated user; a user ID supplied by the browser is not proof of ownership.
 
+## Recommendation flow
+
+`GET /api/recommendations` and `GET /api/places/{place_id}/logs` follow the same layering:
+
+```text
+backend/app/api/recommendations.py        CurrentUser, bbox/limit validation, response mapping
+  → backend/app/services/recommendations.py: RecommendationService
+  → backend/app/repositories/recommendations.py: RecommendationRepository.load_input() / load_place_logs()
+  → backend/app/recommend/                  pure algorithm (docs/recommendations.md section 2)
+```
+
+The service converts the signed-in ORM `User` into the domain `User`, loads the viewer's data through `SqlRecommendationRepository`, and passes it to the pure `recommend()` function. `backend/app/recommend/` never touches the database. Rows become domain models through `backend/app/models/conversions.py`. Both routes send `Cache-Control: no-store`.
+
+The repository reads the `places`, `experiences`, `follows`, `bookmarks` and `taste_profiles` tables (migration `0002`). For one request it loads the places inside the bbox (at most `MAX_PLACES_IN_VIEW`), the latest Experience per `(user, place)` there, those logs' authors, the viewer's follows and bookmarks, and every taste profile row.
+
+### Creating a log
+
+`ExperienceService.create_experience()` is the only write path for Experiences:
+
+```text
+backend/app/services/experiences.py: ExperienceService.create_experience()
+  → backend/app/repositories/places.py: PlaceRepository.get()                 404 if missing
+  → backend/app/repositories/experiences.py: ExperienceRepository.add()
+  → backend/app/repositories/experiences.py: TasteProfileRepository.add_score()
+  → one commit
+```
+
+The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. No HTTP endpoint calls it yet; a future `POST /api/experiences` will use `VerifiedMutation`.
+
 ## Adding a feature
 
 Create and switch to a feature branch from the latest appropriate base before editing files. Keep each distinct change on its own branch and pull request; continue review fixes on the existing pull request branch.

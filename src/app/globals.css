@@ -342,6 +342,30 @@
 .profile-card { padding: 19px 17px 15px; text-align: center; border: 1px solid #e8e0ec; border-radius: 24px; background: #fff; box-shadow: 0 12px 34px rgba(59, 41, 69, .08); }
 .avatar { position: relative; width: 66px; height: 66px; margin: 0 auto 9px; display: grid; place-items: center; color: #fff; background: #82639a; border: 5px solid #eee5f4; border-radius: 50%; font-family: 'DM Serif Display', serif; font-size: 20px; }
 .avatar > span { position: absolute; right: -4px; bottom: -1px; width: 23px; height: 23px; display: grid; place-items: center; color: #fff; background: #4c3d56; border: 2px solid #fff; border-radius: 50%; }
+.character-avatar { padding: 0; overflow: visible; cursor: pointer; }
+.character-avatar .character-figure.compact { width: 56px; height: 68px; transform: translateY(4px); clip-path: circle(28px at 28px 29px); }
+.character-studio { position: fixed; z-index: 60; inset: 0; width: min(100%, 430px); margin: 0 auto; overflow-y: auto; overscroll-behavior: contain; background: #faf8fc; animation: studio-in .28s ease-out; }
+@keyframes studio-in { from { opacity: 0; transform: translateY(18px); } }
+.studio-header { position: sticky; z-index: 4; top: 0; height: 75px; display: grid; grid-template-columns: 42px 1fr 55px; align-items: center; gap: 9px; padding: 8px 17px; border-bottom: 1px solid #eee7f1; background: rgba(250, 248, 252, .96); backdrop-filter: blur(12px); }
+.studio-header > button:first-child { width: 38px; height: 38px; display: grid; place-items: center; color: #65566e; border: 0; border-radius: 50%; background: #eee8f2; }
+.studio-header > button:first-child svg { transform: rotate(180deg); }
+.studio-header h2 { margin-top: 1px; font-family: 'DM Serif Display', serif; font-size: 20px; font-weight: 400; }
+.studio-done { height: 34px; color: #fff; border: 0; border-radius: 11px; background: #75548c; font-size: 9px; font-weight: 700; }
+.character-preview { height: 310px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-top: 13px; background: #eee7f3; }
+.character-preview .character-figure { width: 165px; height: 255px; }
+.character-preview p { margin: 3px 0 13px; color: #84778a; font-size: 9px; font-weight: 600; }
+.customizer-controls { padding: 15px 18px 35px; }
+.control-group { padding: 13px 0 15px; border-bottom: 1px solid #ece5ef; }
+.control-group > p { margin-bottom: 9px; color: #584760; font-size: 10px; font-weight: 700; }
+.option-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.option-pills.four { grid-template-columns: repeat(4, 1fr); }
+.option-pills button { min-height: 34px; padding: 0 7px; color: #85788a; border: 1px solid #e3dae7; border-radius: 11px; background: #fff; font-size: 8px; font-weight: 700; }
+.option-pills button.selected { color: #fff; border-color: #78568f; background: #78568f; box-shadow: 0 5px 12px rgba(82, 54, 100, .16); }
+.color-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.color-swatches button { position: relative; width: 34px; height: 34px; border: 3px solid #faf8fc; border-radius: 50%; box-shadow: 0 0 0 1px #ded5e3; }
+.color-swatches button.selected { box-shadow: 0 0 0 2px #78568f; }
+.color-swatches button.selected::after { content: ''; position: absolute; inset: 9px; border-right: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(45deg) translate(-1px, -2px); }
+.character-figure { display: block; overflow: visible; }
 .profile-name h2 { font-family: 'DM Serif Display', serif; font-size: 23px; font-weight: 400; }
 .profile-name p { color: #928797; font-size: 9px; }
 .profile-bio { max-width: 310px; margin: 10px auto 14px; color: #786c7e; font-size: 10px; line-height: 1.5; }
@@ -374,4 +398,5 @@
   .app-content { height: calc(100dvh - 250px); }
   .bottom-nav { bottom: 24px; border-radius: 0 0 32px 32px; }
   .sheet-backdrop { border-radius: 32px; overflow: hidden; }
+  .character-studio { top: 24px; bottom: 24px; border-radius: 32px; box-shadow: 0 25px 80px rgba(63, 46, 76, .2); }
 }
