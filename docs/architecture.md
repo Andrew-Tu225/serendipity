@@ -211,7 +211,12 @@ Onboarding uses the same 430px phone frame, desktop rounded corners/shadow, and 
 
 `api/onboarding.py` → `OnboardingService` → `OnboardingRepository` owns `/api/me/profile` and `/api/me/onboarding`. Private profile responses expose a public user summary, interests, completion timestamp, and counts for Experiences, saved Places, and following. Requests never accept an owner ID. Category values match the domain enum; unknown/duplicate/empty interests are rejected. `users.onboarding_completed_at` starts null for existing users. Interests are unique by user/category and cascade when a user is removed.
 
-Home uses the redesigned `HomeDiscoveryFeed` from main, with landmark slides and prototype Experience cards. Login and onboarding gate entry to the app. Profile uses Auth0 name/avatar with an initials fallback and real database counts; mock scores, activity, and character customization are removed. The unrelated Buddy prototype remains.
+Home retains the pre-consolidation layout, with category filters, the pottery card, social row,
+and nearby card. The imported `HomeDiscoveryFeed` carousel is not mounted. The app shell, Discover
+preview, and shared styles match commit `927ec90`; the map adapter, nearby queue, caching, and
+recommendation overlays retain the latest fixes. Login and onboarding gate entry to the app.
+Profile uses Auth0 name/avatar with an initials fallback and real database counts; mock scores,
+activity, and character customization are removed. The unrelated Buddy prototype remains.
 
 The Figma preview source (`src/app/App.tsx`, `main.tsx`, and `vite.config.ts`) remains separate from
 the Next.js app entry. Its image imports accept both Vite URL strings and Next.js image metadata
