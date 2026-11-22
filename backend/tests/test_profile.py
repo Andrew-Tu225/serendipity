@@ -37,10 +37,48 @@ async def test_profile_requires_a_session_and_empty_profiles_are_valid(client, i
         "follower_count": 0,
         "following_count": 0,
         "bookmark_count": 0,
+        "list_count": 1,
         "favorites": [],
         "recent": [],
         "next_offset": None,
     }
+
+
+async def test_custom_lists_are_private_and_writes_can_be_retried(client, identity_provider):
+    lists = "/api/profile/lists"
+    list_id = str(UUID(int=1000))
+    entries = f"{lists}/{list_id}/entries"
+    first = {"id": str(UUID(int=1001)), "name": "Sunset hike", "location": "London, ON"}
+    second = {"id": str(UUID(int=1002)), "name": "Coffee after", "location": "Market Lane"}
+    data = {"id": list_id, "name": "Weekend", "first_entry": first}
+    assert (await client.get(lists)).status_code == 401
+
+    await authenticate(client, identity_provider)
+    session = (await client.get("/api/auth/me")).json()
+    headers = {"origin": "http://localhost:3000", "x-csrf-token": session["csrf_token"]}
+    assert (await client.post(lists, json=data)).status_code == 403
+    for _ in range(2):
+        response = await client.post(lists, json=data, headers=headers)
+        assert response.status_code == 201
+        assert response.json() == {"id": list_id, "name": "Weekend", "entry_count": 1}
+
+    for _ in range(2):
+        assert (await client.post(entries, json=second, headers=headers)).status_code == 201
+    assert (await client.get(PROFILE)).json()["list_count"] == 2
+    assert (await client.get(lists)).json()["lists"][0]["entry_count"] == 2
+    page = await client.get(f"{entries}?limit=1")
+    assert page.headers["cache-control"] == "no-store"
+    assert page.json() == {"entries": [first], "next_offset": 1}
+    assert (await client.get(f"{entries}?offset=1")).json()["entries"] == [second]
+
+    client.cookies.clear()
+    identity_provider.claims["sub"] = "auth0|other-list-viewer"
+    await authenticate(client, identity_provider)
+    session = (await client.get("/api/auth/me")).json()
+    headers["x-csrf-token"] = session["csrf_token"]
+    assert (await client.get(lists)).json()["lists"] == []
+    assert (await client.get(entries)).status_code == 404
+    assert (await client.post(entries, json=second, headers=headers)).status_code == 404
 
 
 async def test_profile_ranks_and_paginates_only_the_viewers_experiences(

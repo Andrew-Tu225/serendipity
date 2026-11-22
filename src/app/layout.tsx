@@ -3,7 +3,7 @@ import "./globals.css";
 import { SessionProvider } from "@/components/auth/session-provider";
 
 export const metadata: Metadata = {
-  title: "Serendipity",
+  title: "serendipity",
   description: "Discover the world through the experiences of people you trust.",
 };
 

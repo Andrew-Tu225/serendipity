@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { CharacterAppearance } from "../src/types/character";
+import type { ProfileListCreate, ProfileListEntry } from "../src/types/profile";
 import { signedIn } from "./helpers/discovery";
 
 test("shows demo favorites in one row and expands the latest four ratings", async ({ page }) => {
@@ -83,12 +84,31 @@ test("opens the lists screen and shows each saved place's name and location", as
   await expect(page.getByRole("heading", { name: "Top 4 experiences" })).toBeVisible();
 });
 
-test("creates a demo list with a place and reads signed-in bookmarks from the API", async ({ page }) => {
-  let signedIn = false;
-  await page.route("**/api/profile/experiences?**", (route) => signedIn ? route.fulfill({ json: {
-    user_id: "alex", character: null, display_name: "Alex", total: 0, follower_count: 2, following_count: 3, bookmark_count: 1,
-    favorites: [], recent: [], next_offset: null,
-  } }) : route.fulfill({ status: 401 }));
+test("creates a private list, adds experiences and reloads the saved collection", async ({ page }) => {
+  let collection: ProfileListCreate | undefined;
+  let entries: ProfileListEntry[] = [];
+  await page.route("**/api/auth/me", (route) => route.fulfill({ json: signedIn }));
+  await page.route("**/api/profile/experiences?**", (route) => route.fulfill({ json: {
+    user_id: signedIn.user.id, character: null, display_name: "Alex", total: 0, follower_count: 2, following_count: 3, bookmark_count: 1,
+    list_count: collection ? 2 : 1, favorites: [], recent: [], next_offset: null,
+  } }));
+  await page.route("**/api/profile/lists", (route) => {
+    expect(route.request().headers()["x-csrf-token"]).toBe(signedIn.csrf_token);
+    collection = route.request().postDataJSON() as ProfileListCreate;
+    entries = collection.first_entry ? [collection.first_entry] : [];
+    return route.fulfill({ status: 201, json: { id: collection.id, name: collection.name, entry_count: entries.length } });
+  });
+  await page.route("**/api/profile/lists?**", (route) => route.fulfill({ json: {
+    lists: collection ? [{ id: collection.id, name: collection.name, entry_count: entries.length }] : [], next_offset: null,
+  } }));
+  await page.route("**/api/profile/lists/*/entries**", (route) => {
+    if (route.request().method() === "POST") {
+      const entry = route.request().postDataJSON() as ProfileListEntry;
+      entries.push(entry);
+      return route.fulfill({ status: 201, json: entry });
+    }
+    return route.fulfill({ json: { entries, next_offset: null } });
+  });
   await page.route("**/api/profile/bookmarks?**", (route) => route.fulfill({ json: {
     places: [{ id: "river", name: "River Trail", latitude: 43.1, longitude: -81.2 }], next_offset: null,
   } }));
@@ -97,27 +117,36 @@ test("creates a demo list with a place and reads signed-in bookmarks from the AP
   await page.getByRole("button", { name: "Lists", exact: true }).click();
   await page.getByRole("button", { name: "New list" }).click();
   await page.getByLabel("List name").fill("Sunday walks");
-  await page.getByLabel("Place name").fill("Maple Lookout");
-  await page.getByLabel("Location").fill("London, ON");
+  await page.getByLabel("Experience name").fill("Sunset hike");
+  await page.getByLabel("Location").fill("Maple Lookout, London");
   await page.getByRole("button", { name: "Create list" }).click();
   await expect(page.getByRole("heading", { name: "Sunday walks" })).toBeVisible();
-  await expect(page.getByText("London, ON")).toBeVisible();
-  await page.getByRole("button", { name: "Back to lists" }).click();
-  await expect(page.getByRole("button", { name: /Sunday walks/ })).toBeVisible();
+  const entry = page.getByRole("listitem").filter({ hasText: "Sunset hike" });
+  await expect(entry.locator("strong")).toHaveText("Sunset hike");
+  await expect(entry.locator("small")).toHaveText("Maple Lookout, London");
+  await page.getByRole("button", { name: "Add experience" }).click();
+  await page.getByLabel("Experience name").fill("Coffee after");
+  await page.getByLabel("Location").fill("Market Lane");
+  await page.getByRole("button", { name: "Save experience" }).click();
+  await expect(page.getByText("Coffee after")).toBeVisible();
 
-  signedIn = true;
   await page.reload();
   await page.getByRole("button", { name: "Profile", exact: true }).click();
-  await page.getByRole("button", { name: "Lists", exact: true }).click();
+  const lists = page.getByRole("button", { name: "Lists", exact: true });
+  await expect(lists).toContainText("2");
+  await lists.click();
+  await page.getByRole("button", { name: /Sunday walks/ }).click();
+  await expect(page.getByRole("list", { name: "Saved places" }).getByRole("listitem")).toHaveCount(2);
+  await page.getByRole("button", { name: "Back to lists" }).click();
   await page.getByRole("button", { name: /Saved places/ }).click();
   await expect(page.getByText("River Trail")).toBeVisible();
-  await expect(page.getByText("43.1000° N, 81.2000° W")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open River Trail in Google Maps" })).toHaveAttribute(
     "href", "https://www.google.com/maps/search/?api=1&query=43.1%2C-81.2",
   );
 });
 
 test("opens both connection screens and focuses the matching profile stat when going back", async ({ page }) => {
+  await page.route("**/api/auth/me", (route) => route.fulfill({ json: signedIn }));
   await page.route("**/api/profile/experiences?**", (route) => route.fulfill({ json: {
     user_id: "mia", character: null, display_name: "Mia", total: 0, follower_count: 2, following_count: 1, bookmark_count: 0,
     favorites: [], recent: [], next_offset: null,

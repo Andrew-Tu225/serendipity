@@ -178,9 +178,14 @@ test("new-place review uses a chosen map point and a user-authored name", async 
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Add a post" }).click();
-  await page.getByRole("button", { name: "Use map center" }).click();
   const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Business name")).toHaveValue("");
+  await dialog.getByRole("button", { name: "Select location", exact: true }).click();
+  await page.getByRole("button", { name: "Use map center" }).click();
+  await expect(dialog.getByRole("button", { name: "Change location", exact: true })).toBeVisible();
+  await expect(dialog.getByLabel("How was it?")).toHaveCount(0);
   await dialog.getByLabel("Add to a list").selectOption("restaurant");
+  await expect(dialog.getByLabel("Place name")).toHaveCount(0);
   await dialog.getByLabel("How was it?").selectOption("recommend");
   await dialog.getByLabel("Place name").fill("My neighborhood restaurant");
   await dialog.getByRole("button", { name: "Continue", exact: true }).click();

@@ -18,9 +18,28 @@ export interface ProfileExperiences {
   follower_count: number;
   following_count: number;
   bookmark_count: number;
+  list_count?: number;
   favorites: ProfileExperience[];
   recent: ProfileExperience[];
   next_offset: number | null;
+}
+
+export interface ProfileListEntry {
+  id: string;
+  name: string;
+  location: string;
+}
+
+export interface ProfileListSummary {
+  id: string;
+  name: string;
+  entry_count: number;
+}
+
+export interface ProfileListCreate {
+  id: string;
+  name: string;
+  first_entry?: ProfileListEntry;
 }
 
 export interface ProfileBookmarks {

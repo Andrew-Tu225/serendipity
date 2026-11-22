@@ -5,14 +5,14 @@ import { useRef, useState, type ReactNode } from 'react'
 import DiscoverMap from '@/components/map/discover-map'
 import { ReviewComposer } from '@/components/experience/review-composer'
 import { HomeDiscoveryFeed } from '@/components/home/home-discovery-feed'
-import { mapPlace, type PlaceExperiences } from '@/types/discovery'
-import type { Coordinates, MapPlace } from '@/types/places'
+import { mapPlace, type ExperienceLocation, type PlaceExperiences } from '@/types/discovery'
+import type { MapPlace } from '@/types/places'
 import { CharacterFigure } from '@/components/profile/character-figure'
 import { CharacterPortrait } from '@/components/profile/character-portrait'
 import { ProfileExperiencePanels } from '@/components/profile/profile-experiences'
-import { demoPlaceLists } from '@/components/profile/demo-place-lists'
+import { demoPlaceLists, saveDemoList } from '@/components/profile/demo-place-lists'
 import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
-import { ProfileConnections } from '@/components/profile/profile-connections'
+import { demoConnectionCounts, ProfileConnections } from '@/components/profile/profile-connections'
 import { SettingsMenu } from '@/components/profile/settings-menu'
 import { BuddyDeckCard } from '@/components/buddy/buddy-deck-card'
 import { BuddyChat } from '@/components/buddy/buddy-messages'
@@ -28,21 +28,22 @@ import { authClient } from '@/lib/api-client/auth'
 import { profileClient } from '@/lib/api-client/profile'
 import type { BuddyMessage, BuddyPerson, BuddySuggestion } from '@/types/buddies'
 
-type ProfileScreen = { kind: 'lists'; owner: ListOwner }
+type ProfileScreen = { kind: 'lists'; owner: ListOwner; onCreated: () => void }
   | { kind: ConnectionDirection; owner: { name: string; demo: boolean }; count: number }
 type BuddyScreen = { kind: 'inbox' } | { kind: 'compose'; buddy: BuddySuggestion }
   | { kind: 'chat'; buddy: BuddyPerson; initialMessage?: BuddyMessage }
+type ReviewDraft = { location: ExperienceLocation | null; fromTab: string; picking: boolean }
 
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
   const [discovered, setDiscovered] = useState(false)
-  const [sheet, setSheet] = useState<'post' | 'soon' | null>(null)
+  const [review, setReview] = useState<ReviewDraft | null>(null)
   const [posted, setPosted] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null)
-  const [reviewTarget, setReviewTarget] = useState<MapPlace | null>(null)
-  const [reviewPoint, setReviewPoint] = useState<Coordinates | null>(null)
-  const [picking, setPicking] = useState(false)
+  const [pickerPlace, setPickerPlace] = useState<MapPlace | null>(null)
   const [reviewBusy, setReviewBusy] = useState(false)
+  const reviewClose = useRef<HTMLButtonElement>(null)
+  const picking = review?.picking ?? false
   const [discoveryRevision, setDiscoveryRevision] = useState(0)
   const [reviewedPlace, setReviewedPlace] = useState<MapPlace | null>(null)
   const [profileScreen, setProfileScreen] = useState<ProfileScreen | null>(null)
@@ -76,36 +77,39 @@ function App() {
   }
 
   const startReview = (place: MapPlace | null) => {
-    setReviewTarget(place)
-    setReviewPoint(null)
     setPosted(false)
-    if (place?.app_id) {
-      setPicking(false)
-      setSheet('post')
-    } else {
-      setSheet(null)
-      setPicking(true)
-      setDiscovered(true)
-      setActiveTab('Discover')
-    }
+    setReview({ location: place ? { place } : null, fromTab: activeTab, picking: false })
+  }
+  const openLocationPicker = () => {
+    if (!review) return
+    setPickerPlace(review.location?.place ?? null)
+    setReview({ ...review, picking: true })
+    setDiscovered(true)
+    setActiveTab('Discover')
+  }
+  const finishLocationPicker = (location?: ExperienceLocation) => {
+    if (!review?.picking) return
+    setReview({ ...review, location: location ?? review.location, picking: false })
+    setActiveTab(review.fromTab)
+    requestAnimationFrame(() => reviewClose.current?.focus())
   }
   const reviewSaved = (result: PlaceExperiences) => {
     setSelectedPlace(mapPlace(result.place))
     setReviewedPlace(mapPlace(result.place))
     setDiscoveryRevision((value) => value + 1)
     setReviewBusy(false)
-    setSheet(null)
+    setReview(null)
     setPosted(true)
     setActiveTab('Discover')
   }
 
   const changeTab = (tab: string) => {
     if (tab === 'Add') {
-      startReview(null)
+      if (picking) finishLocationPicker()
+      else startReview(null)
       return
     }
-    setSheet(null)
-    setPicking(false)
+    setReview(null)
     if (tab === 'Discover') setDiscovered(true)
     setActiveTab(tab)
   }
@@ -142,9 +146,8 @@ function App() {
         <div className="app-content" hidden={subscreenOpen}>
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
             {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={discoveryRevision} reviewedPlace={reviewedPlace}
-              selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
-              picking={picking} onCancelPick={() => setPicking(false)}
-              onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
+              selected={picking ? pickerPlace : selectedPlace} onSelect={picking ? setPickerPlace : setSelectedPlace} onReview={startReview}
+              picking={picking} onCancelPick={() => finishLocationPicker()} onPick={finishLocationPicker}/>}
           </div>
           {activeTab === 'Buddy' ? (
             <BuddyView deck={buddyDeck} onMessage={(buddy) => setBuddyScreen({ kind: 'compose', buddy })} />
@@ -174,7 +177,8 @@ function App() {
 
         {profileScreen?.kind === 'lists' && (
           <ProfilePlaceLists owner={profileScreen.owner} demoLists={demoLists}
-            onAdd={(list) => setDemoLists((current) => [list, ...current])}
+            onSaveDemo={(list) => setDemoLists((current) => saveDemoList(current, list))}
+            onCreated={profileScreen.onCreated}
             onClose={closeProfileScreen} />
         )}
         {profileScreen && profileScreen.kind !== 'lists' && (
@@ -206,30 +210,20 @@ function App() {
             onBack={() => setBuddyScreen({ kind: 'inbox' })} />
         )}
 
-        {sheet && (
-          <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && !reviewBusy && setSheet(null)}>
+        {review && (
+          <div className="sheet-backdrop" hidden={picking} onMouseDown={(event) => event.currentTarget === event.target && !reviewBusy && setReview(null)}>
             <section className="sheet" onKeyDown={(event) => {
-              if (event.key === 'Escape' && !reviewBusy) setSheet(null)
+              if (event.key === 'Escape' && !reviewBusy) setReview(null)
               if (event.key === 'Tab') {
                 const fields = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]'))
                 const first = fields[0], last = fields[fields.length - 1]
                 if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
                 if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
               }
-            }} role="dialog" aria-modal="true" aria-label={sheet === 'post' ? 'Create a post' : 'Coming soon'}>
+            }} role="dialog" aria-modal="true" aria-label="Add an experience">
               <div className="sheet-handle"/>
-              <button autoFocus className="sheet-close" disabled={reviewBusy} onClick={() => setSheet(null)} aria-label="Close"><Icon name="close" size={20}/></button>
-              {sheet === 'post' ? (
-                <ReviewComposer target={reviewTarget} point={reviewPoint} onSaved={reviewSaved} onBusy={setReviewBusy}/>
-              ) : (
-                <div className="soon-state">
-                  <span><Icon name="sparkle" size={28}/></span>
-                  <p className="eyebrow">PLACEHOLDER</p>
-                  <h2>{activeTab} is on its way</h2>
-                  <p>We’re saving this spot for something special.</p>
-                  <button className="primary-button" onClick={() => { setSheet(null); setActiveTab('Home') }}>Back home</button>
-                </div>
-              )}
+              <button ref={reviewClose} autoFocus className="sheet-close" disabled={reviewBusy} onClick={() => setReview(null)} aria-label="Close"><Icon name="close" size={20}/></button>
+              <ReviewComposer location={review.location} onSelectLocation={openLocationPicker} onSaved={reviewSaved} onBusy={setReviewBusy}/>
             </section>
           </div>
         )}
@@ -307,7 +301,7 @@ function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacte
   onCharacterSaved: () => void
   onOpenScreen: (screen: ProfileScreen, trigger: HTMLButtonElement) => void
 }) {
-  const { profile, retry, updateCharacter } = useProfileExperiences()
+  const { profile, retry, updateCharacter, recordListCreated } = useProfileExperiences()
   const [draft, setDraft] = useState<CharacterAppearance | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -339,14 +333,17 @@ function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacte
   }
   const identity = profile.status === 'demo' ? {
     owner: { name: 'Mia Morgan', demo: true } as const,
-    followers: 382,
-    following: 214,
+    ...demoConnectionCounts,
     lists: demoListCount,
   } : profile.status === 'ready' ? {
-    owner: { name: profile.data.display_name || 'Your profile', demo: false, bookmarkCount: profile.data.bookmark_count } as const,
+    owner: {
+      name: profile.data.display_name || 'Your profile', demo: false,
+      userId: profile.data.user_id, bookmarkCount: profile.data.bookmark_count,
+      listCount: profile.data.list_count ?? 1,
+    } as const,
     followers: profile.data.follower_count,
     following: profile.data.following_count,
-    lists: 1,
+    lists: profile.data.list_count ?? 1,
   } : null
 
   if (profile.status === 'loading') {
@@ -387,7 +384,7 @@ function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacte
             <button type="button" aria-label="Following" onClick={(event) => onOpenScreen({ kind: 'following', owner: identity.owner, count: identity.following }, event.currentTarget)}>
               <strong>{identity.following}</strong><span>Following</span>
             </button>
-            <button type="button" aria-label="Lists" onClick={(event) => onOpenScreen({ kind: 'lists', owner: identity.owner }, event.currentTarget)}>
+            <button type="button" aria-label="Lists" onClick={(event) => onOpenScreen({ kind: 'lists', owner: identity.owner, onCreated: recordListCreated }, event.currentTarget)}>
               <strong>{identity.lists}</strong><span>Lists</span>
             </button>
           </div>

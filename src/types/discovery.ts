@@ -33,6 +33,10 @@ export interface PlaceExperiences {
   experiences: AppExperience[];
   next_offset: number | null;
 }
+export interface ExperienceLocation {
+  place?: MapPlace;
+  point?: Coordinates;
+}
 export interface ExperienceDraft {
   place_id?: string;
   new_place?: Coordinates & { name: string; category: PlaceCategory; google_place_id?: string };

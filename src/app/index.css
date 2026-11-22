@@ -2,6 +2,8 @@
 @import 'tailwindcss';
 @import '../components/buddy/buddy-deck.css';
 @import '../components/profile/profile-experiences.css';
+@import '../components/experience/experience-location.css';
+@import '../components/profile/profile-subscreens.css';
 
 @layer base {
   :root {
@@ -49,6 +51,7 @@
   scrollbar-width: none;
 }
 .app-content::-webkit-scrollbar { display: none; }
+:is(.status-bar, .topbar, .app-content, .bottom-nav)[hidden] { display: none; }
 
 .topbar {
   height: 87px;
@@ -248,6 +251,7 @@
 .taste-tags span { padding: 6px 9px; color: #715b7e; background: #f1ebf5; border-radius: 99px; font-size: 9px; font-weight: 600; }
 .overlap { padding: 13px 4px 0; color: #887d8c; font-size: 10px; line-height: 1.5; }
 .overlap strong { color: #45384d; }
+.buddy-card .primary-button { margin-top: 14px; }
 .swipe-controls { display: grid; grid-template-columns: 62px 1fr 62px; align-items: center; margin: 10px 7px 0; }
 .swipe-controls > button { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #9b6b78; border: 0; background: none; font-size: 8px; font-weight: 700; }
 .swipe-controls > button > span { width: 43px; height: 43px; display: grid; place-items: center; border: 1px solid #e4d9e1; border-radius: 50%; background: #fff; box-shadow: 0 6px 15px rgba(63,45,72,.1); }
@@ -353,6 +357,13 @@
 .map-preview h3 { margin: 2px 0 3px; overflow: hidden; font-family: 'DM Serif Display', serif; font-size: 17px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
 .map-preview p { color: #8d828f; font-size: 8px; }
 .map-preview > button { width: 30px; height: 30px; display: grid; place-items: center; color: #fff; border: 0; border-radius: 50%; background: #76548f; }
+.map-preview > .preview-use-location { width: auto; height: auto; min-height: 42px; padding: 7px 10px; border-radius: 11px; font-size: 11px; font-weight: 700; }
+.preview-place-results, .preview-location-picker { padding: 8px 10px; border: 1px solid #e1d8e6; border-radius: 12px; background: #fff; color: #5e456d; font-size: 12px; }
+.preview-place-results button { display: grid; width: 100%; gap: 2px; padding: 9px; border-radius: 8px; text-align: left; }
+.preview-place-results button:hover { background: #f2ecf6; }
+.preview-location-picker { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
+.preview-location-picker button { min-height: 30px; text-decoration: underline; }
+.sheet .primary-button:disabled { opacity: .55; cursor: default; }
 
 .profile-view { padding-bottom: 8px; }
 .profile-card { padding: 19px 17px 15px; text-align: center; border: 1px solid #e8e0ec; border-radius: 24px; background: #fff; box-shadow: 0 12px 34px rgba(59, 41, 69, .08); }
@@ -385,11 +396,6 @@
 .profile-name h2 { font-family: 'DM Serif Display', serif; font-size: 23px; font-weight: 400; }
 .profile-name p { color: #928797; font-size: 9px; }
 .profile-bio { max-width: 310px; margin: 10px auto 14px; color: #786c7e; font-size: 10px; line-height: 1.5; }
-.profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); padding-top: 13px; border-top: 1px solid #eee8f1; }
-.profile-stats div { display: flex; flex-direction: column; gap: 2px; }
-.profile-stats div + div { border-left: 1px solid #eee8f1; }
-.profile-stats strong { color: #493750; font-size: 15px; }
-.profile-stats span { color: #9b909f; font-size: 8px; }
 .calendar-card { margin-top: 12px; padding: 17px 16px 15px; border: 1px solid #e8e0ec; border-radius: 21px; background: #fff; }
 .calendar-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
 .calendar-heading h3 { margin-top: 2px; font-family: 'DM Serif Display', serif; font-size: 20px; font-weight: 400; }

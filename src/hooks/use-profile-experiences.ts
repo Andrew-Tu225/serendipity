@@ -35,5 +35,12 @@ export function useProfileExperiences() {
     setProfile((current) => current.status === "ready" ? { ...current, data: { ...current.data, character } } : current);
   }
 
-  return { profile, retry, updateCharacter };
+  function recordListCreated() {
+    setProfile((current) => current.status === "ready" ? {
+      ...current,
+      data: { ...current.data, list_count: (current.data.list_count ?? 1) + 1 },
+    } : current);
+  }
+
+  return { profile, retry, updateCharacter, recordListCreated };
 }

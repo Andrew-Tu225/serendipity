@@ -100,6 +100,9 @@ Each experience could include:
 - A recommendation, or reasons someone might want to avoid the location
 
 These reviews are attached to locations on the map, making them accessible to friends exploring that area.
+The Experience form opens from Add and uses the discovery map to search for an existing Place or
+choose a pin. Returning to the form fills the selected location and preserves the draft. Each
+question appears after the previous answer is completed. Optional preview questions can be skipped.
 
 Rather than solely asking, "What does the general public think about this place?", the app helps answer:
 
@@ -116,8 +119,8 @@ Over time, a user's profile becomes a collection of their real-world experiences
 The profile shows the four highest-rated Experiences side by side and the four most recently rated
 Experiences in a vertical list. Users can open their rating history from the recent list.
 The profile header opens separate Followers, Following, and Lists screens. Opening a collection
-shows each Place by name and location. Signed-in users can browse their Bookmarks from the default
-Saved places collection.
+shows each experience name above its location. Users can create named lists and add experiences
+to them. Signed-in users can also browse their Bookmarks from the default Saved places collection.
 Each account has a customizable character. Its face and shoulders form the account's profile
 picture wherever people appear in Profile and Discover.
 

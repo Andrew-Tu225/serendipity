@@ -91,10 +91,19 @@ sessions or persisted to localStorage, and all HTTP no-store headers remain in p
 
 ## Writing an Experience
 
-Use **Write a review** on an existing marker to review that app Place. The **Add** navigation button
-opens Discover in location-picking mode. Tap the map or use its center, then enter a Place name,
-category, date visited, one overall rating, optional review, and recommend/neutral/avoid verdict.
-The new Place name is user-authored and its coordinates come from the user's chosen map point.
+The **Add** navigation button opens the Experience form with a Location card, a full-width
+**Select location** button, and the Business name beneath it. The button opens Discover's
+location picker. Search for a business, select a Place marker, tap the map to drop a pin, or use
+the map center. Confirming a named result fills the form's name and available address. Selecting
+the center with a named Google result uses the current map center as the chosen point. Google
+details stay in the draft's display fields. A new app Place uses the name entered by the user and
+the chosen map point, with an optional Google Place ID. **Write a review** starts the same form
+with an existing Place already selected.
+
+Closing the picker returns to the form, including any review text, rating, and date already entered.
+The form reveals questions after the preceding answer. For a new Place, choose a category, then
+give your verdict and enter the Place name. An existing Place starts with the verdict. Confirm the
+visit date and rating before the optional review.
 The form requires sign-in before submission. Its fields survive save errors; it disables duplicate
 clicks and closing during a pending save. Success is shown only after the API confirms the write,
 then the selected card and viewport ratings refresh. A new reviewed Place therefore appears in the base review layer and remains available after reload.

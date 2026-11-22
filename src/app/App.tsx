@@ -1,15 +1,19 @@
-import { useRef, useState, type ChangeEvent, type PointerEvent, type ReactNode } from 'react'
+import { useRef, useEffect, useState, type PointerEvent, type ReactNode } from 'react'
 import potteryAsset from './assets/pottery-workshop.png'
 import rooftopAsset from './assets/rooftop-dinner.png'
 import ridgeAsset from '@/components/profile/assets/ridge-hike.webp'
 import { describeBuddyInterests } from '@/components/buddy/buddy-interests'
+import { PreviewExperienceForm } from '@/components/experience/preview-experience-form'
+import { demoConnectionCounts, ProfileConnections } from '@/components/profile/profile-connections'
+import { demoPlaceLists, saveDemoList } from '@/components/profile/demo-place-lists'
+import { ProfilePlaceLists } from '@/components/profile/profile-place-lists'
+import type { ConnectionDirection } from '@/types/profile'
 import { ProfileExperiencePanels } from '@/components/profile/profile-experiences'
 
-// Vite serves imported images as URLs. Next.js type checks them as image metadata.
+// Vite returns an asset URL; Next.js returns image metadata for the same import.
 function imageUrl(asset: string | { src: string }) {
   return typeof asset === 'string' ? asset : asset.src
 }
-
 const potteryImage = imageUrl(potteryAsset)
 const rooftopImage = imageUrl(rooftopAsset)
 
@@ -59,14 +63,291 @@ function Icon({ name, size = 22, filled = false }: { name: IconName; size?: numb
 }
 
 const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
-const experienceCriteria: Record<string, string[]> = {
-  Restaurants: ['Flavor', 'Service', 'Atmosphere'],
-  Hikes: ['Scenery', 'Physical effort', 'Difficulty'],
-  Creative: ['Creativity', 'Guidance', 'Hands-on'],
-  Nightlife: ['Energy', 'Music', 'Crowd'],
-  Wellness: ['Relaxation', 'Care', 'Value'],
-  Other: ['Novelty', 'Organization', 'Value'],
+type PreviewProfileScreen = ConnectionDirection | 'lists'
+const previewOwner = { name: 'Mia Morgan', demo: true } as const
+
+type SelectedLocation = {
+  placeId: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+};
+
+type LocationPickerProps = {
+  onSelect: (location: SelectedLocation) => void;
+  onClose: () => void;
+};
+
+function LocationPicker({
+  onSelect,
+  onClose,
+}: LocationPickerProps) {
+  const mapElement = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initializeMap() {
+      try {
+        const key =
+          process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+        if (!key) {
+          throw new Error("Google Maps API key is missing.");
+        }
+
+        if (!(window as any).google?.maps) {
+          const existingScript = document.querySelector(
+            'script[data-google-maps="true"]'
+          ) as HTMLScriptElement | null;
+
+          if (existingScript) {
+            await new Promise<void>((resolve, reject) => {
+              if ((window as any).google?.maps) {
+                resolve();
+                return;
+              }
+
+              existingScript.addEventListener(
+                "load",
+                () => resolve(),
+                { once: true }
+              );
+              existingScript.addEventListener(
+                "error",
+                () => reject(new Error("Maps failed to load.")),
+                { once: true }
+              );
+            });
+          } else {
+            await new Promise<void>((resolve, reject) => {
+              const script = document.createElement("script");
+
+              script.src =
+                "https://maps.googleapis.com/maps/api/js" +
+                `?key=${encodeURIComponent(key)}` +
+                "&v=weekly&libraries=places";
+
+              script.async = true;
+              script.dataset.googleMaps = "true";
+              script.onload = () => resolve();
+              script.onerror = () =>
+                reject(new Error("Maps failed to load."));
+
+              document.head.appendChild(script);
+            });
+          }
+        }
+
+        const google = (window as any).google;
+
+        await google.maps.importLibrary("places");
+
+        if (cancelled || !mapElement.current) return;
+
+        // Initial map position: London, Ontario.
+        // Users can search for places anywhere.
+        mapRef.current = new google.maps.Map(
+          mapElement.current,
+          {
+            center: { lat: 42.9849, lng: -81.2453 },
+            zoom: 12,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+          }
+        );
+
+        setReady(true);
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load Google Maps."
+          );
+        }
+      }
+    }
+
+    initializeMap();
+
+    return () => {
+      cancelled = true;
+      markersRef.current.forEach((marker) =>
+        marker.setMap(null)
+      );
+      markersRef.current = [];
+    };
+  }, []);
+
+  async function searchPlaces() {
+    if (!query.trim() || !mapRef.current) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const google = (window as any).google;
+
+      const { places } =
+        await google.maps.places.Place.searchByText({
+          textQuery: query.trim(),
+          fields: [
+            "id",
+            "displayName",
+            "formattedAddress",
+            "location",
+          ],
+          maxResultCount: 10,
+          locationBias: mapRef.current.getBounds()
+            || undefined,
+        });
+
+      markersRef.current.forEach((marker) =>
+        marker.setMap(null)
+      );
+      markersRef.current = [];
+
+      setResults(places || []);
+
+      if (places?.length) {
+        const bounds = new google.maps.LatLngBounds();
+
+        places.forEach((place: any) => {
+          if (!place.location) return;
+
+          const marker = new google.maps.Marker({
+            map: mapRef.current,
+            position: place.location,
+            title: place.displayName,
+          });
+
+          marker.addListener("click", () => {
+            selectPlace(place);
+          });
+
+          markersRef.current.push(marker);
+          bounds.extend(place.location);
+        });
+
+        mapRef.current.fitBounds(bounds);
+
+        if (places.length === 1) {
+          mapRef.current.setZoom(16);
+        }
+      }
+    } catch {
+      setError(
+        "Search failed. Check your Google Maps API configuration."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function selectPlace(place: any) {
+    if (!place.location || !place.id) return;
+
+    onSelect({
+      placeId: place.id,
+      name: place.displayName || "Unknown business",
+      address: place.formattedAddress || "",
+      lat: place.location.lat(),
+      lng: place.location.lng(),
+    });
+  }
+
+  return (
+    <div className="location-modal-backdrop">
+      <div
+        className="location-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Select a location"
+      >
+        <div className="location-modal-header">
+          <div>
+            <p className="eyebrow">FIND YOUR SPOT</p>
+            <h2>Select a location</h2>
+          </div>
+
+          <button
+            type="button"
+            className="location-modal-close"
+            onClick={onClose}
+            aria-label="Close map"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="location-search">
+          <input
+            value={query}
+            onChange={(event) =>
+              setQuery(event.target.value)
+            }
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                searchPlaces();
+              }
+            }}
+            placeholder="Search restaurants, cafés, places..."
+          />
+
+          <button
+            type="button"
+            onClick={searchPlaces}
+            disabled={!ready || loading}
+          >
+            {loading ? "Searching..." : "Search"}
+          </button>
+        </div>
+
+        {error && (
+          <p className="location-error">{error}</p>
+        )}
+
+        <div
+          ref={mapElement}
+          className="location-map"
+        />
+
+        <div className="location-results">
+          {results.map((place) => (
+            <button
+              type="button"
+              key={place.id}
+              className="location-result"
+              onClick={() => selectPlace(place)}
+            >
+              <strong>{place.displayName}</strong>
+              <span>{place.formattedAddress}</span>
+            </button>
+          ))}
+
+          {ready && results.length === 0 && (
+            <p className="location-hint">
+              Search for a business, then select it
+              from the results or its map marker.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
+
 
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
@@ -76,15 +357,21 @@ function App() {
   const [sheet, setSheet] = useState<'post' | 'soon' | null>(null)
   const [posted, setPosted] = useState(false)
   const [inboxOpen, setInboxOpen] = useState(false)
-  const [media, setMedia] = useState<{ url: string; type: string; name: string } | null>(null)
-  const [postCategory, setPostCategory] = useState('Restaurants')
-  const [sentiment, setSentiment] = useState('liked')
-  const [experienceRatings, setExperienceRatings] = useState<Record<string, number>>({ Flavor: 3, Service: 3, Atmosphere: 3 })
-  const [labels, setLabels] = useState(['date night'])
-  const [labelInput, setLabelInput] = useState('')
+  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null)
+  const [showLocationPicker, setShowLocationPicker] = useState(false)
+  const [profileScreen, setProfileScreen] = useState<PreviewProfileScreen | null>(null)
+  const [lists, setLists] = useState(demoPlaceLists)
+  const profileTrigger = useRef<HTMLButtonElement>(null)
 
-  const changeTab = (tab: string) => {
+  function closeProfileScreen() {
+    setProfileScreen(null)
+    requestAnimationFrame(() => profileTrigger.current?.focus())
+  }
+
+  function changeTab(tab: string) {
     if (tab === 'Add') {
+      setSelectedLocation(null)
+      setShowLocationPicker(false)
       setSheet('post')
       return
     }
@@ -93,37 +380,18 @@ function App() {
     setActiveTab(tab)
   }
 
-  const selectMedia = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (media) URL.revokeObjectURL(media.url)
-    setMedia({ url: URL.createObjectURL(file), type: file.type, name: file.name })
-  }
-
-  const chooseCategory = (category: string) => {
-    setPostCategory(category)
-    setExperienceRatings(Object.fromEntries(experienceCriteria[category].map((criterion) => [criterion, 3])))
-  }
-
-  const addLabel = () => {
-    const value = labelInput.trim().replace(/^#/, '')
-    if (!value || labels.includes(value)) return
-    setLabels((current) => [...current, value])
-    setLabelInput('')
-  }
-
   const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : 'Good morning, Mia'
   const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Taste profile' : activeTab === 'Discover' ? 'Discover' : 'What feels fun?'
 
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
       <div className="app-shell">
-        <div className="status-bar" aria-hidden="true">
+        <div className="status-bar" aria-hidden="true" hidden={profileScreen !== null}>
           <span>9:41</span>
           <div className="status-icons"><span className="signal"/><span className="wifi"/><span className="battery"/></div>
         </div>
 
-        <header className="topbar">
+        <header className="topbar" hidden={profileScreen !== null}>
           <div>
             <p className="eyebrow">{pageEyebrow}</p>
             <h1>{pageTitle}</h1>
@@ -133,11 +401,14 @@ function App() {
           </button>
         </header>
 
-        <div className="app-content">
+        <div className="app-content" hidden={profileScreen !== null}>
           {activeTab === 'Buddy' ? (
             <BuddyView />
           ) : activeTab === 'Profile' ? (
-            <ProfileView />
+            <ProfileView listCount={lists.length} onOpen={(screen, trigger) => {
+              profileTrigger.current = trigger
+              setProfileScreen(screen)
+            }}/>
           ) : activeTab === 'Discover' ? (
             <DiscoverMap />
           ) : (
@@ -193,7 +464,7 @@ function App() {
           )}
         </div>
 
-        <nav className="bottom-nav" aria-label="Primary navigation">
+        <nav className="bottom-nav" aria-label="Primary navigation" hidden={profileScreen !== null}>
           <NavButton label="Home" icon="home" active={activeTab === 'Home'} onClick={() => changeTab('Home')}/>
           <NavButton label="Discover" icon="pin" active={activeTab === 'Discover'} onClick={() => changeTab('Discover')}/>
           <button className="add-button" onClick={() => changeTab('Add')} aria-label="Add a post"><span><Icon name="plus" size={27}/></span><small>Add</small></button>
@@ -201,79 +472,33 @@ function App() {
           <NavButton label="Profile" icon="user" active={activeTab === 'Profile'} onClick={() => changeTab('Profile')}/>
         </nav>
 
+        {profileScreen === 'lists' && <ProfilePlaceLists owner={previewOwner} demoLists={lists}
+          onSaveDemo={(list) => setLists((current) => saveDemoList(current, list))} onClose={closeProfileScreen}/>}
+        {profileScreen && profileScreen !== 'lists' && <ProfileConnections direction={profileScreen} owner={previewOwner}
+          count={demoConnectionCounts[profileScreen]} onClose={closeProfileScreen}/>}
         {inboxOpen && <BuddyInbox onClose={() => setInboxOpen(false)}/>}
 
-        {sheet && (
-          <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}>
-            <section className="sheet" role="dialog" aria-modal="true" aria-label={sheet === 'post' ? 'Create a post' : 'Coming soon'}>
-              <div className="sheet-handle"/>
-              <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close"><Icon name="close" size={20}/></button>
-              {sheet === 'post' ? (
-                <>
-                  <p className="eyebrow">SHARE THE GOOD STUFF</p>
-                  <h2>Add an experience</h2>
-                  <div className="post-section category-section">
-                    <div className="form-title"><strong>Add to a list</strong><span>Pick the best fit</span></div>
-                    <div className="category-options">
-                      {Object.keys(experienceCriteria).map((category) => <button key={category} type="button" className={postCategory === category ? 'selected' : ''} onClick={() => chooseCategory(category)}>{category}</button>)}
-                    </div>
-                  </div>
-                  <div className="post-section sentiment-section">
-                    <div className="form-title"><strong>How was it?</strong><span>Your overall take</span></div>
-                    <div className="sentiment-options">
-                      <button type="button" className={sentiment === 'liked' ? 'selected' : ''} onClick={() => setSentiment('liked')}><i className="green"><Icon name="heart" size={19}/></i><span>I liked it</span></button>
-                      <button type="button" className={sentiment === 'okay' ? 'selected' : ''} onClick={() => setSentiment('okay')}><i className="yellow">—</i><span>It was okay</span></button>
-                      <button type="button" className={sentiment === 'disliked' ? 'selected' : ''} onClick={() => setSentiment('disliked')}><i className="red"><Icon name="close" size={19}/></i><span>I didn’t like it</span></button>
-                    </div>
-                  </div>
-                  <label className="media-picker">
-                    <input type="file" accept="image/*,video/*" onChange={selectMedia}/>
-                    {media ? (
-                      <div className="media-preview">
-                        {media.type.startsWith('video/') ? <video src={media.url} controls/> : <img src={media.url} alt="Selected upload preview"/>}
-                        <span>{media.name}</span>
-                      </div>
-                    ) : (
-                      <div className="media-empty">
-                        <span><Icon name="plus" size={23}/></span>
-                        <div><strong>Add photos or video</strong><small>Share the moment, not just the review</small></div>
-                      </div>
-                    )}
-                  </label>
-                  <label>What did you do?<input placeholder="e.g. Sunset pasta class"/></label>
-                  <div className="form-grid">
-                    <label>Who did you go with?
-                      <select defaultValue=""><option value="" disabled>Select people</option><option>Elena & James</option><option>Alex</option><option>My partner</option><option>Family</option><option>Went solo</option></select>
-                    </label>
-                    <label>Date visited<input type="date"/></label>
-                  </div>
-                  <div className="labels-field">
-                    <label>Labels</label>
-                    <div className="labels-input"><input value={labelInput} onChange={(event) => setLabelInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addLabel() } }} placeholder="Add a label"/><button type="button" onClick={addLabel}><Icon name="plus" size={16}/></button></div>
-                    <div className="added-labels">{labels.map((label) => <button key={label} type="button" onClick={() => setLabels((current) => current.filter((item) => item !== label))}>#{label} <Icon name="close" size={10}/></button>)}</div>
-                  </div>
-                  <label>Favorite parts<textarea placeholder="The dish, view, moment, or detail you loved..." rows={2}/></label>
-                  <label>Notes<textarea placeholder="Anything you want to remember for next time?" rows={2}/></label>
-                  <div className="rating-block">
-                    <div className="form-title"><strong>Rate this {postCategory.toLowerCase()} experience</strong><span>Criteria tailored to your list</span></div>
-                    {Object.entries(experienceRatings).map(([label, value]) => (
-                      <ScaleRating key={label} label={label} value={value} onChange={(rating) => setExperienceRatings((current) => ({ ...current, [label]: rating }))}/>
-                    ))}
-                  </div>
-                  <button className="primary-button" onClick={() => { setSheet(null); setActiveTab('Home'); setPosted(true); window.setTimeout(() => setPosted(false), 2800) }}>Share experience <Icon name="arrow" size={18}/></button>
-                </>
-              ) : (
-                <div className="soon-state">
-                  <span><Icon name="sparkle" size={28}/></span>
-                  <p className="eyebrow">PLACEHOLDER</p>
-                  <h2>{activeTab} is on its way</h2>
-                  <p>We’re saving this spot for something special.</p>
-                  <button className="primary-button" onClick={() => { setSheet(null); setActiveTab('Home') }}>Back home</button>
-                </div>
-              )}
-            </section>
-          </div>
-        )}
+
+        {sheet && <div className="sheet-backdrop" onMouseDown={(event) => {
+          if (event.currentTarget === event.target && !showLocationPicker) setSheet(null)
+        }}>
+          <section className="sheet" role="dialog" aria-modal={!showLocationPicker} aria-label="Add an experience" inert={showLocationPicker}>
+            <div className="sheet-handle"/>
+            <button className="sheet-close" type="button" onClick={() => setSheet(null)} aria-label="Close"><Icon name="close" size={20}/></button>
+            <PreviewExperienceForm location={selectedLocation} onSelectLocation={() => setShowLocationPicker(true)}
+              onShare={() => {
+                setSheet(null)
+                setActiveTab('Home')
+                setPosted(true)
+                window.setTimeout(() => setPosted(false), 2800)
+              }}/>
+          </section>
+          {showLocationPicker && <LocationPicker onSelect={(location) => {
+            setSelectedLocation(location)
+            setShowLocationPicker(false)
+          }} onClose={() => setShowLocationPicker(false)}/>}
+        </div>}
+
       </div>
     </main>
   )
@@ -598,7 +823,10 @@ function PreviewExperienceImage({ src, alt }: { src: string | { src: string }; a
   return <img src={imageUrl(src)} alt={alt} loading="lazy" decoding="async"/>
 }
 
-function ProfileView() {
+function ProfileView({ listCount, onOpen }: {
+  listCount: number;
+  onOpen: (screen: PreviewProfileScreen, trigger: HTMLButtonElement) => void;
+}) {
   const [customizing, setCustomizing] = useState(false)
   const [character, setCharacter] = useState<CharacterOptions>({
     features: 'feminine',
@@ -620,9 +848,9 @@ function ProfileView() {
         <div className="profile-name"><h2>Mia Morgan</h2><p>@miatastes · Brooklyn, NY</p></div>
         <p className="profile-bio">Always looking for tiny restaurants, tactile workshops, and plans worth crossing town for.</p>
         <div className="profile-stats">
-          <div><strong>38</strong><span>Experiences</span></div>
-          <div><strong>126</strong><span>Saved</span></div>
-          <div><strong>24</strong><span>Buddies</span></div>
+          <button type="button" aria-label="Followers" onClick={(event) => onOpen('followers', event.currentTarget)}><strong>{demoConnectionCounts.followers}</strong><span>Followers</span></button>
+          <button type="button" aria-label="Following" onClick={(event) => onOpen('following', event.currentTarget)}><strong>{demoConnectionCounts.following}</strong><span>Following</span></button>
+          <button type="button" aria-label="Lists" onClick={(event) => onOpen('lists', event.currentTarget)}><strong>{listCount}</strong><span>Lists</span></button>
         </div>
       </div>
 
@@ -749,17 +977,5 @@ function ActivityCalendar() {
   )
 }
 
-function ScaleRating({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return (
-    <div className="scale-row">
-      <span>{label}</span>
-      <div role="radiogroup" aria-label={`${label} rating`}>
-        {[1, 2, 3, 4, 5].map((rating) => (
-          <button key={rating} className={rating <= value ? 'selected' : ''} onClick={() => onChange(rating)} role="radio" aria-checked={rating === value} type="button">{rating}</button>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export default App

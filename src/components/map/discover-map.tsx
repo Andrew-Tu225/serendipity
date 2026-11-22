@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CharacterPortrait } from "@/components/profile/character-portrait";
 import { createGoogleMap, LONDON, type MapHandle } from "@/lib/maps/google-map";
-import type { Coordinates, MapPlace } from "@/types/places";
+import type { MapPlace } from "@/types/places";
 import { discoveryClient } from "@/lib/api-client/discovery";
 import { ApiError } from "@/lib/api-client/client";
 import { useDiscovery } from "@/hooks/use-discovery";
@@ -13,7 +13,7 @@ import { useRecommendations } from "@/hooks/use-recommendations";
 import { recommendationReasons } from "@/lib/maps/recommendations";
 import { mapBrowseStatus } from "@/lib/maps/browse-status";
 import { containsPoint } from "@/lib/maps/bounds";
-import { mapPlace, type PlaceExperiences } from "@/types/discovery";
+import { mapPlace, type ExperienceLocation, type PlaceExperiences } from "@/types/discovery";
 import { PlaceGlyph, PlaceMarker } from "./place-marker";
 import { PlaceSearch } from "./place-search";
 
@@ -29,7 +29,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   active: boolean; revision: number; selected: MapPlace | null;
   reviewedPlace: MapPlace | null;
   onSelect: (place: MapPlace | null) => void; onReview: (place: MapPlace | null) => void;
-  picking: boolean; onPick: (point: Coordinates) => void; onCancelPick: () => void;
+  picking: boolean; onPick: (location: ExperienceLocation) => void; onCancelPick: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapHandle | null>(null);
@@ -46,11 +46,13 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   const resolveRequest = useRef<AbortController | null>(null);
   const recommendations = useRecommendations(map, active, revision);
   const discovery = useDiscovery(map, active, revision, reviewedPlace);
-  const nearby = useNearbyPlaces(map, active && !picking);
+  const nearby = useNearbyPlaces(map, active);
   const markerPlaces = mergeMapLayers(nearby.places, discovery.places, recommendations.places);
   const currentSelection = selectedInput ? markerPlaces.get(`${selectedInput.source}:${selectedInput.place_id}`) : undefined;
   const selected = selectedInput?.source === "app"
     ? { ...selectedInput, ...currentSelection,
+      address: selectedInput.address || currentSelection?.address || "",
+      attributions: selectedInput.attributions.length ? selectedInput.attributions : currentSelection?.attributions ?? [],
       rating_summary: currentSelection?.rating_summary ?? selectedInput.rating_summary,
       recommendation: currentSelection?.recommendation,
       friend: currentSelection ? currentSelection.friend : selectedInput.friend }
@@ -97,10 +99,10 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
 
   useEffect(() => {
     if (!map || !active || !picking) return;
-    return map.onPick(onPick);
+    return map.onPick((point) => onPick({ point }));
   }, [map, active, picking, onPick]);
 
-  useEffect(() => () => { resolveRequest.current?.abort(); }, [active]);
+  useEffect(() => () => { resolveRequest.current?.abort(); }, [active, picking]);
 
   const getCenter = useCallback(() => mapRef.current?.center() ?? LONDON, []);
   const resolvePlace = useCallback((place: MapPlace) => {
@@ -113,7 +115,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
     onSelect(place);
     discoveryClient.resolve(place.place_id, controller.signal).then((appPlace) => {
       if (controller.signal.aborted) return;
-      const resolved = mapPlace(appPlace);
+      const resolved = { ...mapPlace(appPlace), address: place.address, attributions: place.attributions };
       setSearchPlace(resolved);
       setReviewLookup("");
       onSelect(resolved);
@@ -125,12 +127,13 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
     });
   }, [onSelect]);
   const selectPlace = useCallback((place: MapPlace) => {
+    if (picking && place.source === "google") mapRef.current?.focus(place);
     if (place.source === "google") { resolvePlace(place); return; }
     resolveRequest.current?.abort();
     setResolveError(""); setReviewLookup("");
     setSearchPlace((current) => current?.place_id === place.place_id ? current : null);
     onSelect(place);
-  }, [onSelect, resolvePlace]);
+  }, [onSelect, picking, resolvePlace]);
   const selectSearch = useCallback((place: MapPlace) => {
     mapRef.current?.focus(place);
     resolvePlace(place);
@@ -158,7 +161,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
     <div className="discovery-canvas">
       <div ref={host} className="discovery-map" aria-label="Interactive discovery map"/>
       <div className="discovery-toolbar">
-        <PlaceSearch active={active} getCenter={getCenter} onSelect={selectSearch}/>
+        <PlaceSearch key={picking ? "pick-location" : "discover"} active={active} getCenter={getCenter} onSelect={selectSearch}/>
         <button type="button" className="discovery-locate" aria-label="Center on my location"
           title="Use my current location" aria-busy={active && locating} disabled={!map || locating} onClick={locate}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -171,9 +174,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
       {mapError && <div className="discovery-map-message" role="alert"><strong>The map couldn’t load</strong><p>{mapError}</p><button type="button" onClick={() => { setMap(null); setMapError(""); setAttempt((n) => n + 1); }}>Try again</button></div>}
       {map && <>
         {[...markerPlaces].map(([key, place]) => <PlaceMarker key={key} map={map} place={place} selected={selected?.source === place.source && selected.place_id === place.place_id} onSelect={selectPlace}/>)}
-        {picking ? <div className="discovery-data-status" role="status">Tap the map to place your pin, or review an existing place.
-          <button onClick={() => onPick(map.center())}>Use map center</button><button onClick={onCancelPick}>Cancel</button>
-        </div> : <>
+        {!picking && <>
           {browseStatus === "loading" && <div className="discovery-data-status" role="status">Loading places…</div>}
           {(discovery.error || recommendations.error || nearby.error) && <div className="discovery-data-status" role="alert">
             {discovery.error && <p>{discovery.error} <button onClick={discovery.retry}>Reload reviews</button></p>}
@@ -185,6 +186,26 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           {browseStatus === "empty" && <div className="discovery-data-status" role="status">No places in this area yet. Search for a place or zoom in. <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}
+      {picking && <div className="discovery-location-picker">
+        <strong>Choose a location</strong>
+        <p>Search for a place, tap a pin, or tap the map to place your own.</p>
+        <div>
+          {map && <button type="button" onClick={() => onPick({ point: map.center() })}>Use map center</button>}
+          <button type="button" onClick={onCancelPick}>Cancel</button>
+        </div>
+      </div>}
+      {picking && selected && <article className="discovery-preview" aria-label="Location to use">
+        <div className="discovery-preview-copy">
+          <h2>{selected.display_name}</h2>
+          {selected.address && <p>{selected.address}</p>}
+          {selected.source === "google" && <p>Google Maps · Uses the current map center</p>}
+          <button type="button" className="discovery-review-button" disabled={!selected.app_id && !map}
+            onClick={() => {
+              if (selected.app_id) onPick({ place: selected });
+              else if (map) onPick({ place: selected, point: map.center() });
+            }}>Use this location</button>
+        </div>
+      </article>}
       {selected && !picking && <article className="discovery-preview" aria-label="Selected place">
         <div className="discovery-preview-copy"><span>{selected.source === "app" ? `${selected.app_category} · Serendipity` : selected.category ?? "Place"}</span>
           <h2>{selected.display_name}</h2>

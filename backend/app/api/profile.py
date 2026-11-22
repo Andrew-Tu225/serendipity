@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +12,16 @@ from app.schemas.profile import (
     ProfileBookmarks,
     ProfileConnections,
     ProfileExperiences,
+    ProfileListCreate,
+    ProfileListEntries,
+    ProfileListEntry,
+    ProfileLists,
+    ProfileListSummary,
 )
 from app.services.profile import ProfileService
 
 router = APIRouter(prefix="/profile", tags=["profile"])
+Database = Annotated[AsyncSession, Depends(get_database_session)]
 
 
 @router.put("/character", response_model=CharacterAppearance)
@@ -56,3 +63,42 @@ async def profile_connections(
     limit: Annotated[int, Query(ge=1, le=100)] = 40,
 ):
     return await ProfileService(database).connections_for(user, direction, offset, limit)
+
+
+@router.get("/lists", response_model=ProfileLists)
+async def profile_lists(
+    user: CurrentUser,
+    database: Database,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 40,
+):
+    return await ProfileService(database).lists_for(user, offset, limit)
+
+
+@router.post("/lists", response_model=ProfileListSummary, status_code=201)
+async def create_list(
+    data: ProfileListCreate, user: CurrentUser, verified: VerifiedMutation, database: Database
+):
+    return await ProfileService(database).create_list(user, data)
+
+
+@router.get("/lists/{list_id}/entries", response_model=ProfileListEntries)
+async def experience_list_entries(
+    list_id: UUID,
+    user: CurrentUser,
+    database: Database,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 40,
+):
+    return await ProfileService(database).list_entries(user, list_id, offset, limit)
+
+
+@router.post("/lists/{list_id}/entries", response_model=ProfileListEntry, status_code=201)
+async def add_experience_list_entry(
+    list_id: UUID,
+    entry: ProfileListEntry,
+    user: CurrentUser,
+    verified: VerifiedMutation,
+    database: Database,
+):
+    return await ProfileService(database).add_list_entry(user, list_id, entry)

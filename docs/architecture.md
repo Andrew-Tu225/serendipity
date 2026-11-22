@@ -90,7 +90,9 @@ returns latest-per-author ratings and viewer-specific followed-user snippets. Pu
 an optional session dependency; invalid/expired sessions are anonymous while database failures remain
 errors. Search results join to app Places only by an optional unique Google Place ID (migration 0003).
 App IDs remain separate from provider identifiers. The base API includes every reviewed Place;
-recommendation exclusions remove highlights without removing base review pins. The review form submits through the same typed
+recommendation exclusions remove highlights without removing base review pins. Add opens the review form
+first. The form stays mounted while Discover is picking a location, and the result supplies a Place
+or a user-selected map point to the draft. The review form submits through the same typed
 client with a CSRF token; `CurrentUser` and `VerifiedMutation` protect writes. The discovery service
 creates an optional user-authored Place, then delegates to the existing Experience service to commit
 the Place, Experience, and taste update together. Repositories never commit. Public reviews and
@@ -122,14 +124,21 @@ for thumbnails.
 
 The Profile response also includes follower, following, and Bookmark counts. The Lists button opens
 a dedicated in-app screen, and selecting a collection opens its Place list. The signed-out preview
-includes 12 sample collections with named locations and supports creating a temporary list during the
-current page session. Signed-in users see their default Saved places collection. Its rows come from
+includes sample connections and 12 sample collections. Preview list edits last for the current
+page session. Signed-in users see their own collections and their default Saved places collection. Its rows come from
 `GET /api/profile/bookmarks` through `profileClient`, `ProfileService`, and `ProfileRepository`.
 The API pages through the current user's Bookmarks, and each row shows the Place name, stored map
 coordinates, and a link to open those coordinates. The Followers and Following screens use
 `GET /api/profile/connections/{direction}` to page through the corresponding directed Follow rows.
 The response includes each connection's ID, display name, and saved character appearance. The
 signed-out Profile shows sample connections. All profile endpoints require `CurrentUser`.
+
+Private experience collections use `GET /api/profile/lists` and
+`GET /api/profile/lists/{list_id}/entries` for paginated reads. The corresponding POST routes
+create a collection or add an experience name and location. `ProfileService` checks ownership and
+commits a new list and its optional first entry together. Client-generated IDs make retrying an
+unchanged write safe. `VerifiedMutation` protects both POST routes. Alembic revision `0010` adds
+the two tables, and the Profile response counts custom collections alongside Saved places.
 
 The character editor saves an account's appearance with `PUT /api/profile/character`, using the
 session's CSRF token and `VerifiedMutation`. `ProfileService` commits the validated appearance to
@@ -279,7 +288,9 @@ activity, and character customization are removed. The unrelated Buddy prototype
 The Figma preview source (`src/app/App.tsx`, `main.tsx`, and `vite.config.ts`) remains separate from
 the Next.js app entry. Both entry points share the Profile ratings panels and styles. The preview
 uses the sample ratings and loads thumbnails from Vite asset URLs. The Next.js entry renders
-thumbnails with its image component and loads ratings for the signed-in account.
+thumbnails with its image component and loads ratings for the signed-in account. Both entry points
+share the Add form's Location card. The Vite picker uses the same public Google Maps browser key as
+the Next.js app.
 
 The map marker markup and map-specific CSS are restored from `e199a8a` after the Figma merge
 overwrote them. Compact circular pins, decluttered place captions, relationship colours, and

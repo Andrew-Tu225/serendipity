@@ -1,4 +1,4 @@
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import fs from 'node:fs'
@@ -11,9 +11,13 @@ import siteConfiguration from './.figma/make/site.json'
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
+  const { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } = loadEnv(mode, process.cwd(), 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY')
 
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
+    define: {
+      'process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY': JSON.stringify(NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ''),
+    },
     build: {
       sourcemap: emitSourcemaps ? 'inline' : false,
       minify: !emitSourcemaps,

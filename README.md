@@ -102,6 +102,8 @@ through FastAPI's Places API (New) integration. Set these values before starting
 - `.env.local`: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`.
 - `backend/.env`: `BACKEND_API_KEY_GOOGLE` (server-only).
 
+The Vite location picker also reads `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` from `.env.local`.
+
 Enable **Maps JavaScript API** and **Places API (New)** in a billing-enabled Google Cloud project.
 Restrict the browser key to Maps JavaScript API and your development/production website origins.
 Restrict the backend key to Places API (New), and server egress IPs where available. The browser
@@ -129,7 +131,13 @@ reuse them. Leaving coverage requests another area after 500 ms idle. The origin
 cache and nearby request budget remain. Nearby searches reuse geographic roots across zooms,
 fill visible areas progressively, and subdivide only capped responses; one failing area does not
 block the others. Recommendation refreshes do not block browsing.
-Use Add to name a new Place and choose its map point, or Write a review on a selected Place.
+Use **Add** to open the Experience form, then **Select location** to search for a Place or choose
+a map point. Questions appear as the previous answers are completed. **Write a review** opens the
+form with an existing Place selected.
+
+Profile opens separate Followers, Following, and Lists screens. Signed-in users can create private
+lists and add experiences by name and location. Apply migrations through revision `0010` for
+account-backed lists.
 
 Run `npm install` and `cd backend && uv run alembic upgrade head` for the existing setup. This map
 change adds no migration, dependency, or environment variable. No demo data is inserted automatically.

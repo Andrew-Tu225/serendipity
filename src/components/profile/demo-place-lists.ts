@@ -12,6 +12,12 @@ export interface DemoPlaceList {
   places: ListedPlace[];
 }
 
+export function saveDemoList(lists: DemoPlaceList[], list: DemoPlaceList) {
+  return lists.some((item) => item.id === list.id)
+    ? lists.map((item) => item.id === list.id ? list : item)
+    : [list, ...lists];
+}
+
 const places = {
   violet: { name: "Violet Note", location: "Lower East Side, Manhattan" },
   mend: { name: "Mend Studio", location: "Williamsburg, Brooklyn" },

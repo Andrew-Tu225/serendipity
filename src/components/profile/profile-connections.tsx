@@ -11,6 +11,11 @@ const demoPeople = {
   following: ["Elena Rivera", "Alex Bennett", "Nora Patel", "Riley Brooks", "Jamie Kim"],
 };
 
+export const demoConnectionCounts = {
+  followers: demoPeople.followers.length,
+  following: demoPeople.following.length,
+};
+
 export function ProfileConnections({ direction, owner, count, onClose }: {
   direction: ConnectionDirection;
   owner: { name: string; demo: boolean };

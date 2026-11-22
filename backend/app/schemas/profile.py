@@ -1,8 +1,8 @@
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, StringConstraints
 
 from app.models.domain import Category, Verdict
 from app.schemas.character import CharacterAppearance
@@ -25,8 +25,39 @@ class ProfileExperiences(BaseModel):
     follower_count: int
     following_count: int
     bookmark_count: int
+    list_count: int
     favorites: list[ProfileExperience]
     recent: list[ProfileExperience]
+    next_offset: int | None
+
+
+class ProfileListEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: UUID
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    location: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
+
+
+class ProfileListCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: UUID
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    first_entry: ProfileListEntry | None = None
+
+
+class ProfileListSummary(BaseModel):
+    id: UUID
+    name: str
+    entry_count: int
+
+
+class ProfileLists(BaseModel):
+    lists: list[ProfileListSummary]
+    next_offset: int | None
+
+
+class ProfileListEntries(BaseModel):
+    entries: list[ProfileListEntry]
     next_offset: int | None
 
 
