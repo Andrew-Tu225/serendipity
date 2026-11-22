@@ -12,7 +12,7 @@ export const appPlaces: DiscoveryPlace[] = names.map((name, index) => ({
   friends: index < 3 ? [{
     id: `log-${index}`, author_id: `author-${index}`, author_name: ["Elena", "James", "Alex"][index],
     rating: 4.5, verdict: index === 1 ? "neutral" : "recommend", review: ["Go early, grab something warm, and wander the stalls.", "Leave time for the upstairs galleries.", "My favorite quiet waterfront walk."][index],
-    visited_on: "2026-10-01", is_friend: true, is_self: false,
+    visited_on: "2026-10-01", is_friend: true, is_self: false, photo_urls: [],
   }] : [],
 }));
 

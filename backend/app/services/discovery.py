@@ -35,6 +35,7 @@ class DiscoveryService:
                     rating=log.rating,
                     verdict=log.verdict,
                     review=log.review,
+                    photo_urls=list(log.photo_urls),
                     visited_on=log.visited_on,
                     is_friend=author.id in follows,
                     is_self=viewer is not None and author.id == viewer.id,

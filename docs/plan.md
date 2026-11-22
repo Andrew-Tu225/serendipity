@@ -263,7 +263,7 @@ The social backend now supports directed follow management, public profiles and 
 Experience likes and flat editable comments, independent private saved reviews/Places, and a
 following feed of published Experiences. Saving a new Place can create its app record without a
 review. Profile identity remains read-only and Auth0-managed; category interests are persisted separately during first-login onboarding; all Experiences and social read surfaces are
-public, while saves and the personalized feed require sign-in. Home retains the original prototype UI; its redesign and data integration belong to separate frontend work. Profile uses the authenticated identity, selected interests, and real Experience/saved Place/following counts. Other social frontend integration remains future work.
+public, while saves and the personalized feed require sign-in. Home includes the redesigned landmark carousel and prototype Experience feed merged from main; its live data integration remains future work. Profile uses the authenticated identity, selected interests, and real Experience/saved Place/following counts. Other social frontend integration remains future work.
 See [social-api.md](social-api.md) for contracts and the remaining social scope.
 Local development can opt into 24 London Places and labeled mock reviews using the repeatable seed
 script; a guarded reset script clears local application rows. See [local-demo-data.md](local-demo-data.md).

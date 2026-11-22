@@ -16,6 +16,9 @@ place previews clear the raised Add button and Google's attribution. The desktop
 Previews and search suggestions scroll internally when needed. Selecting a Google result fits its
 viewport or centers at zoom 16. Unknown Google Places remain temporary markers, displaying
 provider name/address/link and returned attributions without invented app activity.
+Place previews include the description, app rating summary, and first photo shared in loaded
+Experiences, with a placeholder when none is available. Recommendation evidence remains visible
+alongside the place profile. App review requests wait for the active viewer identity to be ready.
 Reviewed Places retain their original white pins; personal recommendations are amber and friends’ recommendations purple. No legend is shown.
 Recommended and base Places merge by UUID, preserving aggregate ratings. Exact Google IDs suppress
 duplicate provider pins. A followed-user review is white unless the recommendations API classifies
