@@ -276,7 +276,7 @@ Response: `{ "place": {...}, "logs": [...] }`. Errors: `401` as in 3.1; `404` `"
 
 ### 3.3 When the frontend calls it
 
-Home now calls the ranked endpoint for up to 12 Places around London, Ontario (`-81.4,42.85,-81.1,43.12`), displays its supporting reviews, and refreshes after a successful review. Cards open their Place in Discover. The table below describes future map-ranked integration points. The current Discover
+Home retains its original prototype UI; the replacement ranked Home feed was removed for separate frontend work. The table below describes future map-ranked integration points. The current Discover
 map uses the separate public `/api/discovery` endpoints to show every app-reviewed Place in view,
 including neutral/negative and self-reviewed Places. Its review form calls the existing Experience
 service via `POST /api/discovery/experiences`, keeping taste profiles current. See

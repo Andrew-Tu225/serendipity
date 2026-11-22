@@ -79,7 +79,7 @@ The form requires sign-in before submission. Its fields survive save errors; it 
 clicks and closing during a pending save. Success is shown only after the API confirms the write,
 then the selected card and viewport ratings refresh. A new reviewed Place therefore appears on the
 next query and remains available after reload. No photo/video storage provider is introduced.
-After Auth0 sign-in, incomplete accounts choose category interests at `/onboarding`; completed accounts reach Home. Home recommendation cards open real discovery details and focus the map without resetting the camera when switching tabs.
+After Auth0 sign-in, incomplete accounts choose category interests at `/onboarding`; completed accounts reach Home. Home retains its original prototype UI for separate frontend work; it does not load a replacement recommendation feed.
 
 `CurrentUser` supplies the author. `VerifiedMutation` enforces CSRF and origin checking. Pydantic
 rejects unknown fields such as a forged owner, invalid ratings, future visits, blank/long names,

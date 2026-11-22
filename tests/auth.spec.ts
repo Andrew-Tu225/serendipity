@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockGoogleMaps } from "./helpers/google-maps";
-import { appPlaces, mockDiscovery, signedIn } from "./helpers/discovery";
+import { mockDiscovery, signedIn } from "./helpers/discovery";
 
 const profile = {
   user: { id: signedIn.user.id, display_name: "Alex Example", avatar_url: null },
@@ -69,7 +68,7 @@ test("first login requires interests, retries failed saves, then persists comple
   fail = false;
   await finish.click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText("Hello, Alex")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What feels fun?" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "What feels fun?" })).toBeVisible();
   await page.goto("/onboarding");
@@ -111,43 +110,6 @@ test("new account profile has honest empty counts", async ({ page }) => {
   await page.getByRole("button", { name: "Profile", exact: true }).click();
   await expect(page.locator(".profile-stats")).toHaveText("0Experiences0Saved places0Following");
   await expect(page.getByText("No Experiences yet.", { exact: false })).toBeVisible();
-});
-
-test("Home shows review-backed recommendations and opens the real Place on the map", async ({ page }) => {
-  await mockGoogleMaps(page);
-  await mockDiscovery(page);
-  await page.route("**/api/recommendations?**", (route) => {
-    const params = new URL(route.request().url()).searchParams;
-    expect(params.get("bbox")).toBe("-81.4,42.85,-81.1,43.12");
-    expect(params.get("limit")).toBe("12");
-    return route.fulfill({ json: { items: [{
-      place: { id: appPlaces[0].id, name: appPlaces[0].name, lat: appPlaces[0].latitude, lng: appPlaces[0].longitude, category: "restaurant" },
-      kind: "similar_taste", score: 1, logs: [{ experience_id: "review-1", author: { id: "a", display_name: "Cafe regular", avatar_url: null }, relation: "similar_taste", rating: 5, verdict: "recommend", review: "A lovely little spot", photo_urls: [], visited_on: "2026-11-01" }],
-    }] } });
-  });
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "St. Lawrence Market" })).toBeVisible();
-  await expect(page.getByText("A lovely little spot")).toBeVisible();
-  await expect(page.getByText("Loved by people with similar taste")).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "test-results/recommendations-mobile.png", fullPage: true });
-  await page.getByRole("button", { name: "View on map" }).click();
-  await expect(page.getByRole("region", { name: "Discover places" })).toBeVisible();
-  await expect(page.getByRole("article", { name: "Selected place" })).toContainText("St. Lawrence Market");
-});
-
-test("recommendation failures retry and empty results invite map exploration", async ({ page }) => {
-  await mockDiscovery(page);
-  let fail = true;
-  await page.route("**/api/recommendations?**", (route) => fail
-    ? route.fulfill({ status: 503, json: { detail: "Database is unavailable" } })
-    : route.fulfill({ json: { items: [] } }));
-  await page.goto("/");
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("Database is unavailable");
-  fail = false;
-  await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText("Your next discovery is out there")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Explore the map" })).toBeVisible();
 });
 
 test("session service failures retry without showing personal content", async ({ page }) => {

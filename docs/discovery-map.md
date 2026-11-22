@@ -8,7 +8,7 @@ across viewport updates; nearby areas are prefetched and newly exposed rectangle
 background. There are no
 hard-coded demo pins or demo fallback on errors. Selecting a marker checks/opens its app reviews; closing
 the preview keeps the marker available. See [discovery-data.md](discovery-data.md) for database
-queries, review submission, public API access, and exact Google-ID matching. The app requires sign-in and completed category onboarding before browsing. Home recommendation cards focus the corresponding real Place in Discover.
+queries, review submission, public API access, and exact Google-ID matching. The app requires sign-in and completed category onboarding before browsing.
 
 Discover fills the phone frame above navigation. The simulated status bar and page header are hidden.
 Search floats at the top with safe-area spacing, with a crosshair location button to its right, and

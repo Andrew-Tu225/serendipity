@@ -19,8 +19,8 @@ function externalUrl(value?: string | null) {
   } catch { return undefined; }
 }
 
-export default function DiscoverMap({ active, revision, reviewedPlace, selected: selectedInput, focusTarget, onSelect, onReview, picking, onPick, onCancelPick }: {
-  active: boolean; revision: number; selected: MapPlace | null; focusTarget: MapPlace | null;
+export default function DiscoverMap({ active, revision, reviewedPlace, selected: selectedInput, onSelect, onReview, picking, onPick, onCancelPick }: {
+  active: boolean; revision: number; selected: MapPlace | null;
   reviewedPlace: MapPlace | null;
   onSelect: (place: MapPlace | null) => void; onReview: (place: MapPlace | null) => void;
   picking: boolean; onPick: (point: Coordinates) => void; onCancelPick: () => void;
@@ -86,10 +86,6 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   }, [map, active, picking, onPick]);
 
   useEffect(() => () => { resolveRequest.current?.abort(); }, [active]);
-
-  useEffect(() => {
-    if (focusTarget) map?.focus(focusTarget);
-  }, [map, focusTarget]);
 
   const getCenter = useCallback(() => mapRef.current?.center() ?? LONDON, []);
   const resolvePlace = useCallback((place: MapPlace) => {
