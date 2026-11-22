@@ -40,11 +40,15 @@ Compact pins have a fixed 44 px interaction area with 24 px nearby icons and 30 
 Names and ratings live in an independently positioned caption, so hiding labels never moves the
 pin anchor. The place name identifies the destination; friend identity and evidence remain in the preview.
 
-All loaded Places, including Google nearby destinations, belong to one marker clusterer. Dense
+All loaded Places, including Google nearby destinations, share one SuperCluster calculation. Dense
 areas show counted groups; expanding them reveals the same SDK marker instances. The adapter no
 longer hides nearby icons independently. Selected Places temporarily leave clustering and remain
 visible. A colour/evidence change updates priority without changing membership or attaching hidden
-cluster members. New marker batches legitimately update cluster counts in one animation-frame pass.
+cluster members. `StableClusters` reconciles the result by group membership rather than using the
+package renderer, which recreates every group after a membership change. Cached pans perform no
+SDK attachment writes; new batches replace only affected groups, attaching replacements before
+removing old groups. Reconciliation waits until the camera stops moving and runs in one animation
+frame. Group and individual marker clicks use the Advanced Marker DOM `gmp-click` event.
 
 Only captions participate in the settled collision pass, 150 ms after camera/marker changes. It
 measures visible icon/caption footprints, using the nearest world copy at the date line, and allocates
@@ -98,12 +102,15 @@ Nine scattered samples are no longer treated as sufficient coverage. All visible
 queued, with unseen root areas first, then smaller dense-area searches, then stale revalidation.
 Within a priority, searches closest to the camera centre run first. Up to three requests run at once,
 and an 18-attempt rolling-minute budget controls provider work. When the budget is exhausted, loaded
-places remain visible and the UI explains that further searches resume automatically. Requests that
+places remain visible. A pause message appears only when no destinations are available and no
+request is still running; further searches resume automatically. Requests that
 leave buffered view coverage are cancelled; late responses cannot repopulate a superseded area.
 
 A response containing 20 Places may have reached Google's cap. Such cells are subdivided into
-intersecting child cells when zoom is at least the parent's level, to a maximum level of 16. Responses
-below the cap are reused across zooms. Parent pins stay available during refinement. This fills dense
+intersecting child cells only when inspecting neighbourhoods: zooms 13–14 search roots only, zoom
+15 permits level-14 children, zoom 16 permits level-15 children, and zoom 17+ permits level 16.
+City-overview responses no longer immediately spawn child searches and exhaust the minute budget.
+Responses below the cap are reused across zooms. Parent pins stay available during refinement. This fills dense
 neighbourhoods progressively without repeatedly re-querying sparse areas. Fewer than 20 results are
 not a promise of an exhaustive Google listing; category filtering and provider ranking still apply.
 See [Google Nearby Search](https://developers.google.com/maps/documentation/places/web-service/nearby-search)

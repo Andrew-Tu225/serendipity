@@ -94,7 +94,7 @@ test("only capped responses refine; parent results stay available while children
     await new Promise<void>((resolve) => release.push(resolve));
     return [place(cell)];
   });
-  app.loader.update(viewport()); await app.time.advance(500);
+  app.loader.update(viewport(1, 1, 2289, 2990, 15)); await app.time.advance(500);
   expect(app.view().places).toHaveLength(20);
   expect(app.view().loading).toBe(true);
   expect(calls.filter((cell) => cell.level === 14)).toHaveLength(3);
@@ -124,18 +124,19 @@ test("the rolling budget pauses and resumes unfinished coverage without losing p
   app.loader.pause();
 });
 
-test("initial coverage across the viewport takes priority over dense-area refinement", async () => {
+test("a dense overview finishes its twelve base searches without draining the budget on refinement", async () => {
   const calls: NearbyCell[] = [];
   const app = setup(async (cell) => {
     calls.push(cell);
     return Array.from({ length: cell.level === 13 ? 20 : 1 }, (_, i) => place(cell, `${cell.key}-${i}`));
   });
   app.loader.update(viewport(4, 3, 2289, 2990, 13)); await app.time.advance(500);
-  expect(calls).toHaveLength(18);
+  expect(calls).toHaveLength(12);
   expect(calls.slice(0, 12).every((cell) => cell.level === 13)).toBe(true);
-  expect(calls.filter((cell) => cell.level === 14)).toHaveLength(6);
+  expect(calls.filter((cell) => cell.level > 13)).toHaveLength(0);
   expect(app.view().places.length).toBeGreaterThanOrEqual(240);
-  expect(app.view().waiting).toBe(true);
+  expect(app.view().waiting).toBe(false);
+  expect(app.view().complete).toBe(true);
   app.loader.pause();
 });
 

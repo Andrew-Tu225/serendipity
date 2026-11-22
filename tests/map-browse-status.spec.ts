@@ -7,6 +7,7 @@ const nearby = { ...ready, waiting: false, zoomIn: false };
 test("base places can be browsed immediately while other work remains pending", () => {
   expect(mapBrowseStatus({ ...ready, complete: false }, { ...nearby, complete: false }, 1)).toBe("ready");
   expect(mapBrowseStatus(ready, nearby, 1)).toBe("ready");
+  expect(mapBrowseStatus(ready, { ...nearby, waiting: true, complete: false }, 1)).toBe("ready");
 });
 
 test("empty means both base searches finished successfully with zero visible places", () => {

@@ -104,10 +104,13 @@ const sdk = String.raw`
       this.node.style.top = (20 + Math.floor(i/3)*25) + '%';
     }
     addListener(name, callback) {
+      if (name.startsWith('gmp-')) throw new Error('Advanced Marker gmp events require addEventListener');
       const domName = name === 'gmp-click' ? 'click' : name;
       this.node.addEventListener(domName, callback);
       return { remove: () => this.node.removeEventListener(domName, callback) };
     }
+    addEventListener(name, callback) { this.node.addEventListener(name === 'gmp-click' ? 'click' : name, callback); }
+    removeEventListener(name, callback) { this.node.removeEventListener(name === 'gmp-click' ? 'click' : name, callback); }
   }
   const maps = window.google.maps;
   maps.ControlPosition = { RIGHT_CENTER: 'right-center' };

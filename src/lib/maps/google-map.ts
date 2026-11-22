@@ -51,7 +51,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
   ]);
   signal.throwIfAborted();
   if (authenticationFailed) throw new Error("Google Maps authorization failed. Please check the map configuration.");
-  const { MarkerClusterer } = await import("@googlemaps/markerclusterer");
+  const { StableClusters } = await import("./stable-clusters");
   signal.throwIfAborted();
   const map = new GoogleMap(host, {
     center: latLng(LONDON), zoom: 13, mapId,
@@ -59,16 +59,14 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
     gestureHandling: "greedy", keyboardShortcuts: false,
   });
   const groupMarkers = new Map<google.maps.marker.AdvancedMarkerElement, google.maps.LatLng>();
-  const clusters = new MarkerClusterer({ map, renderer: {
-    render({ count, position }) {
+  const clusters = new StableClusters(map, ({ count, position }) => {
       const content = document.createElement("span");
       content.className = "discovery-cluster";
       content.textContent = String(count);
-      const marker = new AdvancedMarkerElement({ position, content, title: `Zoom to ${count} places`, zIndex: 500, collisionBehavior: google.maps.CollisionBehavior.REQUIRED });
+      const marker = new AdvancedMarkerElement({ position, content, title: `Zoom to ${count} places`, gmpClickable: true, zIndex: 500, collisionBehavior: google.maps.CollisionBehavior.REQUIRED });
       groupMarkers.set(marker, position);
       return marker;
-    },
-  } });
+  });
   let frame = 0;
   let destroyed = false;
   const selectedMarkers = new Set<google.maps.marker.AdvancedMarkerElement>();
@@ -156,18 +154,22 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
     settle();
   });
   resized.observe(host);
-  const motion = map.addListener("bounds_changed", () => { moving = true; clearTimeout(settling); });
-  const idle = map.addListener("idle", () => { moving = false; settle(); });
-  const clustered = google.maps.event.addListener(clusters, "clusteringend", settle);
-  const renderClusters = () => {
-    if (destroyed) return;
+  const motion = map.addListener("bounds_changed", () => {
+    moving = true;
+    cancelAnimationFrame(frame);
+    clearTimeout(settling);
+  });
+  const idle = map.addListener("idle", () => { moving = false; renderClusters(); });
+  function renderClusters() {
+    if (destroyed || moving) return;
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
+      if (destroyed || moving) return;
       clusters.render();
       selectedMarkers.forEach((marker) => { if (marker.map !== map) marker.map = map; });
       settle();
     });
-  };
+  }
   let locationMarker: google.maps.marker.AdvancedMarkerElement | undefined;
   let locationPosition: Coordinates | undefined;
   authenticationListeners.add(onAuthenticationFailure);
@@ -225,7 +227,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
           collisionBehavior: google.maps.CollisionBehavior.REQUIRED,
         };
       }
-      const marker = new AdvancedMarkerElement({ map: cluster ? null : map, position: latLng(position), content: element, title, ...visibility() });
+      const marker = new AdvancedMarkerElement({ map: cluster ? null : map, position: latLng(position), content: element, title, gmpClickable: true, ...visibility() });
       const contentObserver = new MutationObserver(() => { pin.geometry = undefined; settle(); });
       const pin: Pin = { id: ++serial, marker, position, layer, selected: false,
         element, labelVisible: false, contentObserver };
@@ -239,8 +241,8 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
         const next = cluster && !selection;
         if (next === inCluster) return;
         inCluster = next;
-        if (next) clusters.addMarker(marker, true);
-        else clusters.removeMarker(marker, true);
+        if (next) clusters.addMarker(marker);
+        else clusters.removeMarker(marker, selection);
         renderClusters();
       }
       function applyVisibility() {
@@ -250,7 +252,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       }
       membership();
       settle();
-      const listener = marker.addListener("click", onClick);
+      marker.addEventListener("gmp-click", onClick);
       return {
         layer(value) {
           if (layer === value) return;
@@ -275,14 +277,14 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
           settle();
         },
         remove() {
-          listener.remove();
+          marker.removeEventListener("gmp-click", onClick);
           contentObserver.disconnect();
           resized.unobserve(element);
           if (caption) resized.unobserve(caption);
           selectedMarkers.delete(marker);
           pins.delete(pin);
-          if (inCluster) { clusters.removeMarker(marker, true); renderClusters(); }
-          marker.map = null;
+          if (inCluster) { clusters.removeMarker(marker); renderClusters(); }
+          if (marker.map != null) marker.map = null;
           settle();
         },
       };
@@ -297,12 +299,11 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       selectedMarkers.clear();
       cancelAnimationFrame(frame);
       clearTimeout(settling);
-      motion.remove(); idle.remove(); clustered.remove();
+      motion.remove(); idle.remove();
       resized.disconnect();
-      for (const pin of pins) { pin.contentObserver.disconnect(); pin.marker.map = null; }
+      for (const pin of pins) { pin.contentObserver.disconnect(); if (pin.marker.map != null) pin.marker.map = null; }
       pins.clear(); groupMarkers.clear();
-      clusters.clearMarkers(true);
-      clusters.setMap(null);
+      clusters.destroy();
       authenticationListeners.delete(onAuthenticationFailure);
       if (locationMarker) locationMarker.map = null;
       google.maps.event.clearInstanceListeners(map);

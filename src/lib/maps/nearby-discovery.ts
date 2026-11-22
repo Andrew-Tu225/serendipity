@@ -63,12 +63,13 @@ export class NearbyDiscovery {
     const roots = nearbyCells(this.viewport.bounds, this.viewport.zoom);
     const required: NearbyCell[] = [], pending: NearbyCell[] = [];
     const now = this.time.now();
+    const detailLevel = Math.max(13, Math.min(16, Math.floor(this.viewport.zoom) - 1));
     const visit = (cell: NearbyCell) => {
       const entry = this.entries.get(cell.key);
       required.push(cell);
       if (!entry || now - entry.fetched >= FRESH_MS) pending.push(cell);
       // A full provider response may be truncated. Refine it only when inspecting that area.
-      if (entry && entry.places.length >= 20 && cell.level < 16 && this.viewport.zoom >= cell.level) {
+      if (entry && entry.places.length >= 20 && cell.level < detailLevel) {
         for (const child of nearbyChildren(cell)) {
           if (this.viewport.bounds.some((bounds) => intersects(bounds, child.bounds))) visit(child);
         }
@@ -136,7 +137,8 @@ export class NearbyDiscovery {
     });
     const places = rows.length === this.view.places.length && rows.every((place, i) => place === this.view.places[i]) ? this.view.places : rows;
     const error = plan.pending.map((cell) => this.failures.get(cell.key)?.message).find(Boolean) ?? "";
-    const waiting = plan.pending.length > 0 && this.budget.retryAt(now) > now;
+    const waiting = this.jobs.size === 0 && this.budget.retryAt(now) > now && plan.pending.some((cell) =>
+      !this.jobs.has(cell.key) && (this.failures.get(cell.key)?.retryAt ?? 0) <= now);
     this.view = { places, error, waiting, zoomIn: this.viewport.bounds.length > 0 && !plan.roots.length,
       loading: plan.pending.length > 0 && !waiting && !error,
       complete: plan.roots.length > 0 && plan.pending.length === 0 };
