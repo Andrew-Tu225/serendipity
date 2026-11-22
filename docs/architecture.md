@@ -141,6 +141,29 @@ backend/app/services/experiences.py: ExperienceService.create_experience()
 
 The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. `POST /api/discovery/experiences` calls it through `DiscoveryService`, using `CurrentUser` and `VerifiedMutation`; a new Place participates in that same transaction.
 
+## Lists
+
+A List is a named, public collection of Experiences owned by one user (tables `lists` and `list_items`, migration `0004`). Any existing Experience may be listed, including other users' logs; deleting a List, or a listed Experience, cascades to its `list_items` rows.
+
+```text
+backend/app/api/lists.py           CurrentUser / VerifiedMutation, Pydantic contracts in schemas/lists.py
+  → backend/app/services/lists.py: ListService     ownership checks, item cap, commits
+  → backend/app/repositories/lists.py: ListRepository
+```
+
+| Method and path | Auth | Behavior |
+|---|---|---|
+| `GET /api/lists` | signed in | The viewer's lists, most recently updated first |
+| `GET /api/users/{user_id}/lists` | public | Another user's lists |
+| `POST /api/lists` | mutation | Create from `{name, description?}`; returns the list with items (201) |
+| `GET /api/lists/{list_id}` | public | The list with its Experiences, Place and author, oldest addition first |
+| `PATCH /api/lists/{list_id}` | owner mutation | Rename or change description; an empty description clears it |
+| `DELETE /api/lists/{list_id}` | owner mutation | Delete the list (204) |
+| `POST /api/lists/{list_id}/experiences` | owner mutation | Add `{experience_id}`; re-adding is a no-op. 404 for an unknown Experience, 409 past `MAX_LIST_ITEMS` (200) |
+| `DELETE /api/lists/{list_id}/experiences/{experience_id}` | owner mutation | Remove one Experience (204); 404 if it is not listed |
+
+Names are trimmed and 1–80 characters; descriptions are at most 500. Non-owners receive 403 on mutations. The owner always comes from the session. Every `/api/lists` and `/api/users/` response sends `Cache-Control: no-store`.
+
 ## Adding a feature
 
 Local maintenance commands in `backend/scripts/` validate a loopback PostgreSQL target and delegate

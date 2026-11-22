@@ -285,8 +285,8 @@ _These are intentionally unresolved and can be developed as the concept evolves.
 
 **Bookmarking**
 
-- Should users create custom collections or lists?
-- Can users share collections with friends?
+- Decided: users create named, public Lists of Experiences (their own or anyone's). See [architecture.md](architecture.md#lists).
+- Can users share collections with friends? (Lists are public by link; no private or collaborative lists yet.)
 - How do we make saving places as effortless as possible?
 
 **Long-term experience**
