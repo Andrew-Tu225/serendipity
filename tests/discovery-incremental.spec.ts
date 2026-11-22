@@ -93,7 +93,7 @@ test("expired ratings update quietly in the same marker and click handlers see t
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
   await expect(page.getByText("Loading app-reviewed places…")).toHaveCount(0);
   await marker(page).click();
-  await expect(page.getByRole("article")).toContainText("2.5/5 · 24 reviewers");
+  await expect(page.getByRole("article")).toContainText("2.5/5 · 24 reviews");
 });
 
 test("switching viewers clears friend labels and refetches without replacing the marker", async ({ page }) => {

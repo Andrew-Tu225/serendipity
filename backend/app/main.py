@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import JSONResponse
 
-from app.api import auth, discovery, health, places, recommendations, social
+from app.api import auth, buddies, discovery, health, places, profile, recommendations, social
 from app.config import get_settings
 
 settings = get_settings()
@@ -21,6 +21,8 @@ app.include_router(places.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")
 app.include_router(discovery.router, prefix="/api")
 app.include_router(social.router, prefix="/api")
+app.include_router(profile.router, prefix="/api")
+app.include_router(buddies.router, prefix="/api")
 
 
 @app.middleware("http")
@@ -36,6 +38,8 @@ async def protect_auth_responses(request: Request, call_next):
             "/api/comments/",
             "/api/me/",
             "/api/feed",
+            "/api/profile/",
+            "/api/buddies/",
         )
     ):
         response.headers["Cache-Control"] = "no-store"

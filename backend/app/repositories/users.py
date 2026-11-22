@@ -15,6 +15,9 @@ class UserRepository:
     async def get(self, user_id: UUID) -> User | None:
         return await self.session.get(User, user_id, populate_existing=True)
 
+    def set_character(self, user: User, character: dict[str, str]) -> None:
+        user.character = character
+
     async def upsert_from_auth0(self, claims: dict[str, Any]) -> User:
         profile = {
             "email": claims.get("email"),

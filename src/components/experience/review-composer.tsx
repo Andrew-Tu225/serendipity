@@ -22,15 +22,16 @@ export function ReviewComposer({ target, point, onSaved, onBusy }: {
   const [authAttempt, setAuthAttempt] = useState(0);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<PlaceCategory>("restaurant");
+  const [category, setCategory] = useState<PlaceCategory | "">("");
   const [rating, setRating] = useState("4");
-  const [verdict, setVerdict] = useState<AppExperience["verdict"]>("neutral");
+  const [verdict, setVerdict] = useState<AppExperience["verdict"] | "">("");
+  const [step, setStep] = useState<"name" | "date" | "rating" | "review">(target?.app_id ? "date" : "name");
   const [visited, setVisited] = useState(today);
   const [review, setReview] = useState("");
   const [saving, setSaving] = useState(false);
   const pending = useRef(false);
   const live = useRef(true);
-  const firstField = useRef<HTMLInputElement>(null);
+  const firstField = useRef<HTMLSelectElement>(null);
   useEffect(() => {
     live.current = true;
     return () => { live.current = false; };
@@ -50,14 +51,18 @@ export function ReviewComposer({ target, point, onSaved, onBusy }: {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!session || pending.current) return;
+    if (!session || pending.current || step !== "review" || !verdict) return;
+    const existingPlaceId = target?.app_id;
+    const place = existingPlaceId ? { place_id: existingPlaceId } :
+      point && category && name.trim() ? {
+        new_place: { name: name.trim(), category, ...point, google_place_id: target?.source === "google" ? target.place_id : undefined },
+      } : null;
+    if (!place) return;
     pending.current = true;
     setSaving(true); onBusy(true); setError("");
     try {
       const result = await discoveryClient.createExperience({
-        ...(target?.app_id ? { place_id: target.app_id } : {
-          new_place: { name, category, ...point!, google_place_id: target?.source === "google" ? target.place_id : undefined },
-        }), rating: Number(rating), verdict, visited_on: visited, review,
+        ...place, rating: Number(rating), verdict, visited_on: visited, review,
       }, session.csrf_token);
       if (live.current) onSaved(result);
     } catch (error) {
@@ -78,21 +83,34 @@ export function ReviewComposer({ target, point, onSaved, onBusy }: {
       <button className="primary-button" onClick={() => authClient.startLogin()}>Sign in to review</button>
     </> : <form className="review-form" onSubmit={submit}>
       <fieldset disabled={saving}>
-        {!target?.app_id && <>
-          <label>Place name<input ref={firstField} value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} placeholder="What do you call this place?"/></label>
-          <label>Category<select value={category} onChange={(event) => setCategory(event.target.value as PlaceCategory)}>
+        {target?.app_id ? <p>Add to a list ? {target.category ?? target.app_category ?? "Existing place"}</p> : (
+          <label>Add to a list<select ref={firstField} value={category} onChange={(event) => setCategory(event.target.value as PlaceCategory)} required>
+            <option value="" disabled>Select a category</option>
             {placeCategories.map((item) => <option key={item} value={item}>{item.charAt(0).toUpperCase() + item.slice(1)}</option>)}
           </select></label>
-        </>}
-        <label>Date visited<input ref={target?.app_id ? firstField : undefined} type="date" required max={today()} value={visited} onChange={(event) => setVisited(event.target.value)}/></label>
-        <label>Your rating<select value={rating} onChange={(event) => setRating(event.target.value)}>
-          {Array.from({ length: 9 }, (_, index) => 1 + index / 2).map((value) => <option key={value} value={value}>{value.toFixed(1)} out of 5</option>)}
-        </select></label>
-        <label>Your take<select value={verdict} onChange={(event) => setVerdict(event.target.value as AppExperience["verdict"])}>
+        )}
+        <label>How was it?<select ref={target?.app_id ? firstField : undefined} value={verdict} onChange={(event) => setVerdict(event.target.value as AppExperience["verdict"])} required>
+          <option value="" disabled>Select your overall take</option>
           <option value="neutral">It was okay</option><option value="recommend">I recommend it</option><option value="avoid">I would avoid it</option>
         </select></label>
-        <label>Your review<textarea value={review} onChange={(event) => setReview(event.target.value)} maxLength={2000} rows={4} placeholder="What should someone know before visiting?"/></label>
-        <button className="primary-button" disabled={saving || (!target?.app_id && !point)}>{saving ? "Sharing…" : "Share experience"}</button>
+
+        {(target?.app_id || category) && verdict && <>
+          {!target?.app_id && <label>Place name<input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} placeholder="What do you call this place?"/></label>}
+          {step === "name" && <button className="primary-button" type="button" disabled={!name.trim()} onClick={() => setStep("date")}>Continue</button>}
+
+          {step !== "name" && <label>Date visited<input type="date" required max={today()} value={visited} onChange={(event) => setVisited(event.target.value)}/></label>}
+          {step === "date" && <button className="primary-button" type="button" disabled={!visited || visited > today()} onClick={() => setStep("rating")}>Continue</button>}
+
+          {(step === "rating" || step === "review") && <label>Your rating<select value={rating} onChange={(event) => setRating(event.target.value)}>
+            {Array.from({ length: 9 }, (_, index) => 1 + index / 2).map((value) => <option key={value} value={value}>{value.toFixed(1)} out of 5</option>)}
+          </select></label>}
+          {step === "rating" && <button className="primary-button" type="button" onClick={() => setStep("review")}>Continue</button>}
+
+          {step === "review" && <>
+            <label>Your review<textarea value={review} onChange={(event) => setReview(event.target.value)} maxLength={2000} rows={4} placeholder="What should someone know before visiting?"/></label>
+            <button className="primary-button" disabled={saving || (!target?.app_id && !point)}>{saving ? "Sharing?" : "Share experience"}</button>
+          </>}
+        </>}
       </fieldset>
     </form>}
     {error && <div role="alert">{error}{!session && <button type="button" onClick={() => { setChecking(true); setError(""); setAuthAttempt((n) => n + 1); }}>Check sign-in again</button>}</div>}

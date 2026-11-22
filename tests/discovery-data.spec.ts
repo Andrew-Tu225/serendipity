@@ -101,7 +101,7 @@ test("a Google search matching an app identity shows its actual reviews once", a
   await page.getByRole("combobox").fill("Market");
   await page.getByRole("option").click();
   await expect(page.getByRole("article")).toContainText("St. Lawrence Market");
-  await expect(page.getByRole("article")).toContainText("23 reviewers");
+  await expect(page.getByRole("article")).toContainText("23 reviews");
   await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toHaveCount(1);
   await expect(page.getByRole("button", { name: "View Google Market", exact: true })).toHaveCount(0);
 });
@@ -133,8 +133,14 @@ test("review submission sends CSRF, preserves errors, and refreshes ratings only
   await choosePlace(page);
   const markerId = await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).getAttribute("data-marker-id");
   const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Date visited")).toHaveCount(0);
+  await dialog.getByLabel("How was it?").selectOption("recommend");
+  await expect(dialog.getByLabel("Date visited")).toBeVisible();
+  await expect(dialog.getByLabel("Your rating")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Continue" }).click();
   await dialog.getByLabel("Your rating").selectOption("4.5");
-  await dialog.getByLabel("Your take").selectOption("recommend");
+  await expect(dialog.getByLabel("Your review")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Continue" }).click();
   await dialog.getByLabel("Your review").fill("Great lunch");
   await dialog.getByRole("button", { name: "Share experience" }).click();
   await expect(dialog.getByRole("alert")).toContainText("Database is unavailable");
@@ -144,7 +150,7 @@ test("review submission sends CSRF, preserves errors, and refreshes ratings only
   fail = false;
   await dialog.getByRole("button", { name: "Share experience" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("article")).toContainText("4.5/5 · 24 reviewers");
+  await expect(page.getByRole("article")).toContainText("4.5/5 · 24 reviews");
   await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toHaveAttribute("data-marker-id", markerId!);
   await expect(page.getByText("Your experience was shared", { exact: false })).toBeVisible();
   await expect.poll(() => posted).toBe(true);
@@ -165,7 +171,13 @@ test("new-place review uses a chosen map point and a user-authored name", async 
   await page.getByRole("button", { name: "Add a post" }).click();
   await page.getByRole("button", { name: "Use map center" }).click();
   const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Add to a list").selectOption("restaurant");
+  await expect(dialog.getByLabel("Place name")).toHaveCount(0);
+  await dialog.getByLabel("How was it?").selectOption("neutral");
   await dialog.getByLabel("Place name").fill("My neighborhood restaurant");
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await dialog.getByRole("button", { name: "Continue" }).click();
+  await dialog.getByRole("button", { name: "Continue" }).click();
   await dialog.getByLabel("Your review").fill("A lovely dinner.");
   await dialog.evaluate(async (element) => { await Promise.all(element.getAnimations().map((animation) => animation.finished)); });
   await page.screenshot({ path: "test-results/review-mobile.png" });

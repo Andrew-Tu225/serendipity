@@ -164,3 +164,15 @@ def test_similar_users_sorts_by_similarity_then_id_and_caps_at_k():
 
 def test_similar_users_viewer_without_profile_gets_none():
     assert similar_users("viewer", frozenset(), {"kai": KAI}) == ()
+
+
+def test_log_value_uses_the_stored_value_when_present():
+    log = make_log(rating=5.0, verdict=Verdict.RECOMMEND).model_copy(update={"value": 0.25})
+
+    assert log_value(log) == 0.25
+
+
+def test_is_liked_follows_the_stored_value():
+    log = make_log(rating=5.0, verdict=Verdict.RECOMMEND).model_copy(update={"value": 0.0})
+
+    assert is_liked(log) is False

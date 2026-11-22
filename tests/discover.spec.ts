@@ -201,11 +201,11 @@ test("app-rated places include friends’ reviews and community-only ratings", a
   await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).click();
   const preview = page.getByRole("article", { name: "Selected place" });
-  await expect(preview).toContainText("4.7/5 · 23 reviewers · Serendipity");
+  await expect(preview).toContainText("4.7/5 · 23 reviews");
   await expect(preview).toContainText("Go early, grab something warm");
   await page.getByRole("button", { name: "Close place preview" }).click();
   await page.getByRole("button", { name: "View Trinity Bellwoods Park", exact: true }).click();
-  await expect(preview).toContainText("4.4/5 · 31 reviewers · Serendipity");
+  await expect(preview).toContainText("4.4/5 · 31 reviews");
   await expect(preview.locator(".discovery-friend-note")).toHaveCount(0);
   await page.getByRole("button", { name: "Close place preview" }).click();
   await page.getByRole("button", { name: "View Toronto Music Garden", exact: true }).click();
@@ -247,6 +247,6 @@ for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, heig
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight)).toBe(false);
     await page.screenshot({ path: `test-results/discover-${width}.png`, fullPage: true });
     await page.getByRole("button", { name: "Home", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "What feels fun?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Serendipity" })).toBeVisible();
   });
 }

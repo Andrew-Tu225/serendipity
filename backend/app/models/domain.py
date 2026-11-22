@@ -8,6 +8,8 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validat
 
 MAX_REVIEW_CHARS = 2000
 MAX_PHOTOS = 10
+NEUTRAL_RATING = 3.0
+RATING_HALF_RANGE = 2.0
 
 
 class Category(StrEnum):
@@ -31,6 +33,15 @@ class Verdict(StrEnum):
     RECOMMEND = "recommend"
     AVOID = "avoid"
     NEUTRAL = "neutral"
+
+
+def verdict_value(verdict: Verdict, rating: float) -> float:
+    """A log's positivity in [-1, 1] (docs/recommendations.md 2.1)."""
+    if verdict is Verdict.RECOMMEND:
+        return 1.0
+    if verdict is Verdict.AVOID:
+        return -1.0
+    return (rating - NEUTRAL_RATING) / RATING_HALF_RANGE
 
 
 def _check_half_step(rating: float) -> float:
@@ -86,6 +97,8 @@ class Experience(FrozenModel):
     review: str | None = Field(default=None, max_length=MAX_REVIEW_CHARS)
     photo_urls: tuple[str, ...] = Field(default=(), max_length=MAX_PHOTOS)
     visited_on: Annotated[date, AfterValidator(_check_not_future)]
+    # The value stored when the log was written; None until it is stored.
+    value: float | None = Field(default=None, ge=-1, le=1)
 
 
 class Bookmark(FrozenModel):

@@ -359,3 +359,13 @@ def test_recommend_cold_start_orders_explore_by_liked_count():
 
     assert all(i.kind is PinKind.EXPLORE for i in items)
     assert [i.place.id for i in items[:5]] == ["p_01", "p_02", "p_09", "p_03", "p_04"]
+
+
+def test_score_places_uses_stored_values():
+    stored = make_log("e_1", fx.MAYA.id, "p_a", verdict=Verdict.RECOMMEND).model_copy(
+        update={"value": 0.4}
+    )
+
+    scored = score_places([stored], WEIGHTS, excluded=frozenset())
+
+    assert scored == (ScoredPlace("p_a", 0.4),)

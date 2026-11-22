@@ -78,3 +78,21 @@ async def test_self_follow_is_rejected(session):
 
 async def test_taste_profile_unknown_category_is_rejected(session):
     await assert_rejected(session, TasteProfile(user_id=USER_ID, category="spaceport", score=1.0))
+
+
+async def test_experience_value_outside_minus_one_to_one_is_rejected(session):
+    await assert_rejected(session, experience(value=1.5))
+
+
+@pytest.mark.parametrize(
+    ("verdict", "rating", "expected"),
+    [("recommend", 2.0, 1.0), ("avoid", 5.0, -1.0), ("neutral", 4.5, 0.75)],
+)
+async def test_experience_value_defaults_from_verdict_and_rating(
+    session, verdict, rating, expected
+):
+    row = experience(verdict=verdict, rating=rating)
+    session.add(row)
+    await session.flush()
+
+    assert row.value == expected

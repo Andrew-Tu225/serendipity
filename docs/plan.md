@@ -113,6 +113,14 @@ Users can add friends, view their profiles, and explore places they've reviewed 
 
 Over time, a user's profile becomes a collection of their real-world experiences.
 
+The profile shows the four highest-rated Experiences side by side and the four most recently rated
+Experiences in a vertical list. Users can open their rating history from the recent list.
+The profile header opens separate Followers, Following, and Lists screens. Opening a collection
+shows each Place by name and location. Signed-in users can browse their Bookmarks from the default
+Saved places collection.
+Each account has a customizable character. Its face and shoulders form the account's profile
+picture wherever people appear in Profile and Discover.
+
 For example, someone who's passionate about hiking might have a collection of trails, viewpoints, and outdoor destinations they've visited.
 
 Another friend might be known for discovering interesting restaurants and cafés.
@@ -120,6 +128,11 @@ Another friend might be known for discovering interesting restaurants and cafés
 Instead of repeatedly asking these friends for recommendations, users can explore their experiences directly on the map.
 
 Friends help vet places by sharing their genuine opinions, both positive and negative.
+
+In Taste Buddies, swipe left to pass on a suggestion and right to open a first-message sheet.
+The card centers the buddy’s character portrait, and the small arrows below it perform the same actions.
+Send message opens the conversation. The Taste Buddies header opens Messages, with unread counts
+and a Read all action. An X closes Messages, and selecting a row opens that conversation.
 
 This creates an environment where recommendations feel more personal and relevant than anonymous public reviews.
 

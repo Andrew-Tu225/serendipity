@@ -46,8 +46,7 @@ Discover occupies the full phone area above navigation, with search and previews
 map. App-reviewed Places and friend snippets come from the discovery API; dense pins are clustered.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
 cancels pending search/details/discovery requests and suspends refresh timers. Fresh discovery
-coverage is reused on return, and session changes invalidate personalized cached data. Home, Buddy,
-and Profile keep their existing behavior.
+coverage is reused on return, and session changes invalidate personalized cached data.
 
 Place search follows `UI → placesClient → /api proxy → places router → PlacesService → GooglePlacesClient`.
 The integration uses Google Places API **New**, separate from the browser Maps SDK. No repository,
@@ -87,6 +86,54 @@ storage, or cached by the backend. App Places persist user-authored names and us
 points, plus optional provider IDs. Google search names/addresses/coordinates are not copied into
 app records. Hard-coded demo discovery pins are removed. No Google photos or reviews are fetched. Required map
 attribution and returned provider attributions remain visible. See [discovery-map.md](discovery-map.md).
+
+## Profile experience history
+
+The Profile tab fetches `GET /api/profile/experiences` through `profileClient`. `CurrentUser` supplies
+the author, and `ProfileService` asks `ExperienceRepository` for that user's highest-rated and
+most recently created Experiences. Ties in favorites use creation time and then ID. Recent activity
+shows four rows initially and uses offset pagination to open the rest of the user's rating history.
+Every response uses `Cache-Control: no-store`. A signed-out visitor sees the illustrated demo
+profile. Accounts with no ratings see empty states, and database-backed entries use category icons
+for thumbnails.
+
+The Profile response also includes follower, following, and Bookmark counts. The Lists button opens
+a dedicated in-app screen, and selecting a collection opens its Place list. The signed-out preview
+includes 12 sample collections with named locations and supports creating a temporary list during the
+current page session. Signed-in users see their default Saved places collection. Its rows come from
+`GET /api/profile/bookmarks` through `profileClient`, `ProfileService`, and `ProfileRepository`.
+The API pages through the current user's Bookmarks, and each row shows the Place name, stored map
+coordinates, and a link to open those coordinates. The Followers and Following screens use
+`GET /api/profile/connections/{direction}` to page through the corresponding directed Follow rows.
+The response includes each connection's ID, display name, and saved character appearance. The
+signed-out Profile shows sample connections. All profile endpoints require `CurrentUser`.
+
+The character editor saves an account's appearance with `PUT /api/profile/character`, using the
+session's CSRF token and `VerifiedMutation`. `ProfileService` commits the validated appearance to
+`users.character` (Alembic `0005`). Profile and discovery responses carry the saved appearance.
+The client draws a circular face-and-shoulders portrait on profiles, connection rows, friend map
+markers, and review rows. Accounts with no saved appearance get a stable default based on their ID.
+The signed-out preview keeps its character edits for the current page session.
+
+## Taste Buddies and inbox
+
+`buddyClient` calls the FastAPI `/api/buddies` router, `BuddyService`, and `BuddyRepository`.
+Suggestions rank up to 100 eligible recent accounts by the existing category taste similarity.
+Accounts with no overlapping taste scores can appear without a match percentage. A saved pass or
+an existing conversation removes the account from future suggestions. Swiping right opens the
+first-message sheet over the deck. Only Send writes a message, with a client-generated UUID to make retries
+idempotent. The inbox lists the latest message for each conversation, and an open chat periodically
+checks for new messages and can page back through its history.
+
+Alembic `0006` creates `buddy_skips` and `buddy_messages`. Reads and writes use `CurrentUser`, and
+mutations use `VerifiedMutation`. Inbox queries include only messages involving the viewer. Chat
+history and cursors are restricted to the viewer and selected account. These routes use no-store
+responses. Signed-out visitors can try swipes and messages with the demo buddies during the current
+page session.
+
+Alembic `0007` adds the message read timestamp. Opening a thread acknowledges incoming messages,
+and Read all acknowledges every unread message addressed to the signed-in viewer. The inbox shows
+the total unread count and highlights conversations with unread messages.
 
 ## Authentication flow
 
@@ -139,7 +186,7 @@ backend/app/services/experiences.py: ExperienceService.create_experience()
   → one commit
 ```
 
-The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. `POST /api/discovery/experiences` calls it through `DiscoveryService`, using `CurrentUser` and `VerifiedMutation`; a new Place participates in that same transaction.
+The service computes the log's value with `verdict_value()` (`backend/app/models/domain.py`), stores it in `experiences.value`, and adds the same number to `taste_profiles`. The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. `POST /api/discovery/experiences` calls it through `DiscoveryService`, using `CurrentUser` and `VerifiedMutation`; a new Place participates in that same transaction.
 
 ## Social interactions
 
@@ -157,6 +204,11 @@ Migration `0004` adds Experience likes, comments, and private Experience bookmar
 and Place `bookmarks` are reused. Place saving can atomically create an unreviewed, user-authored
 Place through the same repository path used by discovery review creation. Google IDs converge on
 one Place without overwriting existing fields. Saved review and Place collections are independent.
+
+Revision `0008` reconciles the two versions of revision `0004`. It adds the missing social
+tables or Experience values while retaining existing rows. Upgrade either branch with
+`uv run alembic upgrade head` from `backend/`. Downgrading to the merged branch?s `0007`
+schema drops the stored Experience values and retains the social tables.
 Only Place bookmarks and follows affect existing recommendations; social likes/comments do not
 alter taste profiles. Experiences stay immutable. The feed queries all published Experiences of
 currently followed users, including repeat visits, ordered by publication time rather than visit date.

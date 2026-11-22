@@ -148,3 +148,37 @@ async def test_add_score_creates_then_increments_the_row(database_factory, user)
         await session.commit()
 
     assert await stored_scores(database_factory) == {Category.MUSEUM: -1.0}
+
+
+async def test_create_experience_stores_the_value_added_to_the_profile(database_factory, user):
+    async with database_factory() as session:
+        log = await ExperienceService(session).create_experience(
+            user, str(CAFE_ID), rating=4.0, visited_on=DAY
+        )
+
+    async with database_factory() as session:
+        row = await session.get(Experience, UUID(log.id))
+    assert row.value == log.value == 0.5
+    assert await stored_scores(database_factory) == {Category.CAFE: 0.5}
+
+
+async def test_taste_profiles_equal_the_sum_of_stored_values(database_factory, user):
+    for place_id, rating, verdict in [
+        (TRAIL_ID, 5.0, Verdict.RECOMMEND),
+        (TRAIL_ID, 2.0, Verdict.NEUTRAL),
+        (CAFE_ID, 4.5, Verdict.AVOID),
+    ]:
+        async with database_factory() as session:
+            await ExperienceService(session).create_experience(
+                user, str(place_id), rating=rating, visited_on=DAY, verdict=verdict
+            )
+
+    async with database_factory() as session:
+        rows = (
+            await session.execute(
+                select(Place.category, func.sum(Experience.value))
+                .join(Place, Place.id == Experience.place_id)
+                .group_by(Place.category)
+            )
+        ).all()
+    assert {Category(c): total for c, total in rows} == await stored_scores(database_factory)

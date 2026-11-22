@@ -22,10 +22,10 @@ test("the Figma homepage remains available alongside authentication", async ({ p
   await mockDiscovery(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("What feels fun?");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Serendipity");
   await expect(page).toHaveURL(/\/$/);
   await expect.poll(
-    () => page.locator(".hero-card img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+    () => page.getByAltText("Illustration of the clock tower at Covent Garden Market in London, Ontario").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
     { timeout: 15_000 },
   ).toBe(true);
   await page.screenshot({ path: "test-results/figma-home-mobile.png", fullPage: true });
