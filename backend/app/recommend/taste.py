@@ -9,13 +9,10 @@ import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
-from app.models.domain import Category, Experience, TasteProfile, Verdict
+from app.models.domain import Category, Experience, TasteProfile, verdict_value
 from app.recommend.config import SIMILAR_K, SIMILAR_MIN
 
 Profile = Mapping[Category, float]
-
-NEUTRAL_RATING = 3.0
-RATING_HALF_RANGE = 2.0
 
 
 @dataclass(frozen=True)
@@ -25,11 +22,8 @@ class SimilarUser:
 
 
 def log_value(log: Experience) -> float:
-    if log.verdict is Verdict.RECOMMEND:
-        return 1.0
-    if log.verdict is Verdict.AVOID:
-        return -1.0
-    return (log.rating - NEUTRAL_RATING) / RATING_HALF_RANGE
+    """The stored value, so scores match what was added to the taste profile at write time."""
+    return log.value if log.value is not None else verdict_value(log.verdict, log.rating)
 
 
 def is_liked(log: Experience) -> bool:

@@ -38,6 +38,7 @@ def to_domain_experience(row: Experience) -> domain.Experience:
         review=row.review,
         photo_urls=tuple(row.photo_urls),
         visited_on=row.visited_on,
+        value=row.value,
     )
 
 

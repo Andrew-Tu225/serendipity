@@ -67,6 +67,7 @@ async def test_load_input_converts_rows_to_domain_models(seeded, repository):
         rating=4.5,
         verdict=domain.Verdict.RECOMMEND,
         visited_on=date(2026, 10, 5),
+        value=1.0,
     )
     place = next(p for p in data.places if p.id == str(seeded["p_01"]))
     assert (place.name, place.category) == ("Place 1", domain.Category.TRAIL)
@@ -147,3 +148,17 @@ async def test_unnamed_author_is_anonymous(database_factory, repository, seeded)
     data = await repository.load_input(VIEWER, AROUND_FIXTURE, 30, fx.TODAY)
 
     assert data.users[str(seeded["u_zed"])].display_name == "Anonymous"
+
+
+async def test_load_input_returns_the_stored_value_not_a_recomputed_one(
+    seeded, repository, database_factory
+):
+    async with database_factory() as session:
+        row = await session.get(Experience, seeded["e_02"])
+        row.value = 0.3
+        await session.commit()
+
+    data = await repository.load_input(VIEWER, AROUND_FIXTURE, 30, fx.TODAY)
+
+    log = next(log for log in data.logs if log.id == str(seeded["e_02"]))
+    assert (log.verdict, log.value) == (domain.Verdict.RECOMMEND, 0.3)
