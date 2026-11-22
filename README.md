@@ -133,7 +133,7 @@ Use Add to name a new Place and choose its map point, or Write a review on a sel
 
 Run `npm install` and `cd backend && uv run alembic upgrade head` for the existing setup. This map
 change adds no migration, dependency, or environment variable. No demo data is inserted automatically.
-Photos, saving UI, friend-management UI, and filters remain deferred. See
+Photo uploads, saving UI, friend-management controls, and filters remain deferred. Map previews can show Google place photos; reviewer names and connection lists open public profiles. See
 [the discovery guide](docs/discovery-data.md).
 
 ### Social endpoints (backend only)

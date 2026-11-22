@@ -49,3 +49,43 @@ test("review photos take precedence and a broken review photo falls back to Goog
   await expect(page.getByRole("img", { name: `Photo of ${place.name}` })).toBeVisible();
   expect(requests).toBeGreaterThan(0);
 });
+
+
+test("uses a shared review photo without requesting Google", async ({ page }) => {
+  let requests = 0;
+  await page.route(/\/api\/discovery\/places\/00000000[^?]+\?/, route => route.fulfill({ json: { place, experiences: [{ ...place.friends[0], photo_urls: ["https://example.com/shared-photo"] }], next_offset: null } }));
+  await page.route("https://example.com/shared-photo", route => route.fulfill({ contentType: "image/svg+xml", body: image }));
+  await page.route("**/api/places/london-market/photo", route => {
+    requests++; return route.fulfill({ json: { photo: null } });
+  });
+  await page.goto("/"); await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await page.getByRole("button", { name: `View ${place.name}`, exact: true }).click();
+  await expect(page.getByRole("img", { name: `A photo shared from ${place.name}` })).toBeVisible();
+  expect(requests).toBe(0);
+});
+
+
+test("a late photo response cannot replace the newly selected destination", async ({ page }) => {
+  const next = { ...appPlaces[1], google_place_id: "next-place" };
+  let oldRequested = false;
+  await page.route("**/api/discovery/places?**", route => route.fulfill({ json: { places: [place, next], next_cursor: null } }));
+  await page.route(/\/api\/discovery\/places\/00000000[^?]+\?/, route => {
+    const selected = new URL(route.request().url()).pathname.endsWith(next.id) ? next : place;
+    return route.fulfill({ json: { place: selected, experiences: selected.friends, next_offset: null } });
+  });
+  await page.route("**/api/places/london-market/photo", async route => {
+    oldRequested = true;
+    await new Promise(resolve => setTimeout(resolve, 600));
+    await route.fulfill({ json: { photo: { url: "https://lh3.googleusercontent.com/late-photo", authors: [] } } }).catch(() => {});
+  });
+  await page.route("**/api/places/next-place/photo", route => route.fulfill({ json: { photo: { url: "https://lh3.googleusercontent.com/test-photo", authors: [] } } }));
+  await page.goto("/"); await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await page.getByRole("button", { name: `View ${place.name}`, exact: true }).click();
+  await expect.poll(() => oldRequested).toBe(true);
+  await page.getByRole("button", { name: `View ${next.name}`, exact: true }).click();
+  const photo = page.getByRole("img", { name: `Photo of ${next.name}` });
+  await expect(photo).toHaveAttribute("src", "https://lh3.googleusercontent.com/test-photo");
+  await page.waitForTimeout(700);
+  await expect(photo).toHaveAttribute("src", "https://lh3.googleusercontent.com/test-photo");
+  await expect(page.getByRole("img", { name: `Photo of ${place.name}`, exact: true })).toHaveCount(0);
+});

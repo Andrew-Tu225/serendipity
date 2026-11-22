@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, StringConstraints, model_validator
 
 from app.models.domain import Category, Verdict
+from app.schemas.character import CharacterAppearance
 from app.schemas.discovery import NewPlace
 
 T = TypeVar("T")
@@ -25,6 +26,7 @@ class UserSummary(BaseModel):
     id: UUID
     display_name: str
     avatar_url: str | None
+    character: CharacterAppearance | None = None
 
 
 class UserProfile(UserSummary):

@@ -155,3 +155,44 @@ async def test_local_flag_rejects_remote_app():
             app_base_url="https://example.com",
             cookie_secure=True,
         )
+
+
+async def test_sample_friends_supply_map_evidence_and_browsable_profiles(
+    client, identity_provider, database_factory
+):
+    from app.demo.london import PLACES
+
+    await authenticate(client, identity_provider)
+    async with database_factory() as session:
+        await DemoDataService(session).seed_london(date.today())
+    response = await client.get(
+        "/api/discovery/places",
+        params={
+            "bbox": "-81.35,42.93,-81.20,43.03",
+            "limit": 200,
+        },
+    )
+    places = response.json()["places"]
+    assert len(places) == len(PLACES)
+    assert all(place["friend_count"] > 0 for place in places)
+    assert all(place["friends"] for place in places)
+    recommendations = await client.get(
+        "/api/recommendations",
+        params={
+            "bbox": "-81.35,42.93,-81.20,43.03",
+            "limit": 30,
+        },
+    )
+    friends = [item for item in recommendations.json()["items"] if item["kind"] == "friend"]
+    assert friends
+    for item in friends:
+        assert any(log["relation"] == "following" for log in item["logs"])
+    author = places[0]["friends"][0]["author_id"]
+    profile = (await client.get(f"/api/users/{author}")).json()
+    assert profile["is_following"] and profile["follows_you"]
+    assert profile["experience_count"] >= 5
+    history = (await client.get(f"/api/users/{author}/experiences")).json()
+    assert history["items"]
+    assert all(item["author"]["id"] == author for item in history["items"])
+    assert all("Demo " not in item["author"]["display_name"] for item in history["items"])
+    assert all("[Mock review]" not in (item["review"] or "") for item in history["items"])

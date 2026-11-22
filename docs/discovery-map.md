@@ -193,3 +193,8 @@ credentials stay private. Photo metadata and URLs are not stored or cached. Cred
 beside the image. Review photos take precedence, including fallback after an image fails.
 Closing or changing the selection cancels the request; photo failure never blocks reviews.
 Photo requests have a separate 60-per-minute, per-process limit. No new configuration is needed.
+
+Reviewer names and portraits, recommendation authors and the highlighted friend name open
+the same public profile screens as the viewer’s followers/following lists. Returning preserves
+map selection and camera position; opening a profile’s reviewed Place centers the map there.
+Map browsing and photo requests pause while the profile subscreen is open.

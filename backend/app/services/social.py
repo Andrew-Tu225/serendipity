@@ -39,6 +39,7 @@ def user_summary(user: User) -> UserSummary:
         id=user.id,
         display_name=(user.display_name or "").strip()[:60] or "Anonymous",
         avatar_url=user.picture_url,
+        character=user.character,
     )
 
 

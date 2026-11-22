@@ -41,11 +41,14 @@ class GooglePlacesClient:
 
     async def request(self, method: str, path: str, fields: str, **kwargs) -> dict:
         # Fixed origin and encoded IDs prevent client-controlled provider URLs.
+        headers = {"X-Goog-Api-Key": self.api_key}
+        if fields:
+            headers["X-Goog-FieldMask"] = fields
         async with httpx.AsyncClient(
             base_url="https://places.googleapis.com",
             timeout=10,
             transport=self.transport,
-            headers={"X-Goog-Api-Key": self.api_key, "X-Goog-FieldMask": fields},
+            headers=headers,
         ) as client:
             response = await client.request(method, path, **kwargs)
             response.raise_for_status()

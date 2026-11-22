@@ -105,6 +105,7 @@ async def test_public_reads_have_safe_shapes_and_anonymous_flags(client, records
         "id": str(A),
         "display_name": "Alex",
         "avatar_url": None,
+        "character": None,
         "experience_count": 2,
         "follower_count": 0,
         "following_count": 0,
@@ -114,7 +115,12 @@ async def test_public_reads_have_safe_shapes_and_anonymous_flags(client, records
     }
     response = await client.get(f"/api/experiences/{E1}")
     assert response.status_code == 200
-    assert response.json()["author"] == {"id": str(A), "display_name": "Alex", "avatar_url": None}
+    assert response.json()["author"] == {
+        "id": str(A),
+        "display_name": "Alex",
+        "avatar_url": None,
+        "character": None,
+    }
     assert response.json()["place"]["id"] == str(P)
     assert response.json()["like_count"] == response.json()["comment_count"] == 0
     assert not response.json()["is_liked"] and not response.json()["is_bookmarked"]
@@ -540,3 +546,31 @@ async def test_database_failures_are_sanitized_and_not_cached(client, records, m
     assert result.status_code == 503
     assert result.json() == {"detail": "Database is unavailable"}
     assert result.headers["cache-control"] == "no-store"
+
+
+async def test_public_profile_and_history_share_character_without_private_fields(
+    client, records, database_factory
+):
+    appearance = {
+        "features": "feminine",
+        "hairStyle": "curly",
+        "hairColor": "#211d20",
+        "skinTone": "#dca985",
+        "shirt": "#8664a0",
+        "pants": "#4d526b",
+        "shoes": "#eee8f2",
+        "hat": "none",
+    }
+    async with database_factory() as session:
+        user = await session.get(User, A)
+        user.character = appearance
+        await session.commit()
+    profile = await client.get(f"/api/users/{A}")
+    history = await client.get(f"/api/users/{A}/experiences")
+    assert profile.json()["character"] == appearance
+    assert all(row["author"]["character"] == appearance for row in history.json()["items"])
+    assert profile.headers["cache-control"] == "no-store"
+    for response in (profile, history):
+        assert "private@example.com" not in response.text
+        assert "test|a" not in response.text
+        assert "email" not in response.text

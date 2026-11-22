@@ -11,25 +11,26 @@ const demoPeople = {
   following: ["Elena Rivera", "Alex Bennett", "Nora Patel", "Riley Brooks", "Jamie Kim"],
 };
 
-export function ProfileConnections({ direction, owner, count, onClose }: {
+export function ProfileConnections({ direction, owner, count, onClose, onPerson }: {
   direction: ConnectionDirection;
   owner: { name: string; demo: boolean };
   count: number;
   onClose: () => void;
+  onPerson?: (id: string) => void;
 }) {
   return (
     <ProfileSubscreen title={titles[direction]} subtitle={owner.name} count={count}
       countLabel={direction === "followers" ? `${count} ${count === 1 ? "follower" : "followers"}` : `Following ${count} ${count === 1 ? "person" : "people"}`}
       backLabel="Back to profile" onBack={onClose}>
       {owner.demo ? <>
-        <p className="place-lists-message">Sample {direction === "followers" ? "followers" : "people Mia follows"}</p>
+        <p className="place-lists-message">{direction === "followers" ? "People following Mia" : "People Mia follows"}</p>
         <PeopleRows direction={direction} people={demoPeople[direction].map((name) => ({ id: name, display_name: name }))} />
-      </> : <LiveConnections key={direction} direction={direction} />}
+      </> : <LiveConnections key={direction} direction={direction} onPerson={onPerson} />}
     </ProfileSubscreen>
   );
 }
 
-function LiveConnections({ direction }: { direction: ConnectionDirection }) {
+function LiveConnections({ direction, onPerson }: { direction: ConnectionDirection; onPerson?: (id: string) => void }) {
   const getPage = useCallback((offset: number, signal: AbortSignal) => (
     profileClient.getConnections(direction, offset, signal)
   ), [direction]);
@@ -37,7 +38,7 @@ function LiveConnections({ direction }: { direction: ConnectionDirection }) {
 
   return (
     <>
-      {items.length > 0 && <PeopleRows direction={direction} people={items} />}
+      {items.length > 0 && <PeopleRows direction={direction} people={items} onPerson={onPerson} />}
       {status === "ready" && items.length === 0 && <p className="place-lists-message">
         {direction === "followers" ? "You don’t have any followers yet." : "You aren’t following anyone yet."}
       </p>}
@@ -50,15 +51,17 @@ function LiveConnections({ direction }: { direction: ConnectionDirection }) {
   );
 }
 
-function PeopleRows({ direction, people }: { direction: ConnectionDirection; people: ProfileConnection[] }) {
+export function PeopleRows({ direction, people, onPerson, label }: { direction: ConnectionDirection; people: ProfileConnection[]; onPerson?: (id: string) => void; label?: string }) {
   return (
-    <ul className="place-lists-rows" aria-label={direction === "followers" ? "People who follow you" : "People you follow"}>
-      {people.map(({ id, display_name, character }) => (
-        <li key={id} className="place-list-card">
-          <CharacterPortrait identity={id} appearance={character} size={45} />
-          <span className="place-list-copy"><strong>{display_name}</strong></span>
-        </li>
-      ))}
+    <ul className="place-lists-rows" aria-label={label ?? (direction === "followers" ? "People who follow you" : "People you follow")}>
+      {people.map(({ id, display_name, character }) => {
+        const content = <><CharacterPortrait identity={id} appearance={character} size={45} />
+          <span className="place-list-copy"><strong>{display_name}</strong></span></>;
+        return <li key={id} className="place-list-card">
+          {onPerson ? <button className="person-row" onClick={() => onPerson(id)} aria-label={`View profile of ${display_name}`}>{content}</button>
+            : <div className="person-row">{content}</div>}
+        </li>;
+      })}
     </ul>
   );
 }

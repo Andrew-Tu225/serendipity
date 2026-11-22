@@ -694,3 +694,26 @@ a.place-list-arrow:hover { background: #f2eaf7; }
 .discovery-photo-loading { animation: photo-pulse 1.5s ease-in-out infinite alternate; }
 @keyframes photo-pulse { to { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .discovery-photo-loading { animation: none; } }
+
+/* Public people profiles reuse the phone-frame subscreen layout. */
+.profile-subscreen-mount { height: 100%; min-height: 0; }
+.profile-subscreen-mount[hidden] { display: none; }
+.person-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; color: inherit; }
+button.person-row { cursor: pointer; }
+.review-author-button { display: inline-flex; align-items: center; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; text-align: left; cursor: pointer; }
+.review-author-button:hover, .person-row:hover strong, .public-experience-place:hover { text-decoration: underline; }
+.review-author-button:focus-visible, .person-row:focus-visible, .public-experience-place:focus-visible { outline: 2px solid #8664a0; outline-offset: 4px; border-radius: 4px; }
+.public-profile-identity { display: flex; align-items: center; flex-direction: column; gap: 8px; padding: 20px 0; }
+.public-profile-identity h2 { font-size: 1.5rem; color: #493750; }
+.public-profile-identity p { color: #71617e; font-size: .875rem; }
+.public-profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-bottom: 24px; }
+.public-profile-stats > * { display: flex; align-items: center; flex-direction: column; gap: 4px; padding: 12px 4px; border: 1px solid #e8e0ec; border-radius: 14px; background: #fff; }
+.public-profile-stats strong { color: #493750; font-size: 1.125rem; }
+.public-profile-stats span { color: #71617e; font-size: .875rem; }
+.public-profile-section-title { margin: 0 0 12px; font-size: 1.125rem; }
+.public-experience-list { display: flex; flex-direction: column; gap: 12px; padding: 0; list-style: none; }
+.public-experience-card { padding: 16px; border: 1px solid #e8e0ec; border-radius: 16px; background: #fff; }
+.public-experience-place { border: 0; padding: 0; background: transparent; color: #493750; font-size: 1rem; font-weight: 700; text-align: left; cursor: pointer; }
+.public-experience-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; color: #76548f; font-size: .875rem; }
+.public-experience-card p { margin: 12px 0; font-size: 1rem; line-height: 1.5; }
+.public-experience-card small { color: #71617e; font-size: .875rem; }

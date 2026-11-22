@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 
 export function ProfileSubscreen({ title, subtitle, count, countLabel, backLabel, backIcon = "arrow", onBack, children, footer, headerAction }: {
@@ -14,11 +14,12 @@ export function ProfileSubscreen({ title, subtitle, count, countLabel, backLabel
   headerAction?: ReactNode;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const headingId = useId();
 
   useEffect(() => heading.current?.focus(), []);
 
   return (
-    <section className="place-lists-screen" aria-labelledby="profile-subscreen-heading" onKeyDown={(event) => {
+    <section className="place-lists-screen" aria-labelledby={headingId} onKeyDown={(event) => {
       if (event.key === "Escape") onBack();
     }}>
       <header className="place-lists-header">
@@ -27,7 +28,7 @@ export function ProfileSubscreen({ title, subtitle, count, countLabel, backLabel
         </button>
         <div>
           <p className="eyebrow">{subtitle}</p>
-          <h1 id="profile-subscreen-heading" ref={heading} tabIndex={-1}>{title}</h1>
+          <h1 id={headingId} ref={heading} tabIndex={-1}>{title}</h1>
         </div>
         {count !== undefined && <span className="place-lists-count" aria-label={countLabel}>{count}</span>}
         {headerAction}

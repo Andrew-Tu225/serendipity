@@ -317,6 +317,7 @@ def test_photo_resolves_media_and_keeps_key_private(places_client, monkeypatch):
     assert calls[0].headers["x-goog-fieldmask"] == "photos"
     assert calls[1].url.params["maxWidthPx"] == "800"
     assert calls[1].url.params["skipHttpRedirect"] == "true"
+    assert "x-goog-fieldmask" not in calls[1].headers
     assert "sessionToken" not in calls[0].url.params
     assert "private-google-key" not in response.text
     assert not requests

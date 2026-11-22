@@ -305,3 +305,13 @@ service commits relationships and session together, preserving later unfollows. 
 reject non-loopback app/database targets and libpq target overrides for this local mode.
 `FixturePlacesService` optionally verifies authored destinations using Google Text Search;
 it stores matching IDs only and commits separately from the fixture seed.
+
+### Public people navigation
+
+The public-profile subscreens use the typed social client and existing `/api/users/{id}`
+profile/history/connection APIs. Public user summaries add nullable character appearance.
+The app maintains an in-memory screen stack, retaining hidden prior screens so pagination,
+scroll position and focus targets survive nested navigation. SessionProvider’s existing
+viewer-keyed subtree clears this state on account changes. Opening a reviewed Place uses
+its app UUID and optional Google ID, focuses the map once, and fetches normal app reviews.
+Private profile bookmarks and editing remain on the authenticated owner endpoints.

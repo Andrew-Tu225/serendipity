@@ -26,10 +26,12 @@ function externalUrl(value?: string | null) {
   } catch { return undefined; }
 }
 
-export default function DiscoverMap({ active, revision, reviewedPlace, selected: selectedInput, onSelect, onReview, picking, onPick, onCancelPick }: {
+export default function DiscoverMap({ active, revision, reviewedPlace, selected: selectedInput, onSelect, onReview, picking, onPick, onCancelPick, onPerson, focusTarget }: {
   active: boolean; revision: number; selected: MapPlace | null;
   reviewedPlace: MapPlace | null;
   onSelect: (place: MapPlace | null) => void; onReview: (place: MapPlace | null) => void;
+  focusTarget?: MapPlace | null;
+  onPerson: (id: string) => void;
   picking: boolean; onPick: (point: Coordinates) => void; onCancelPick: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -137,6 +139,14 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
     resolvePlace(place);
   }, [resolvePlace]);
 
+  const appliedFocus = useRef<{ map: MapHandle; target: MapPlace } | null>(null);
+  useEffect(() => {
+    if (!map || !active || !focusTarget) return;
+    if (appliedFocus.current?.map === map && appliedFocus.current.target === focusTarget) return;
+    appliedFocus.current = { map, target: focusTarget };
+    map.focus(focusTarget);
+  }, [map, active, focusTarget]);
+
   function locate() {
     if (!navigator.geolocation) { setLocationError("Location is not available in this browser."); return; }
     setLocating(true);
@@ -192,17 +202,17 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           <p className="discovery-place-description">{selected.address
             ? `${selected.display_name} is located at ${selected.address}.`
             : `A ${selected.app_category ?? selected.category?.toLowerCase() ?? "local"} place shared by the Serendipity community.`}</p>
-          {selected.app_id && active && discovery.identityReady
-            ? <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id} ratingSummary={selected.rating_summary} name={selected.display_name} googleId={selected.google_place_id ?? (selected.source === "google" ? selected.place_id : undefined)}/>
-            : <PlaceProfileSummary ratingSummary={selected.rating_summary} name={selected.display_name} googleId={selected.google_place_id ?? (selected.source === "google" ? selected.place_id : undefined)} />}
+          {selected.app_id && discovery.identityReady
+            ? <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id} onPerson={onPerson} active={active} ratingSummary={selected.rating_summary} name={selected.display_name} googleId={selected.google_place_id ?? (selected.source === "google" ? selected.place_id : undefined)}/>
+            : <PlaceProfileSummary active={active && !selected.app_id} ratingSummary={selected.rating_summary} name={selected.display_name} googleId={selected.google_place_id ?? (selected.source === "google" ? selected.place_id : undefined)} />}
           {selected.recommendation && <div className="discovery-reviews" aria-label="Why this place is recommended">
             <p className="discovery-friend-note">{recommendationReasons[selected.recommendation.kind]}</p>
             {selected.recommendation.logs.map((log) => <div className="discovery-review" key={log.experience_id}>
-              <strong>{log.author.display_name} · {log.rating}/5 · {log.relation === "following" ? "Following" : log.relation === "similar_taste" ? "Similar taste" : "Community"}</strong>
+              <strong><button className="review-author-button" onClick={() => onPerson(log.author.id)} aria-label={`View profile of ${log.author.display_name}`}>{log.author.display_name}</button> · {log.rating}/5 · {log.relation === "following" ? "Following" : log.relation === "similar_taste" ? "Similar taste" : "Community"}</strong>
               <p>{log.review || "Recommends this place"}</p>
             </div>)}
           </div>}
-          {selected.friend && <p className="discovery-friend-note">{selected.friend.name} {selected.friend.note}{(selected.friend_count ?? 0) > 1 ? ` · ${selected.friend_count} friends reviewed` : ""}</p>}
+          {selected.friend && <p className="discovery-friend-note"><button className="review-author-button" onClick={() => onPerson(selected.friend!.id)} aria-label={`View profile of ${selected.friend.name}`}>{selected.friend.name}</button> {selected.friend.note}{(selected.friend_count ?? 0) > 1 ? ` · ${selected.friend_count} friends reviewed` : ""}</p>}
           {resolveError && selected.source === "google" && <p role="alert">{resolveError}</p>}
           {selected.source === "google" && reviewLookup === "checking" && <p role="status">Checking app reviews…</p>}
           {selected.source === "google" && reviewLookup === "empty" && <p>No Serendipity reviews yet. Be the first to review it.</p>}
@@ -219,14 +229,14 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   </section>;
 }
 
-function PlaceProfileSummary({ ratingSummary, name, googleId }: { ratingSummary?: MapPlace["rating_summary"]; name: string; googleId?: string }) {
+function PlaceProfileSummary({ ratingSummary, name, googleId, active }: { active: boolean; ratingSummary?: MapPlace["rating_summary"]; name: string; googleId?: string }) {
   return <>
-    <PlacePhoto name={name} googleId={googleId} />
+    <PlacePhoto name={name} googleId={googleId} active={active} />
     {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
   </>;
 }
 
-function PlaceReviews({ placeId, ratingSummary, name, googleId }: { placeId: string; ratingSummary?: MapPlace["rating_summary"]; name: string; googleId?: string }) {
+function PlaceReviews({ placeId, ratingSummary, name, googleId, onPerson, active }: { active: boolean; onPerson: (id: string) => void; placeId: string; ratingSummary?: MapPlace["rating_summary"]; name: string; googleId?: string }) {
   const [data, setData] = useState<PlaceExperiences | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -255,15 +265,16 @@ function PlaceReviews({ placeId, ratingSummary, name, googleId }: { placeId: str
     } finally { if (!controller.signal.aborted) setLoading(false); }
   }
   const photo = data?.experiences.flatMap((review) => review.photo_urls ?? [])[0];
+  const summary = data?.place.rating_summary.count ? data.place.rating_summary : ratingSummary;
   return <div className="discovery-reviews">
     {!data && !error && <p role="status">Loading reviews…</p>}
-    <PlacePhoto name={name} googleId={googleId} reviewPhoto={photo} />
-    {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
+    <PlacePhoto name={name} googleId={googleId} reviewPhoto={photo} active={active && Boolean(data || error)} />
+    {summary && <p className="discovery-rating-summary"><strong>★ {summary.average.toFixed(1)}/5</strong> · {summary.count} reviews</p>}
     <h3 className="discovery-friends-heading">Friends’ reviews</h3>
     {data?.experiences.map((review) => <div className="discovery-review flex items-start gap-2" key={review.id}>
-      <CharacterPortrait identity={review.author_id} appearance={review.author_character} size={28} />
+      <button className="review-author-button" onClick={() => onPerson(review.author_id)} aria-label={`View profile of ${review.author_name}`}><CharacterPortrait identity={review.author_id} appearance={review.author_character} size={28} /></button>
       <div>
-        <strong>{review.author_name}{review.is_self ? " · You" : review.is_friend ? " · Friend" : ""} · {review.rating}/5</strong>
+        <strong><button className="review-author-button" onClick={() => onPerson(review.author_id)} aria-label={`View profile of ${review.author_name}`}>{review.author_name}</button>{review.is_self ? " · You" : review.is_friend ? " · Friend" : ""} · {review.rating}/5</strong>
         <p>{review.review || (review.verdict === "recommend" ? "Recommends this place" : review.verdict === "avoid" ? "Would avoid this place" : "Visited this place")}</p>
         <small>Visited {review.visited_on}</small>
       </div>

@@ -11,11 +11,11 @@ function safeUrl(value?: string | null) {
   catch { return undefined; }
 }
 
-export function PlacePhoto({ name, googleId, reviewPhoto }: { name: string; googleId?: string; reviewPhoto?: string }) {
-  return <PhotoContent key={`${googleId ?? name}:${reviewPhoto ?? ""}`} name={name} googleId={googleId} reviewPhoto={reviewPhoto} />;
+export function PlacePhoto({ name, googleId, reviewPhoto, active = true }: { name: string; googleId?: string; reviewPhoto?: string; active?: boolean }) {
+  return <PhotoContent key={`${googleId ?? name}:${reviewPhoto ?? ""}`} name={name} googleId={googleId} reviewPhoto={reviewPhoto} active={active} />;
 }
 
-function PhotoContent({ name, googleId, reviewPhoto }: { name: string; googleId?: string; reviewPhoto?: string }) {
+function PhotoContent({ name, googleId, reviewPhoto, active }: { name: string; googleId?: string; reviewPhoto?: string; active: boolean }) {
   const [reviewFailed, setReviewFailed] = useState(false);
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [finished, setFinished] = useState(false);
@@ -23,7 +23,7 @@ function PhotoContent({ name, googleId, reviewPhoto }: { name: string; googleId?
   const shared = safeUrl(reviewPhoto);
   const useGoogle = !shared || reviewFailed;
   useEffect(() => {
-    if (!useGoogle || !googleId) return;
+    if (!active || !useGoogle || !googleId || finished) return;
     const controller = new AbortController();
     placesClient.photo(googleId, controller.signal).then(({ photo }) => {
       if (!controller.signal.aborted) setPhoto(photo);
@@ -31,7 +31,7 @@ function PhotoContent({ name, googleId, reviewPhoto }: { name: string; googleId?
       if (!controller.signal.aborted) setFinished(true);
     });
     return () => controller.abort();
-  }, [googleId, useGoogle]);
+  }, [googleId, useGoogle, active, finished]);
   if (shared && !reviewFailed) return <img className="discovery-place-photo" src={shared} alt={`A photo shared from ${name}`} onError={() => setReviewFailed(true)} />;
   if (photo && safeUrl(photo.url) && !imageFailed) return <figure className="discovery-photo-figure">
     <img className="discovery-place-photo" src={safeUrl(photo.url)} alt={`Photo of ${name}`} onError={() => setImageFailed(true)} />

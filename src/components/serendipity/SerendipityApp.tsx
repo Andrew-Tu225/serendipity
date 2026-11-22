@@ -12,6 +12,8 @@ import { ProfileExperiencePanels } from '@/components/profile/profile-experience
 import { demoPlaceLists } from '@/components/profile/demo-place-lists'
 import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
 import { ProfileConnections } from '@/components/profile/profile-connections'
+import { PublicProfile, PublicConnections } from '@/components/profile/public-profile'
+import type { PublicPlace } from '@/types/social'
 import { SettingsMenu } from '@/components/profile/settings-menu'
 import { BuddyDeckCard } from '@/components/buddy/buddy-deck-card'
 import { BuddyChat } from '@/components/buddy/buddy-messages'
@@ -29,6 +31,9 @@ import type { BuddyMessage, BuddyPerson, BuddySuggestion } from '@/types/buddies
 
 type ProfileScreen = { kind: 'lists'; owner: ListOwner }
   | { kind: ConnectionDirection; owner: { name: string; demo: boolean }; count: number }
+type PersonScreen = { key: number; userId: string; returnFocus: HTMLElement | null } & (
+  { kind: 'profile' } | { kind: ConnectionDirection; name: string }
+)
 type BuddyScreen = { kind: 'inbox' } | { kind: 'compose'; buddy: BuddySuggestion }
   | { kind: 'chat'; buddy: BuddyPerson; initialMessage?: BuddyMessage }
 
@@ -38,6 +43,7 @@ function App() {
   const [sheet, setSheet] = useState<'post' | 'soon' | null>(null)
   const [posted, setPosted] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null)
+  const [profileMapTarget, setProfileMapTarget] = useState<MapPlace | null>(null)
   const [reviewTarget, setReviewTarget] = useState<MapPlace | null>(null)
   const [reviewPoint, setReviewPoint] = useState<Coordinates | null>(null)
   const [picking, setPicking] = useState(false)
@@ -45,6 +51,8 @@ function App() {
   const [discoveryRevision, setDiscoveryRevision] = useState(0)
   const [reviewedPlace, setReviewedPlace] = useState<MapPlace | null>(null)
   const [profileScreen, setProfileScreen] = useState<ProfileScreen | null>(null)
+  const [personScreens, setPersonScreens] = useState<PersonScreen[]>([])
+  const personSequence = useRef(0)
   const [demoLists, setDemoLists] = useState(demoPlaceLists)
   const [demoCharacter, setDemoCharacter] = useState(miaCharacter)
   const profileTrigger = useRef<HTMLButtonElement>(null)
@@ -52,7 +60,33 @@ function App() {
   const [sampleMessages, setSampleMessages] = useState(demoBuddyMessages)
   const buddyDeck = useBuddyDeck(activeTab === 'Buddy')
   const inboxTrigger = useRef<HTMLButtonElement>(null)
-  const subscreenOpen = profileScreen !== null || buddyScreen?.kind === 'inbox' || buddyScreen?.kind === 'chat'
+  const subscreenOpen = personScreens.length > 0 || profileScreen !== null || buddyScreen?.kind === 'inbox' || buddyScreen?.kind === 'chat'
+
+  function openPerson(userId: string) {
+    const screen: PersonScreen = { kind: 'profile', userId, key: personSequence.current++, returnFocus: document.activeElement instanceof HTMLElement ? document.activeElement : null }
+    setPersonScreens(current => [...current, screen])
+  }
+
+  function backPerson() {
+    const screen = personScreens[personScreens.length - 1]
+    setPersonScreens(current => current.slice(0, -1))
+    requestAnimationFrame(() => screen?.returnFocus?.focus())
+  }
+
+  function openPersonConnections(userId: string, direction: ConnectionDirection, name: string) {
+    const screen: PersonScreen = { kind: direction, userId, name, key: personSequence.current++, returnFocus: document.activeElement instanceof HTMLElement ? document.activeElement : null }
+    setPersonScreens(current => [...current, screen])
+  }
+
+  function openPublicPlace(place: PublicPlace) {
+    setPersonScreens([])
+    setProfileScreen(null)
+    setDiscovered(true)
+    setActiveTab('Discover')
+    const target = mapPlace({ ...place, rating_summary: { average: 0, count: 0 }, friend_count: 0, friends: [] })
+    setSelectedPlace(target)
+    setProfileMapTarget(target)
+  }
 
   function closeProfileScreen() {
     setProfileScreen(null)
@@ -140,7 +174,7 @@ function App() {
 
         <div className="app-content" hidden={subscreenOpen}>
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
-            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={discoveryRevision} reviewedPlace={reviewedPlace}
+            {discovered && <DiscoverMap active={activeTab === 'Discover' && !subscreenOpen} onPerson={openPerson} focusTarget={profileMapTarget} revision={discoveryRevision} reviewedPlace={reviewedPlace}
               selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
               picking={picking} onCancelPick={() => setPicking(false)}
               onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
@@ -177,9 +211,14 @@ function App() {
             onClose={closeProfileScreen} />
         )}
         {profileScreen && profileScreen.kind !== 'lists' && (
-          <ProfileConnections direction={profileScreen.kind} owner={profileScreen.owner}
-            count={profileScreen.count} onClose={closeProfileScreen} />
+          <div className="profile-subscreen-mount" hidden={personScreens.length > 0}><ProfileConnections direction={profileScreen.kind} owner={profileScreen.owner}
+            count={profileScreen.count} onClose={closeProfileScreen} onPerson={openPerson} /></div>
         )}
+        {personScreens.map((screen, index) => <div className="profile-subscreen-mount" key={screen.key} hidden={index !== personScreens.length - 1}>
+          {screen.kind === 'profile' ? <PublicProfile userId={screen.userId} onBack={backPerson} onPlace={openPublicPlace}
+            onConnections={(direction, name) => openPersonConnections(screen.userId, direction, name)} />
+            : <PublicConnections userId={screen.userId} direction={screen.kind} name={screen.name} onBack={backPerson} onPerson={openPerson} />}
+        </div>)}
         {buddyScreen?.kind === 'inbox' && (
           <BuddyInbox demo={buddyDeck.status === 'demo'} demoMessages={sampleMessages} onClose={closeBuddyScreen}
             onReadDemo={readSampleMessages} onOpen={(buddy) => setBuddyScreen({ kind: 'chat', buddy })} />

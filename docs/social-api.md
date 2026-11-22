@@ -1,6 +1,6 @@
 # Social backend API
 
-These endpoints provide persistent social behavior without changing the frontend. Reviews are
+These endpoints provide persistent social behavior. Public profiles are accessible from map reviewers and authenticated follower/following lists. Reviews are
 called **Experiences** in APIs and storage. All paths below begin with `/api`. Interactive response
 schemas are available at `/api/docs`; OpenAPI is at `/api/openapi.json`.
 
@@ -16,8 +16,7 @@ Public reads require no login. Optional authenticated viewers receive their own 
 flags. An expired or invalid session is treated as anonymous on those reads. `/feed` and all
 `/me/bookmarks/*` operations require a valid session. Every mutation requires the existing
 HttpOnly session cookie, trusted `Origin`, and `X-CSRF-Token` from `GET /api/auth/me`. The server
-always determines the acting user from that session. Use the frontend API-client layer when
-integrating these endpoints; this change does not add frontend clients or UI.
+always determines the acting user from that session. Use the typed social client in `src/lib/api-client/social.ts` for public profiles, review history and connections.
 
 Every new endpoint returns `Cache-Control: no-store`, including validation and authorization errors.
 Public responses never include emails, Auth0 subjects/claims, session data, or other users' saves.
@@ -91,7 +90,7 @@ client-supplied ownership fields cannot change the acting user.
 
 ### Response shapes
 
-- A user summary is `{id, display_name, avatar_url}`. Names use the existing 60-character public
+- A user summary is `{id, display_name, avatar_url, character}`; `character` is nullable. Names use the existing 60-character public
   display convention, with `Anonymous` for missing/blank names.
 - A profile adds `experience_count`, `follower_count`, `following_count`, `is_following`,
   `follows_you`, and `is_self`. `is_following` means the viewer follows this profile;
@@ -150,7 +149,7 @@ immutable; their existing creation endpoint is `POST /api/discovery/experiences`
 and recommendation response schemas remain unchanged.
 
 Usernames, profile editing, private accounts, follow requests, replies, comment likes, notifications,
-custom lists, moderation, uploads, and UI integration remain future work.
+custom lists, moderation and uploads remain future work.
 
 ## Validation
 
@@ -163,3 +162,13 @@ isolated schemas; they do not migrate or delete application tables in the public
 ## Signed-in profile and onboarding
 
 Onboarding uses `GET /api/me/profile`, a private summary of the current account's identity, interests, onboarding timestamp, Experience count, saved Place count, and following count. `PUT /api/me/onboarding` accepts 1–14 unique domain category interests with normal session/CSRF verification. These endpoints live in the onboarding domain and never accept a client-supplied owner ID. The existing public profile and social endpoints retain their contracts. See [architecture.md](architecture.md) and [recommendations.md](recommendations.md) for persistence and interest weighting.
+
+## Public profile navigation
+
+Reviewer names/portraits and recommendation authors on Discover open a public profile. The
+viewer’s connection rows do the same. Public profiles show names, character portraits, mutual
+follow status, counts and paginated Experiences, with links back to their Places on the map.
+Follower/following lists support nested profiles. Returning preserves prior lists, pagination
+and map selection, restoring keyboard focus. All public content comes from existing social
+endpoints; profiles do not expose saved Places, Auth0 identities or email addresses.
+These screens are read-only; the Home feed remains the existing prototype.
