@@ -2,13 +2,14 @@ import type { MapPlace } from "@/types/places";
 
 export type MarkerLayer = "place" | "review" | "recommendation" | "friend";
 export const markerLayerLabels: Record<MarkerLayer, string> = {
-  place: "Nearby place", review: "Reviewed place", recommendation: "Recommended for you", friend: "Friend recommendation",
+  place: "Place without reviews", review: "Reviewed place", recommendation: "Recommended for you", friend: "Reviewed by friends",
 };
 
 export function markerLayer(place: MapPlace): MarkerLayer {
-  if (place.recommendation?.kind === "friend") return "friend";
   if (place.recommendation) return "recommendation";
-  return place.source === "app" ? "review" : "place";
+  if (place.friend || (place.friend_count ?? 0) > 0) return "friend";
+  if ((place.rating_summary?.count ?? 0) > 0) return "review";
+  return "place";
 }
 
 export function mergeMapLayers(nearby: MapPlace[], reviewed: MapPlace[], recommended: MapPlace[]) {
@@ -19,6 +20,8 @@ export function mergeMapLayers(nearby: MapPlace[], reviewed: MapPlace[], recomme
     result.set(`app:${place.place_id}`, { ...base, ...place,
       rating_summary: base?.rating_summary ?? place.rating_summary,
       google_place_id: base?.google_place_id ?? place.google_place_id,
+      friend: place.friend ?? base?.friend,
+      friend_count: base?.friend_count ?? place.friend_count,
     });
   }
   const googleIds = new Set([...result.values()].filter((place) => place.source === "app").map((place) => place.google_place_id).filter(Boolean));

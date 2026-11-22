@@ -29,10 +29,12 @@ App review requests wait for the active viewer identity to be ready. Discover
 retains live global place search and the stable map renderer.
 The separate Home tab mounts the new landmark carousel and Experience feed; its scoped layout
 styles do not replace map styles. Home images use explicit dimensions rather than absolute fill.
-Reviewed Places retain their original white pins; personal recommendations are amber and friends’ recommendations purple. No legend is shown.
+All recommendations are amber, friend-reviewed Places are teal, other reviewed Places are white,
+and Places without reviews are grey. Recommendation colour takes precedence over friend reviews.
+No legend is shown.
 Recommended and base Places merge by UUID, preserving aggregate ratings. Exact Google IDs suppress
-duplicate provider pins. A followed-user review is white unless the recommendations API classifies
-the Place as a friend recommendation. Selection retains its layer colour. Empty or failed ranking
+duplicate provider pins. A followed-user review is teal even without a recommendation; all
+recommendation kinds use amber. Selection retains its layer colour. Empty or failed ranking
 requests leave the original results visible. Optional Google controls, including zoom buttons and keyboard
 shortcuts, are disabled; touch gestures and the custom location button remain available. Google's
 required logo, map attribution, and legal notices remain visible along the bottom edge.
@@ -65,12 +67,12 @@ frame. Group and individual marker clicks use the Advanced Marker DOM `gmp-click
 
 Only captions participate in the settled collision pass, 150 ms after camera/marker changes. It
 measures visible icon/caption footprints, using the nearest world copy at the date line, and allocates
-labels in order: selected Place, friend recommendation, personal recommendation, review, nearby Place.
+labels in order: selected Place, recommendation, friend-reviewed Place, other reviewed Place, unreviewed Place.
 Existing labels win within a priority. Selected captions stay visible; other captions avoid visible
 icons, groups, the location dot, and higher-priority labels. Hidden cluster members reserve no space.
 The pass never attaches or detaches a marker. All SDK markers use `REQUIRED`, so native collision
-hiding cannot silently remove destinations. White reviews, amber personal recommendations, and
-purple friend recommendations stay distinct; no legend is displayed.
+hiding cannot silently remove destinations. Amber recommendations, teal friend reviews, white
+other reviews, and grey unreviewed Places stay distinct; no legend is displayed.
 
 ## Recommendation overlay
 
@@ -93,7 +95,7 @@ personalized snapshots. Superseded requests are cancelled and stale responses ig
 Full successful rankings replace only recommendation membership. Existing results remain during
 refreshes and failures. The original review/nearby layers continue independently. Pins leaving
 recommendations revert to their base colour without replacing stable markers. A successful review
-updates the white base layer. See [discovery-data.md](discovery-data.md) for colour precedence and caching.
+updates the base review layer. See [discovery-data.md](discovery-data.md) for colour precedence and caching.
 
 ## Nearby places without app reviews
 

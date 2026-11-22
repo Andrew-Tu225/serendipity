@@ -35,7 +35,7 @@ export const PlaceMarker = memo(function PlaceMarker({ map, place, selected, onS
     element.setAttribute("title", markerLayerLabels[layer]);
     marker.current?.layer(layer);
   }, [element, layer]);
-  useEffect(() => { element.classList.toggle("is-unreviewed", place.source === "google"); }, [element, place.source]);
+  useEffect(() => { element.classList.toggle("is-unreviewed", layer === "place"); }, [element, layer]);
   useEffect(() => {
     const handle = map.marker({ latitude, longitude }, element, `View ${latest.current.place.display_name}`, () => {
       latest.current.onSelect(latest.current.place);
