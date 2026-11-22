@@ -267,6 +267,12 @@ Response: `{ "place": {...}, "logs": [...] }`. Errors: `401` as in 3.1; `404` `"
 
 ### 3.3 When the frontend calls it
 
+These are the integration points for a future ranked-recommendations layer. The current Discover
+map uses the separate public `/api/discovery` endpoints to show every app-reviewed Place in view,
+including neutral/negative and self-reviewed Places. Its review form calls the existing Experience
+service via `POST /api/discovery/experiences`, keeping taste profiles current. See
+[discovery-data.md](discovery-data.md).
+
 | Trigger | Call |
 |---|---|
 | Map first load | `GET /recommendations` for the visible bbox |

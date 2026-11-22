@@ -22,7 +22,7 @@ The full concept, user story, and open design questions are in [docs/plan.md](do
 - **Frontend:** [Next.js 16](https://nextjs.org) (App Router, Turbopack) with React 19, TypeScript, and [Tailwind CSS v4](https://tailwindcss.com)
 - **Backend:** [FastAPI](https://fastapi.tiangolo.com) on Python 3.11+, managed with [uv](https://docs.astral.sh/uv/)
 
-The Next.js app proxies `/api/*` to FastAPI. Authentication uses Auth0 with server-managed sessions; PostgreSQL runs locally through Docker Compose. Map library and image storage are still to be decided.
+The Next.js app proxies `/api/*` to FastAPI. Authentication uses Auth0 with server-managed sessions; PostgreSQL runs locally through Docker Compose. Maps use Google Maps JavaScript API and Places API (New). Image storage is still to be decided.
 
 ## Getting started
 
@@ -89,7 +89,57 @@ The homepage at `/` shows the imported Figma discovery interface. Open [http://l
 
 Sessions expire after 8 hours; temporary login attempts expire after 10 minutes. Expired rows are removed when a new login starts. A blocked/deleted Auth0 account does not automatically revoke an existing local session; immediate account-wide revocation can be added later.
 
-### Architecture
+### Google discovery map
+
+Discover fills the phone above navigation, with floating search and place previews. The Next.js
+development badge is disabled to keep those controls clear; compile/runtime errors still surface.
+
+Discover uses Google Maps JavaScript API with custom Advanced Markers and public place search
+through FastAPI's Places API (New) integration. Set these values before starting the servers:
+
+- `.env.local`: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`.
+- `backend/.env`: `BACKEND_API_KEY_GOOGLE` (server-only).
+
+Enable **Maps JavaScript API** and **Places API (New)** in a billing-enabled Google Cloud project.
+Restrict the browser key to Maps JavaScript API and your development/production website origins.
+Restrict the backend key to Places API (New), and server egress IPs where available. The browser
+key is intentionally public; never prefix the backend key with `NEXT_PUBLIC_`.
+
+Create a JavaScript **vector Map ID**, import [the map style](docs/google-map-style.json) into
+Google's cloud style editor, publish it, and associate it with that Map ID. See
+[the setup and behavior guide](docs/discovery-map.md) for details. Local development falls back
+to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production requires an explicit
+Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
+
+Search, details, and nearby destination discovery are available without login or a database.
+Nearby places use matching custom category markers, even without app reviews. Neighborhood searches
+reuse temporary geographic cells; wider views retain app-reviewed places to limit paid Google calls.
+The existing backend key must allow Places API (New) Nearby Search; no new environment values are needed.
+Discover initially centers on London, Ontario.
+Run `npm install` for the marker clustering dependency and `cd backend && uv run alembic upgrade head`
+before using app-reviewed places. Migration 0003 links app Places to optional Google IDs; migration
+0002 supplies Places, Experiences, and follows. The map loads every app-reviewed Place in view from
+PostgreSQL. Visitors can browse public reviews; signed-in users can write reviews and see followed
+users highlighted. Use Add to name a new Place and choose its map point, or Write a review on an
+existing marker. An empty database can still show Google nearby destinations; app ratings appear after
+reviews are submitted. No demo data is inserted
+automatically. Photos, saving UI, friend-management UI, and filters are deferred. See
+[the database discovery guide](docs/discovery-data.md).
+
+### Local mock reviews
+
+From the repository root, run `npm run db:seed` to insert 20 demo users, 24 London places, and 171 labeled mock
+reviews. Every demo user has at least five reviews. The seed is repeatable and preserves existing data. Use
+`npm run db:seed -- --viewer-id YOUR_USER_UUID` to follow three demo users from an existing account.
+
+`npm run db:clear -- --dry-run` shows app row counts. `npm run db:clear -- --confirm serendipity`
+deletes all app data, including users and sessions, from the configured local database while keeping
+its schema and migrations. Replace the confirmation name if your database has a different name.
+The clear command is provided for explicit use; seeding does not clear your data first. Both commands
+require the existing backend virtual environment and reject remote database hosts. See
+[the seed/reset guide](docs/local-demo-data.md) for details and backend `uv` equivalents.
+
+### Application layers
 
 ```text
 UI → typed frontend API client → FastAPI router → service → repository → Postgres
@@ -122,7 +172,7 @@ uv run ruff format --check .
 
 The backend suite uses isolated SQLite databases and a mocked OIDC provider with real RSA-signed tokens. To also run PostgreSQL concurrency tests, set `TEST_DATABASE_URL` to a PostgreSQL SQLAlchemy URL and run pytest. Those tests create and remove their own unique schema, leaving application tables untouched. A separate disposable database is recommended for testing migrations.
 
-Browser tests mock the auth API and run a dedicated Next.js server on port 3039 with `.next-auth-test` output. Install Chromium once with `npx playwright install chromium`. `TEST_BASE_URL` can target an existing test server. `SERENDIPITY_DIST_DIR` optionally isolates other Next.js builds from a running dev server.
+Browser tests mock the auth API, Google Maps SDK, Places responses, and discovery/review HTTP responses, and run a dedicated Next.js server on port 3039 with `.next-auth-test` output and dummy Maps credentials. Install Chromium once with `npx playwright install chromium`. `TEST_BASE_URL` can target an existing test server configured with a browser map key and Map ID. `SERENDIPITY_DIST_DIR` optionally isolates other Next.js builds from a running dev server.
 
 | Command | Description |
 |---------|-------------|
@@ -130,6 +180,8 @@ Browser tests mock the auth API and run a dedicated Next.js server on port 3039 
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | Run ESLint |
+| `npm run db:seed` | Insert repeatable London mock reviews in local PostgreSQL |
+| `npm run db:clear -- --confirm serendipity` | Clear all local app rows, retaining schema |
 | `uv run pytest` (in `backend/`) | Run backend tests |
 | `uv run ruff check .` (in `backend/`) | Lint the backend |
 

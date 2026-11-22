@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
@@ -35,6 +35,18 @@ async def require_csrf(request: Request, service: AuthServiceDependency) -> Auth
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 VerifiedMutation = Annotated[AuthSession, Depends(require_csrf)]
+
+
+async def get_optional_user(request: Request, service: AuthServiceDependency) -> User | None:
+    try:
+        return await service.current_user(request)
+    except HTTPException as error:
+        if error.status_code != 401:
+            raise
+        return None
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]
 
 
 def get_recommendation_repository(

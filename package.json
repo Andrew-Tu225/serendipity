@@ -7,9 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:seed": "backend/.venv/bin/python backend/scripts/seed_london.py",
+    "db:clear": "backend/.venv/bin/python backend/scripts/clear_local_db.py",
     "test:browser": "playwright test"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.1.3",
+    "@googlemaps/markerclusterer": "^2.6.2",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -17,6 +21,7 @@
   "devDependencies": {
     "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
+    "@types/google.maps": "^3.67.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

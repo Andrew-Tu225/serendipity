@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { mockGoogleMaps } from "./helpers/google-maps";
+import { mockDiscovery } from "./helpers/discovery";
 
 const session = {
   auth0: { sub: "auth0|browser-test", name: "Alex", email: "alex@example.com" },
@@ -16,6 +18,8 @@ const session = {
 };
 
 test("the Figma homepage remains available alongside authentication", async ({ page }) => {
+  await mockGoogleMaps(page);
+  await mockDiscovery(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("What feels fun?");
@@ -26,7 +30,7 @@ test("the Figma homepage remains available alongside authentication", async ({ p
   ).toBe(true);
   await page.screenshot({ path: "test-results/figma-home-mobile.png", fullPage: true });
   await page.getByRole("button", { name: "Discover", exact: true }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Discover");
+  await expect(page.getByRole("region", { name: "Discover places" })).toBeVisible();
   await page.goto("/login");
   await expect(page.getByRole("button", { name: "Sign in / Sign up" })).toBeVisible();
 });

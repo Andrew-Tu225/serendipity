@@ -43,7 +43,8 @@ Recommendations are always backed by a visible Experience from a followed or sim
 - **Backend:** Python 3.11+ FastAPI in `backend/`, managed with `uv`; Pydantic for request/response models, pytest and ruff for tests and lint. All API routes live under `/api`; Next.js proxies `/api/*` to it (`API_URL`, see `next.config.ts`), so do not add Next.js route handlers or Server Actions for data — business logic and validation belong in FastAPI.
 - **Database:** PostgreSQL 17, local Docker Compose, SQLAlchemy with Psycopg, and Alembic migrations.
 - **Auth:** Auth0 Regular Web Application. FastAPI owns OAuth callbacks and opaque database-backed sessions; the browser uses an HttpOnly cookie.
-- Not chosen yet: map library and image storage. Do not add one without confirming with the team.
+- **Map:** Google Maps JavaScript API with Advanced Markers; Places API (New) search runs through FastAPI. Use the shared map adapter and typed Places client.
+- Image storage is not chosen yet. Do not add a provider without confirming with the team.
 
 ## Layout
 

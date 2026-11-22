@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     session_cookie_name: str = "serendipity_session"
     session_lifetime_seconds: int = 8 * 60 * 60
     login_lifetime_seconds: int = 10 * 60
+    backend_api_key_google: str = ""
 
     @field_validator("auth0_domain")
     @classmethod

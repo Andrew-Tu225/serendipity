@@ -1,9 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import { useState, type ChangeEvent, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
+import DiscoverMap from '@/components/map/discover-map'
+import { ReviewComposer } from '@/components/experience/review-composer'
+import { mapPlace, type PlaceExperiences } from '@/types/discovery'
+import type { Coordinates, MapPlace } from '@/types/places'
+import { FriendAvatar } from '@/components/map/friend-avatar'
 
 type IconName =
   | 'home'
@@ -49,55 +54,55 @@ function Icon({ name, size = 22, filled = false }: { name: IconName; size?: numb
 }
 
 const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
-const experienceCriteria: Record<string, string[]> = {
-  Restaurants: ['Flavor', 'Service', 'Atmosphere'],
-  Hikes: ['Scenery', 'Physical effort', 'Difficulty'],
-  Creative: ['Creativity', 'Guidance', 'Hands-on'],
-  Nightlife: ['Energy', 'Music', 'Crowd'],
-  Wellness: ['Relaxation', 'Care', 'Value'],
-  Other: ['Novelty', 'Organization', 'Value'],
-}
-
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
+  const [discovered, setDiscovered] = useState(false)
   const [activeFilter, setActiveFilter] = useState('For you')
   const [liked, setLiked] = useState(false)
   const [saved, setSaved] = useState(false)
   const [sheet, setSheet] = useState<'post' | 'soon' | null>(null)
   const [posted, setPosted] = useState(false)
-  const [media, setMedia] = useState<{ url: string; type: string; name: string } | null>(null)
-  const [postCategory, setPostCategory] = useState('Restaurants')
-  const [sentiment, setSentiment] = useState('liked')
-  const [experienceRatings, setExperienceRatings] = useState<Record<string, number>>({ Flavor: 3, Service: 3, Atmosphere: 3 })
-  const [labels, setLabels] = useState(['date night'])
-  const [labelInput, setLabelInput] = useState('')
+  const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null)
+  const [reviewTarget, setReviewTarget] = useState<MapPlace | null>(null)
+  const [reviewPoint, setReviewPoint] = useState<Coordinates | null>(null)
+  const [picking, setPicking] = useState(false)
+  const [reviewBusy, setReviewBusy] = useState(false)
+  const [reviewRevision, setReviewRevision] = useState(0)
+  const [reviewedPlace, setReviewedPlace] = useState<MapPlace | null>(null)
+
+  const startReview = (place: MapPlace | null) => {
+    setReviewTarget(place)
+    setReviewPoint(null)
+    setPosted(false)
+    if (place?.app_id) {
+      setPicking(false)
+      setSheet('post')
+    } else {
+      setSheet(null)
+      setPicking(true)
+      setDiscovered(true)
+      setActiveTab('Discover')
+    }
+  }
+  const reviewSaved = (result: PlaceExperiences) => {
+    setSelectedPlace(mapPlace(result.place))
+    setReviewedPlace(mapPlace(result.place))
+    setReviewRevision((value) => value + 1)
+    setReviewBusy(false)
+    setSheet(null)
+    setPosted(true)
+    setActiveTab('Discover')
+  }
 
   const changeTab = (tab: string) => {
     if (tab === 'Add') {
-      setSheet('post')
+      startReview(null)
       return
     }
     setSheet(null)
+    setPicking(false)
+    if (tab === 'Discover') setDiscovered(true)
     setActiveTab(tab)
-  }
-
-  const selectMedia = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (media) URL.revokeObjectURL(media.url)
-    setMedia({ url: URL.createObjectURL(file), type: file.type, name: file.name })
-  }
-
-  const chooseCategory = (category: string) => {
-    setPostCategory(category)
-    setExperienceRatings(Object.fromEntries(experienceCriteria[category].map((criterion) => [criterion, 3])))
-  }
-
-  const addLabel = () => {
-    const value = labelInput.trim().replace(/^#/, '')
-    if (!value || labels.includes(value)) return
-    setLabels((current) => [...current, value])
-    setLabelInput('')
   }
 
   const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : 'Good morning, Mia'
@@ -105,28 +110,36 @@ function App() {
 
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
-      <div className="app-shell">
-        <div className="status-bar" aria-hidden="true">
-          <span>9:41</span>
-          <div className="status-icons"><span className="signal"/><span className="wifi"/><span className="battery"/></div>
-        </div>
+      <div className={`app-shell${activeTab === 'Discover' ? ' is-discover' : ''}`}>
+        {activeTab !== 'Discover' && (
+          <>
+            <div className="status-bar" aria-hidden="true">
+              <span>9:41</span>
+              <div className="status-icons"><span className="signal"/><span className="wifi"/><span className="battery"/></div>
+            </div>
 
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">{pageEyebrow}</p>
-            <h1>{pageTitle}</h1>
-          </div>
-          <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>
-        </header>
+            <header className="topbar">
+              <div>
+                <p className="eyebrow">{pageEyebrow}</p>
+                <h1>{pageTitle}</h1>
+              </div>
+              <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>
+            </header>
+          </>
+        )}
 
         <div className="app-content">
+          <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
+            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision} reviewedPlace={reviewedPlace}
+              selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
+              picking={picking} onCancelPick={() => setPicking(false)}
+              onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
+          </div>
           {activeTab === 'Buddy' ? (
             <BuddyView />
           ) : activeTab === 'Profile' ? (
             <ProfileView />
-          ) : activeTab === 'Discover' ? (
-            <DiscoverMap />
-          ) : (
+          ) : activeTab === 'Discover' ? null : (
             <>
               <section className="filters" aria-label="Experience categories">
                 {filters.map((filter) => (
@@ -174,10 +187,11 @@ function App() {
                 <button aria-label="Save rooftop supper"><Icon name="bookmark" size={18}/></button>
               </article>
 
-              {posted && <div className="toast"><Icon name="sparkle" size={16}/> Your experience was shared</div>}
             </>
           )}
         </div>
+
+        {posted && <div className="review-saved" role="status">Your experience was shared <button onClick={() => setPosted(false)} aria-label="Dismiss confirmation">×</button></div>}
 
         <nav className="bottom-nav" aria-label="Primary navigation">
           <NavButton label="Home" icon="home" active={activeTab === 'Home'} onClick={() => changeTab('Home')}/>
@@ -188,64 +202,20 @@ function App() {
         </nav>
 
         {sheet && (
-          <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}>
-            <section className="sheet" role="dialog" aria-modal="true" aria-label={sheet === 'post' ? 'Create a post' : 'Coming soon'}>
+          <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && !reviewBusy && setSheet(null)}>
+            <section className="sheet" onKeyDown={(event) => {
+              if (event.key === 'Escape' && !reviewBusy) setSheet(null)
+              if (event.key === 'Tab') {
+                const fields = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]'))
+                const first = fields[0], last = fields[fields.length - 1]
+                if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+                if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+              }
+            }} role="dialog" aria-modal="true" aria-label={sheet === 'post' ? 'Create a post' : 'Coming soon'}>
               <div className="sheet-handle"/>
-              <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close"><Icon name="close" size={20}/></button>
+              <button autoFocus className="sheet-close" disabled={reviewBusy} onClick={() => setSheet(null)} aria-label="Close"><Icon name="close" size={20}/></button>
               {sheet === 'post' ? (
-                <>
-                  <p className="eyebrow">SHARE THE GOOD STUFF</p>
-                  <h2>Add an experience</h2>
-                  <div className="post-section category-section">
-                    <div className="form-title"><strong>Add to a list</strong><span>Pick the best fit</span></div>
-                    <div className="category-options">
-                      {Object.keys(experienceCriteria).map((category) => <button key={category} type="button" className={postCategory === category ? 'selected' : ''} onClick={() => chooseCategory(category)}>{category}</button>)}
-                    </div>
-                  </div>
-                  <div className="post-section sentiment-section">
-                    <div className="form-title"><strong>How was it?</strong><span>Your overall take</span></div>
-                    <div className="sentiment-options">
-                      <button type="button" className={sentiment === 'liked' ? 'selected' : ''} onClick={() => setSentiment('liked')}><i className="green"><Icon name="heart" size={19}/></i><span>I liked it</span></button>
-                      <button type="button" className={sentiment === 'okay' ? 'selected' : ''} onClick={() => setSentiment('okay')}><i className="yellow">—</i><span>It was okay</span></button>
-                      <button type="button" className={sentiment === 'disliked' ? 'selected' : ''} onClick={() => setSentiment('disliked')}><i className="red"><Icon name="close" size={19}/></i><span>I didn’t like it</span></button>
-                    </div>
-                  </div>
-                  <label className="media-picker">
-                    <input type="file" accept="image/*,video/*" onChange={selectMedia}/>
-                    {media ? (
-                      <div className="media-preview">
-                        {media.type.startsWith('video/') ? <video src={media.url} controls/> : <Image src={media.url} unoptimized width={96} height={96} alt="Selected upload preview"/>}
-                        <span>{media.name}</span>
-                      </div>
-                    ) : (
-                      <div className="media-empty">
-                        <span><Icon name="plus" size={23}/></span>
-                        <div><strong>Add photos or video</strong><small>Share the moment, not just the review</small></div>
-                      </div>
-                    )}
-                  </label>
-                  <label>What did you do?<input placeholder="e.g. Sunset pasta class"/></label>
-                  <div className="form-grid">
-                    <label>Who did you go with?
-                      <select defaultValue=""><option value="" disabled>Select people</option><option>Elena & James</option><option>Alex</option><option>My partner</option><option>Family</option><option>Went solo</option></select>
-                    </label>
-                    <label>Date visited<input type="date"/></label>
-                  </div>
-                  <div className="labels-field">
-                    <label>Labels</label>
-                    <div className="labels-input"><input value={labelInput} onChange={(event) => setLabelInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addLabel() } }} placeholder="Add a label"/><button type="button" onClick={addLabel}><Icon name="plus" size={16}/></button></div>
-                    <div className="added-labels">{labels.map((label) => <button key={label} type="button" onClick={() => setLabels((current) => current.filter((item) => item !== label))}>#{label} <Icon name="close" size={10}/></button>)}</div>
-                  </div>
-                  <label>Favorite parts<textarea placeholder="The dish, view, moment, or detail you loved..." rows={2}/></label>
-                  <label>Notes<textarea placeholder="Anything you want to remember for next time?" rows={2}/></label>
-                  <div className="rating-block">
-                    <div className="form-title"><strong>Rate this {postCategory.toLowerCase()} experience</strong><span>Criteria tailored to your list</span></div>
-                    {Object.entries(experienceRatings).map(([label, value]) => (
-                      <ScaleRating key={label} label={label} value={value} onChange={(rating) => setExperienceRatings((current) => ({ ...current, [label]: rating }))}/>
-                    ))}
-                  </div>
-                  <button className="primary-button" onClick={() => { setSheet(null); setActiveTab('Home'); setPosted(true); window.setTimeout(() => setPosted(false), 2800) }}>Share experience <Icon name="arrow" size={18}/></button>
-                </>
+                <ReviewComposer target={reviewTarget} point={reviewPoint} onSaved={reviewSaved} onBusy={setReviewBusy}/>
               ) : (
                 <div className="soon-state">
                   <span><Icon name="sparkle" size={28}/></span>
@@ -331,93 +301,6 @@ function WorldwideLock() {
         <div><Icon name="globe" size={17}/><span><strong>Plan anywhere</strong><small>Your network travels with you</small></span></div>
       </div>
     </section>
-  )
-}
-
-const mapExperiences = [
-  { id: 1, top: '19%', left: '67%', category: 'Creative', title: 'Clay & rosé', time: 'Sat · 2:00 PM', distance: '1.2 mi', image: potteryImage },
-  { id: 2, top: '47%', left: '29%', category: 'Food', title: 'Rooftop supper', time: 'Fri · 7:30 PM', distance: '0.8 mi', image: rooftopImage },
-  { id: 3, top: '69%', left: '72%', category: 'Music', title: 'Sunday jazz club', time: 'Sun · 8:00 PM', distance: '1.7 mi', image: rooftopImage },
-]
-
-const friendVisits = [
-  { name: 'Elena', note: 'loved it', top: '28%', left: '34%', experienceId: 2, variant: 'one' },
-  { name: 'James', note: 'went Sat', top: '55%', left: '79%', experienceId: 3, variant: 'two' },
-  { name: 'Alex', note: 'saved this', top: '74%', left: '42%', experienceId: 1, variant: 'three' },
-]
-
-function DiscoverMap() {
-  const [selected, setSelected] = useState(mapExperiences[0])
-  const [category, setCategory] = useState('All')
-
-  return (
-    <section className="discover-view">
-      <div className="map-search"><Icon name="compass" size={18}/><input aria-label="Search the map" placeholder="Search experiences"/><button aria-label="Map filters"><span/><span/><span/></button></div>
-      <div className="map-categories">
-        {['All', 'Food', 'Creative', 'Music'].map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}
-      </div>
-      <div className="map-canvas">
-        <svg className="map-art" viewBox="0 0 390 510" preserveAspectRatio="none" aria-hidden="true">
-          <rect width="390" height="510" fill="#eeeaf1"/>
-          <path d="M-20 95C68 60 119 135 197 100s115-69 215-31" fill="none" stroke="#d7cddd" strokeWidth="17"/>
-          <path d="M-20 95C68 60 119 135 197 100s115-69 215-31" fill="none" stroke="#faf8fb" strokeWidth="13"/>
-          <path d="M70-20c8 88 5 154 45 230s64 155 42 320M272-20c-20 101 19 167 5 258s-39 164-7 292" fill="none" stroke="#d7cddd" strokeWidth="14"/>
-          <path d="M70-20c8 88 5 154 45 230s64 155 42 320M272-20c-20 101 19 167 5 258s-39 164-7 292" fill="none" stroke="#faf8fb" strokeWidth="10"/>
-          <path d="M-20 288c91-31 145-2 210 13s134 3 220-36M-20 420c107 23 170-21 225-14s108 43 205 27" fill="none" stroke="#ddd4e2" strokeWidth="11"/>
-          <path d="M-20 288c91-31 145-2 210 13s134 3 220-36M-20 420c107 23 170-21 225-14s108 43 205 27" fill="none" stroke="#fff" strokeWidth="7"/>
-          <path d="M302 326c32-27 62-22 97-8v105c-43 7-72-10-97-38Z" fill="#dbe6e1"/>
-          <path d="M6 147c36-16 65-4 81 21l-11 69c-29 11-53 3-75-17Z" fill="#e0e7da"/>
-        </svg>
-        <span className="map-label label-one">WILLIAMSBURG</span>
-        <span className="map-label label-two">GREENPOINT</span>
-        {mapExperiences.filter((item) => category === 'All' || item.category === category).map((experience) => (
-          <button key={experience.id} className={`map-pin ${selected.id === experience.id ? 'active' : ''}`} style={{ top: experience.top, left: experience.left }} onClick={() => setSelected(experience)} aria-label={`View ${experience.title}`}>
-            <span><Icon name={experience.category === 'Food' ? 'heart' : experience.category === 'Music' ? 'users' : 'sparkle'} size={15}/></span>
-          </button>
-        ))}
-        {friendVisits.map((friend) => (
-          <button
-            key={friend.name}
-            className="friend-map-pin"
-            style={{ top: friend.top, left: friend.left }}
-            onClick={() => setSelected(mapExperiences.find((experience) => experience.id === friend.experienceId) ?? mapExperiences[0])}
-            aria-label={`${friend.name} ${friend.note} nearby`}
-          >
-            <FriendAvatar variant={friend.variant}/>
-            <span><strong>{friend.name}</strong> {friend.note}</span>
-          </button>
-        ))}
-        <div className="friend-map-key"><span><FriendAvatar variant="one"/></span> Friends’ visits</div>
-        <button className="location-button" aria-label="Center on my location"><Icon name="compass" size={20}/></button>
-        <article className="map-preview">
-          <Image src={selected.image} sizes="61px" alt=""/>
-          <div><span>{selected.category}</span><h3>{selected.title}</h3><p>{selected.time} · {selected.distance}</p></div>
-          <button aria-label={`Open ${selected.title}`}><Icon name="arrow" size={18}/></button>
-        </article>
-      </div>
-    </section>
-  )
-}
-
-function FriendAvatar({ variant }: { variant: string }) {
-  return (
-    <svg className={`friend-avatar ${variant}`} viewBox="0 0 52 80" aria-hidden="true">
-      <ellipse cx="26" cy="76" rx="15" ry="3" fill="rgba(53,39,61,.18)"/>
-      <circle cx="26" cy="22" r="20" className="avatar-bg"/>
-      <path d="M19 54 17 72h8l2-18ZM28 54l1 18h8l-3-18Z" className="avatar-pants"/>
-      <path d="M16 71h10v5H14c0-2 .7-4 2-5ZM29 71h9c1.5 1 2.2 3 2 5H29Z" className="avatar-shoes"/>
-      <path d="M17 38c3-4 15-4 18 0l3 20H14Z" className="avatar-shirt"/>
-      <path d="m17 40-7 14M35 40l7 14" className="avatar-arm" fill="none" strokeWidth="5" strokeLinecap="round"/>
-      <circle cx="9.5" cy="55" r="3" className="avatar-skin"/>
-      <circle cx="42.5" cy="55" r="3" className="avatar-skin"/>
-      <rect x="23" y="31" width="6" height="7" rx="3" className="avatar-skin"/>
-      <path d="M15 21c0-10 4-16 11-16s11 6 11 16v10H15Z" className="avatar-hair"/>
-      <ellipse cx="26" cy="23" rx="9.5" ry="11.5" className="avatar-skin"/>
-      <circle cx="22.5" cy="22" r="1" fill="#3f303a"/>
-      <circle cx="29.5" cy="22" r="1" fill="#3f303a"/>
-      <path d="M23 27.5c2 1.7 4 1.7 6 0" fill="none" stroke="#9b565c" strokeWidth="1.3" strokeLinecap="round"/>
-      <path d="M15 19c4-1 5-7 7-11 3 6 8 7 15 8" fill="none" className="hair-detail" strokeWidth="5" strokeLinecap="round"/>
-    </svg>
   )
 }
 
