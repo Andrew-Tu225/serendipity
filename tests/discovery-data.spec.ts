@@ -18,7 +18,7 @@ async function bounds(page: Page, value: MapBounds) {
   await page.evaluate((value) => (window as unknown as { __boundsTestMap: (bounds: MapBounds) => void }).__boundsTestMap(value), value);
 }
 
-test("map pins come only from the recommendation response", async ({ page }) => {
+test("recommendation responses highlight the original reviewed places without duplicate pins", async ({ page }) => {
   let databaseLists = 0, nearbyLists = 0, details = 0;
   const requests: string[] = [];
   await page.route("**/api/discovery/places?**", (route) => { databaseLists++; return route.fulfill({ json: { places: appPlaces, next_cursor: null } }); });
@@ -32,16 +32,16 @@ test("map pins come only from the recommendation response", async ({ page }) => 
   });
   page.on("request", (request) => { if (/\/discovery\/places\/[^/?]+\?/.test(request.url())) details++; });
   await open(page);
-  await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(2);
-  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true })).toHaveCount(0);
+  await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
+  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
   expect(requests).toHaveLength(1);
   requests[0].split(",").map(Number).forEach((coordinate, i) => expect(coordinate).toBeCloseTo([-81.3453,42.8849,-81.1453,43.0849][i], 7));
-  expect(databaseLists).toBe(0); expect(nearbyLists).toBe(0); expect(details).toBe(0);
+  expect(databaseLists).toBeGreaterThan(0); expect(nearbyLists).toBe(0); expect(details).toBe(0);
 });
 
 test("superseded viewport responses never overwrite the latest recommendations", async ({ page }) => {
   await open(page);
-  await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(6);
+  await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   let oldRequested = false;
   await page.route("**/api/recommendations?**", async (route) => {
     const bbox = new URL(route.request().url()).searchParams.get("bbox");
@@ -55,14 +55,14 @@ test("superseded viewport responses never overwrite the latest recommendations",
   await bounds(page, { west: -75, south: 44, east: -74, north: 45 });
   await expect.poll(() => oldRequested).toBe(true);
   await bounds(page, { west: -73, south: 44, east: -72, north: 45 });
-  await expect(page.getByText("No recommendations in this area yet.", { exact: false })).toBeVisible();
+  await expect(page.getByText("No places in this area yet.", { exact: false })).toBeVisible();
   await page.waitForTimeout(900);
   await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(0);
 });
 
 test("date-line viewports query two recommendation rectangles and deduplicate", async ({ page }) => {
   await open(page);
-  await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(6);
+  await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   const requests: string[] = [];
   await page.route("**/api/recommendations?**", (route) => {
     requests.push(new URL(route.request().url()).searchParams.get("bbox")!);
@@ -74,24 +74,25 @@ test("date-line viewports query two recommendation rectangles and deduplicate", 
   await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(1);
 });
 
-test("recommendation failure offers retry and empty results never fall back to DB places", async ({ page }) => {
+test("recommendation failure and empty results keep the original review layer available", async ({ page }) => {
   let failed = true;
   await page.route("**/api/recommendations?**", (route) => failed
     ? route.fulfill({ status: 503, json: { detail: "Recommendations are unavailable" } })
     : route.fulfill({ json: { items: [] } }));
   await open(page);
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Recommendations are unavailable");
-  await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(0);
+  await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   failed = false;
   await page.getByRole("button", { name: "Reload recommendations" }).click();
-  await expect(page.getByText("No recommendations in this area yet.", { exact: false })).toBeVisible();
-  await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toHaveCount(0);
+  await expect(page.locator('.discovery-pin[data-layer="review"]')).toHaveCount(6);
+  await expect(page.locator('.discovery-pin[data-layer="friend"], .discovery-pin[data-layer="recommendation"]')).toHaveCount(0);
   await expect(page.getByRole("combobox")).toBeEnabled();
 });
 
 test("dense recommendations cluster and can be expanded", async ({ page }) => {
   const dense = appPlaces.slice(0, 3).map((place, index) => recommendation({ ...place, latitude: 42.9849 + index * .00001, longitude: -81.2453 }));
   await page.route("**/api/recommendations?**", (route) => route.fulfill({ json: { items: dense } }));
+  await page.route("**/api/discovery/places?**", (route) => route.fulfill({ json: { places: [], next_cursor: null } }));
   await open(page);
   await expect(page.getByRole("button", { name: "Zoom to 3 places" })).toBeVisible();
   await page.getByRole("button", { name: "Zoom to 3 places" }).click();
@@ -155,7 +156,7 @@ test("review submission preserves errors and refetches recommendation eligibilit
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("article")).toContainText("4.5/5 · 24 reviewers");
   await expect.poll(() => recommendationCalls).toBeGreaterThan(before);
-  await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
   await expect(page.getByText("Your experience was shared", { exact: false })).toBeVisible();
   await expect.poll(() => posted).toBe(true);
 });

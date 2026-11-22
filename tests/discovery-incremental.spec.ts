@@ -39,15 +39,19 @@ test("pan requests the full viewport, preserves shared markers, and caches exact
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
 });
 
-test("a newly ranked response replaces the old set even if an old pin is selected", async ({ page }) => {
+test("a place leaving recommendations returns to the blue review layer without replacing its marker", async ({ page }) => {
   let calls = 0;
   await ranked(page, () => ({ items: [recommendation(appPlaces[calls++ === 0 ? 0 : 1])] }));
   await open(page);
   await expect(marker(page)).toBeVisible();
-  await marker(page).click();
+  const identity = await marker(page).getAttribute("data-marker-id");
+  await marker(page).focus();
+  await marker(page).press("Enter");
+  await expect(page.getByRole("article", { name: "Selected place" })).toBeVisible();
   await bounds(page, shifted);
   await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true })).toBeVisible();
-  await expect(marker(page)).toHaveCount(0);
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
+  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
   await expect(page.getByRole("article", { name: "Selected place" })).toBeVisible();
 });
 
@@ -56,7 +60,7 @@ test("expired recommendation evidence updates quietly without replacing its mark
   let calls = 0;
   await ranked(page, () => {
     const item = recommendation(appPlaces[0]);
-    if (++calls > 1) { item.logs[0].rating = 5; item.logs[0].review = "Fresh recommendation evidence"; }
+    if (++calls > 1) { item.kind = "similar_taste"; item.logs[0].relation = "similar_taste"; item.logs[0].rating = 5; item.logs[0].review = "Fresh recommendation evidence"; }
     return { items: [item] };
   });
   await open(page);
@@ -64,7 +68,7 @@ test("expired recommendation evidence updates quietly without replacing its mark
   const identity = await marker(page).getAttribute("data-marker-id");
   await page.clock.fastForward(61_000);
   await expect.poll(() => calls).toBe(2);
-  await expect(marker(page)).toContainText("5.0");
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "recommendation");
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
   await expect(page.getByText("Loading recommendations…")).toHaveCount(0);
   await marker(page).click();
@@ -123,5 +127,5 @@ test("a late response from another account cannot restore old recommendations", 
   await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true })).toBeVisible();
   release();
   await page.waitForTimeout(350);
-  await expect(marker(page)).toHaveCount(0);
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
 });

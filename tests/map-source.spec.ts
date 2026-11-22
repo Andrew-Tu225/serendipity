@@ -1,23 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { appPlaces, mockDiscovery } from "./helpers/discovery";
+import { mockDiscovery } from "./helpers/discovery";
 import { mockGoogleMaps } from "./helpers/google-maps";
 
 test.beforeEach(async ({ page }) => { await mockGoogleMaps(page); await mockDiscovery(page); });
 
-test("zoom and pan never request automatic Google nearby or all-database pins", async ({ page }) => {
-  let forbidden = 0;
-  for (const pattern of ["**/api/places/nearby?**", "**/api/discovery/places?**"]) {
-    await page.route(pattern, (route) => { forbidden++; return route.fulfill({ json: { places: appPlaces } }); });
-  }
+test("empty recommendations leave the original reviewed map visible", async ({ page }) => {
+  await page.route("**/api/recommendations?**", (route) => route.fulfill({ json: { items: [] } }));
   await page.goto("/");
   await page.getByRole("button", { name: "Discover", exact: true }).click();
-  await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(6);
-  await page.evaluate(() => {
-    const map = window as unknown as { __zoomTestMap: (n: number) => void; __panTestMap: (lat: number, lng: number) => void };
-    map.__zoomTestMap(16); map.__panTestMap(43.7, -79.4);
-  });
-  await expect(page.getByText("No recommendations in this area yet.", { exact: false })).toBeVisible();
-  expect(forbidden).toBe(0);
+  await expect(page.locator('.discovery-pin[data-layer="review"]')).toHaveCount(6);
+  await expect(page.getByRole("group", { name: "Map marker colours" })).toBeVisible();
 });
 
 for (const failedLookup of [false, true]) {

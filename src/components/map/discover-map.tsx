@@ -5,6 +5,9 @@ import { createGoogleMap, LONDON, type MapHandle } from "@/lib/maps/google-map";
 import type { Coordinates, MapPlace } from "@/types/places";
 import { discoveryClient } from "@/lib/api-client/discovery";
 import { ApiError } from "@/lib/api-client/client";
+import { useDiscovery } from "@/hooks/use-discovery";
+import { useNearbyPlaces } from "@/hooks/use-nearby-places";
+import { mergeMapLayers } from "@/lib/maps/layers";
 import { useRecommendations } from "@/hooks/use-recommendations";
 import { recommendationReasons } from "@/lib/maps/recommendations";
 import { mapPlace, type PlaceExperiences } from "@/types/discovery";
@@ -19,8 +22,9 @@ function externalUrl(value?: string | null) {
   } catch { return undefined; }
 }
 
-export default function DiscoverMap({ active, revision, selected: selectedInput, focusTarget, onSelect, onReview, picking, onPick, onCancelPick }: {
+export default function DiscoverMap({ active, revision, reviewedPlace, selected: selectedInput, focusTarget, onSelect, onReview, picking, onPick, onCancelPick }: {
   active: boolean; revision: number; selected: MapPlace | null; focusTarget: MapPlace | null;
+  reviewedPlace: MapPlace | null;
   onSelect: (place: MapPlace | null) => void; onReview: (place: MapPlace | null) => void;
   picking: boolean; onPick: (point: Coordinates) => void; onCancelPick: () => void;
 }) {
@@ -37,15 +41,25 @@ export default function DiscoverMap({ active, revision, selected: selectedInput,
   const [resolveError, setResolveError] = useState("");
   const [reviewLookup, setReviewLookup] = useState<"" | "checking" | "empty">("");
   const resolveRequest = useRef<AbortController | null>(null);
-  const discovery = useRecommendations(map, active, revision);
+  const recommendations = useRecommendations(map, active, revision);
+  const discovery = useDiscovery(map, active, revision, reviewedPlace);
+  const nearby = useNearbyPlaces(map, active && !picking);
+  const markerPlaces = mergeMapLayers(nearby.places, discovery.places, recommendations.places);
+  const currentSelection = selectedInput ? markerPlaces.get(`${selectedInput.source}:${selectedInput.place_id}`) : undefined;
   const selected = selectedInput?.source === "app"
-    ? { ...selectedInput, ...discovery.getPlace(selectedInput.place_id), rating_summary: selectedInput.rating_summary,
-      recommendation: discovery.getPlace(selectedInput.place_id)?.recommendation, friend: discovery.getPlace(selectedInput.place_id)?.friend }
-    : selectedInput;
-  const markerPlaces = new Map(discovery.places.map((place) => [`app:${place.place_id}`, place]));
-  if (searchPlace && searchPlace.place_id === selectedInput?.place_id && !markerPlaces.has(`app:${searchPlace.place_id}`)) {
+    ? { ...selectedInput, ...currentSelection,
+      rating_summary: currentSelection?.rating_summary ?? selectedInput.rating_summary,
+      recommendation: currentSelection?.recommendation,
+      friend: currentSelection?.friend ?? selectedInput.friend }
+    : currentSelection ?? selectedInput;
+  if (searchPlace && searchPlace.place_id === selectedInput?.place_id &&
+    !markerPlaces.has(`${searchPlace.source}:${searchPlace.place_id}`) && !markerPlaces.has(`app:${searchPlace.place_id}`)) {
     markerPlaces.set(`${searchPlace.source}:${searchPlace.place_id}`, searchPlace);
   }
+  // A selected base Place remains available while moving between loaded areas.
+  if (selected?.source === "app" && !markerPlaces.has(`app:${selected.place_id}`)) markerPlaces.set(`app:${selected.place_id}`, selected);
+  const appGoogleIds = new Set([...markerPlaces.values()].filter((place) => place.source === "app").map((place) => place.google_place_id).filter(Boolean));
+  for (const [key, place] of markerPlaces) if (place.source === "google" && appGoogleIds.has(place.place_id)) markerPlaces.delete(key);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +165,10 @@ export default function DiscoverMap({ active, revision, selected: selectedInput,
           </svg>
         </button>
       </div>
+      {map && <div className="discovery-legend" role="group" aria-label="Map marker colours">
+        <span data-layer="place">Places</span><span data-layer="review">Reviews</span>
+        <span data-layer="recommendation">For you</span><span data-layer="friend">Friends</span>
+      </div>}
       {!map && !mapError && <div className="discovery-map-message" role="status">Finding your next favorite corner…</div>}
       {mapError && <div className="discovery-map-message" role="alert"><strong>The map couldn’t load</strong><p>{mapError}</p><button type="button" onClick={() => { setMap(null); setMapError(""); setAttempt((n) => n + 1); }}>Try again</button></div>}
       {map && <>
@@ -158,9 +176,14 @@ export default function DiscoverMap({ active, revision, selected: selectedInput,
         {picking ? <div className="discovery-data-status" role="status">Tap the map to place your pin, or review an existing place.
           <button onClick={() => onPick(map.center())}>Use map center</button><button onClick={onCancelPick}>Cancel</button>
         </div> : <>
-          {discovery.loading && <div className="discovery-data-status" role="status">Loading recommendations…</div>}
-          {discovery.error && <div className="discovery-data-status" role="alert">{discovery.error} <button onClick={discovery.retry}>Reload recommendations</button></div>}
-          {discovery.complete && !discovery.loading && !discovery.error && !discovery.hasVisiblePlaces && <div className="discovery-data-status" role="status">No recommendations in this area yet. <button onClick={() => onReview(null)}>Review a place</button></div>}
+          {(discovery.loading || recommendations.loading) && <div className="discovery-data-status" role="status">Loading places and recommendations…</div>}
+          {(discovery.error || recommendations.error || nearby.error) && <div className="discovery-data-status" role="alert">
+            {discovery.error && <p>{discovery.error} <button onClick={discovery.retry}>Reload reviews</button></p>}
+            {recommendations.error && <p>{recommendations.error} <button onClick={recommendations.retry}>Reload recommendations</button></p>}
+            {nearby.error && <p>{nearby.error} <button onClick={nearby.retry}>Retry nearby places</button></p>}
+          </div>}
+          {nearby.waiting && !nearby.error && !discovery.error && !recommendations.error && <div className="discovery-data-status" role="status">More nearby places will appear shortly.</div>}
+          {discovery.complete && recommendations.complete && !discovery.loading && !recommendations.loading && !discovery.error && !recommendations.error && !nearby.error && markerPlaces.size === 0 && <div className="discovery-data-status" role="status">No places in this area yet. Search for a place or zoom in. <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}
       {selected && !picking && <article className="discovery-preview" aria-label="Selected place">

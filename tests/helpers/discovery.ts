@@ -41,7 +41,10 @@ export async function mockDiscovery(page: Page) {
   });
   await page.route("**/api/places/nearby?**", (route) => route.fulfill({ json: { places: [] } }));
   await page.route("**/api/auth/me", (route) => route.fulfill({ json: signedIn }));
-  await page.route("**/api/discovery/places?**", (route) => route.fulfill({ json: { places: appPlaces, next_cursor: null } }));
+  await page.route("**/api/discovery/places?**", (route) => {
+    const [west, south, east, north] = new URL(route.request().url()).searchParams.get("bbox")!.split(",").map(Number);
+    return route.fulfill({ json: { places: appPlaces.filter((place) => place.longitude >= west && place.longitude <= east && place.latitude >= south && place.latitude <= north), next_cursor: null } });
+  });
   await page.route("**/api/discovery/places/by-google-id/**", (route) => route.fulfill({ status: 404, json: { detail: "Place has no app record yet" } }));
   await page.route(/\/api\/discovery\/places\/00000000[^?]+\?/, (route) => {
     const id = new URL(route.request().url()).pathname.split("/").pop();

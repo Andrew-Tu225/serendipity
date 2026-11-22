@@ -39,30 +39,43 @@ Discover loads the Maps JavaScript SDK only after the tab opens. Its client-side
 the Google map, geographic markers, location indicator, camera operations, and listener cleanup.
 React portals supply custom marker contents, including initials identifying followed users. Marker
 instances are keyed by stable Place identity/coordinates and their contents update in place. The
-recommendation hook caches up to eight exact viewport responses for one minute, with quiet
-revalidation, debounced full-bbox requests, cancellation, and stable overlapping markers. Ranked
-responses replace the pin set; they are not unioned from incremental coverage strips.
-Discover occupies the phone area above navigation, with search and previews over the map. Normal
-pins come only from the signed-in recommendations API (30 per visible bbox), including returned
-review evidence and kind/relation labels. Empty results have no database/Google fallback. The tab
-stays mounted while hidden to preserve camera and selection, cancelling pending work on hide.
-Session expiry/account changes clear personal UI through the shared session gate.
+discovery hook retains a viewer-scoped in-memory cache with buffered geographic coverage, delta
+queries, incremental pagination, and quiet one-minute revalidation. Existing HTTP contracts and
+no-store response headers remain unchanged; this cache is private to the mounted UI.
+Discover occupies the full phone area above navigation, with search and previews layered over the
+map. App-reviewed Places and friend snippets come from the discovery API; dense pins are clustered.
+A separate `useRecommendations` hook requests 30 ranked Places per full visible bbox, with up to
+8 exact viewport snapshots cached for one minute. `mergeMapLayers` combines provider results,
+review summaries, and recommendation metadata by app UUID/exact provider ID. Friend recommendations
+are purple, personal recommendations amber, reviews blue, and nearby unreviewed results grey. A
+compact legend and colour-preserving selection expose those relationships. Followed-user reviews
+alone remain blue. Empty/failed rankings leave the independently loaded base layers available.
+The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
+cancels pending search/details/discovery requests and suspends refresh timers. Fresh discovery
+coverage is reused on return, and session changes invalidate personalized cached data. Home, Buddy,
+and Profile keep their existing behavior.
 
 Place search follows `UI → placesClient → /api proxy → places router → PlacesService → GooglePlacesClient`.
 The integration uses Google Places API **New**, separate from the browser Maps SDK. No repository,
 database connection, tables, or commits are involved in this read-only provider flow.
-The public `GET /api/places/nearby` provider endpoint remains available, but Discover no longer
-calls it. Automatic nearby destination pins, their client hook, and their cell cache have been
-removed. Explicit search may show one temporary selection outside the recommended set until its
-preview is closed. See [discovery-map.md](discovery-map.md).
+Nearby discovery follows this same flow through `GET /api/places/nearby`, with validated coordinates
+and a 50–5,000 m radius. The provider filters experience destinations and returns at most 20 places
+per search. `useNearbyPlaces` reuses bounded geographic search cells in temporary display memory,
+separately from the app's reviewed-place cache. Google IDs deduplicate results and let app Places
+take precedence. Nearby markers use our custom category glyphs, with no Google ratings or reviews.
+The map adapter exposes zoom so nearby search can refine geographic cells as users zoom in.
+The UI schedules up to three center-prioritized searches concurrently, with a separate mounted-map
+budget of 18 attempts per rolling minute. These limits control provider work without changing the
+backend contracts, persistence, or shared process rate limits.
+See [discovery-map.md](discovery-map.md) for sampling, freshness, density, and billing limits.
 
 Discovery follows `UI → discoveryClient → discovery router → DiscoveryService → DiscoveryRepository
-→ PostgreSQL`. Its public bbox list remains available to other clients, but is not used for map
-pin membership. The frontend uses its exact-ID lookup, review details, and review creation. It
+→ PostgreSQL`. It queries every app-reviewed Place within visible bounds, paginates results, and
 returns latest-per-author ratings and viewer-specific followed-user snippets. Public browsing uses
 an optional session dependency; invalid/expired sessions are anonymous while database failures remain
 errors. Search results join to app Places only by an optional unique Google Place ID (migration 0003).
-App IDs remain separate from provider identifiers. The review form submits through the same typed
+App IDs remain separate from provider identifiers. The base API includes every reviewed Place;
+recommendation exclusions remove highlights without removing base review pins. The review form submits through the same typed
 client with a CSRF token; `CurrentUser` and `VerifiedMutation` protect writes. The discovery service
 creates an optional user-authored Place, then delegates to the existing Experience service to commit
 the Place, Experience, and taste update together. Repositories never commit. Public reviews and
@@ -76,7 +89,7 @@ and imposes a 10-second timeout. `429` responses include `Retry-After`; validati
 unconfigured or failed provider requests return `503`. Every Places response, including errors, is
 `Cache-Control: no-store`. These public, read-only routes do not require authentication or CSRF.
 
-Explicit Google search selections live only in mounted-UI memory. They are not persisted, stored in browser
+Google search and nearby results live only in mounted-UI memory. They are not persisted, stored in browser
 storage, or cached by the backend. App Places persist user-authored names and user-chosen map
 points, plus optional provider IDs. Google search names/addresses/coordinates are not copied into
 app records. Hard-coded demo discovery pins are removed. No Google photos or reviews are fetched. Required map

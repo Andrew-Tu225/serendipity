@@ -113,22 +113,23 @@ Google's cloud style editor, publish it, and associate it with that Map ID. See
 to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production requires an explicit
 Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
 
-Discover initially centers on London, Ontario. Its normal pins come exclusively from the signed-in
-recommendations API (`GET /api/recommendations`, 30 per visible bbox), with friend/similar-taste/explore
-labels and supporting reviews. Panning/zooming fetches a new full ranking; exact viewport snapshots
-stay fresh for one minute. Empty results remain empty. The UI does not fetch all database Places
-or automatically display Google nearby destinations. Explicit Google search can temporarily show
-one selected Place outside recommendations; closing the preview removes that selection marker.
+Discover initially centers on London, Ontario and keeps the original results visible beneath
+recommendation highlights. The legend uses neutral grey for nearby places, blue for reviews,
+amber for personalized recommendations, and purple for friends' recommendations. Recommendation
+colours come from `GET /api/recommendations` (`limit=30` per visible bbox), preserving its supporting
+reviews. A followed-user review alone stays blue. App UUIDs and exact Google IDs prevent duplicate
+pins, and selection preserves a pin's colour.
 
-Run `npm install` for the marker clusterer and `cd backend && uv run alembic upgrade head` for the
-existing schema. No new migration, dependencies, or environment variables are required for the
-recommendation map. The all-reviewed-Places and public Nearby Search backend endpoints remain
-available, while the UI uses discovery endpoints only for exact search identity, review details,
-and review creation. Use Add to name a new Place and choose its map point, or Write a review on a
-selected Place. A successful review refetches recommendations; the API excludes the viewer's logged
-Places, so a new review does not force its Place onto their recommended map. No demo data is
-inserted automatically. Photos, saving UI, friend-management UI, and filters remain deferred.
-See [the discovery guide](docs/discovery-data.md).
+Base database review queries and temporary Google nearby searches continue independently. Ranked
+responses highlight those results; an empty or failed ranking leaves the original map available.
+A successful review updates the blue base marker and refetches rankings. Recommendation snapshots
+stay fresh for one minute; the original base coverage cache and nearby request budget remain.
+Use Add to name a new Place and choose its map point, or Write a review on a selected Place.
+
+Run `npm install` and `cd backend && uv run alembic upgrade head` for the existing setup. This map
+change adds no migration, dependency, or environment variable. No demo data is inserted automatically.
+Photos, saving UI, friend-management UI, and filters remain deferred. See
+[the discovery guide](docs/discovery-data.md).
 
 ### Social endpoints (backend only)
 

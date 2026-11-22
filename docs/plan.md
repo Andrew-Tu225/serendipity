@@ -230,14 +230,17 @@ Ultimately, we want someone to open the app and think:
 ## Current implementation
 
 Discover fills the phone above navigation, with floating search, location controls, and place previews.
-Google supplies the basemap and explicit global place/city search through FastAPI.
-Normal map pins come exclusively from the recommendations API for the current viewport, including
-friend, similar-taste, and explore picks backed by positive Experiences. The map no longer displays
-all reviewed database Places or automatic Google nearby results. Empty recommendations have no
-fallback. Panning and zooming request complete viewport rankings, with one-minute exact-view
-caching and stable overlapping markers. Reviews invalidate rankings; logged/bookmarked Places are
-excluded by the API. An explicitly searched Place may have one temporary selection marker outside
-the ranking until its preview is closed. Provider results remain temporary and create no rows.
+Google supplies the basemap, global search, and nearby destinations through FastAPI. The original
+map remains visible: smaller neutral grey nearby pins and blue reviewed Places, including low-rated,
+self-reviewed, and bookmarked Places. The recommendations API overlays amber personalized picks and
+purple friends' recommendations. Friend > personalized recommendation > base review determines
+each app Place's colour; exact provider IDs remove duplicate nearby pins. A followed-user review
+alone does not make a Place purple. A compact legend explains the colours, which persist on selection.
+
+Reviewed-place coverage and temporary nearby search cells retain their original caches and provider
+budgets. Ranked results use separate one-minute snapshots for the full viewport; panning/zooming
+refetches rankings rather than combining strips. Empty or failed rankings leave the base map
+available. A new review updates the blue base layer and refetches recommendation eligibility.
 Dense locations cluster rather than being dropped. London, Ontario is the initial camera position; location
 permission is requested only on tap.
 

@@ -277,18 +277,21 @@ Response: `{ "place": {...}, "logs": [...] }`. Errors: `401` as in 3.1; `404` `"
 ### 3.3 When the frontend calls it
 
 Home calls the ranked endpoint for up to 12 Places around London, Ontario (`-81.4,42.85,-81.1,43.12`).
-Discover calls the same API with `limit=30` and its exact visible bbox. Crossing the date line uses
-two ordinary bboxes and deduplicates by Place ID. Normal map pins come exclusively from these
-responses; `/api/discovery/places` and automatic Google nearby results are not fallback sources.
-The UI preserves `kind`, `score`, supporting logs, and author relations. Pin ratings come from
-supporting logs, not a fabricated aggregate. Complete responses replace viewport membership.
+Discover calls the same API with `limit=30` for its full visible bbox. Date-line views use two ordinary
+bboxes and deduplicate by app Place ID. These results highlight the original reviewed/Google nearby
+map rather than replacing its background results.
 
-Up to eight exact viewport responses remain fresh in mounted-map memory for one minute. Pans and
-zooms refetch the full bbox after a 250 ms idle debounce; they do not request only newly exposed
-strips because limited ranking is not additive. Successful reviews and window return invalidate
-snapshots. Existing shared marker IDs remain stable while obsolete responses are ignored.
-Selecting a pin loads public review details through the existing discovery client. Explicit search
-may show one transient non-recommended selection until it is closed. See [discovery-data.md](discovery-data.md).
+`friend` results are purple; `similar_taste` and `explore` results are amber. Reviewed Places outside
+recommendations are blue, and unreviewed nearby results remain neutral grey. A followed-user review
+alone stays blue. Results merge into existing app Places by UUID, retaining available aggregate
+ratings and exact provider identity; supporting recommendation logs remain visible in the preview.
+Friend recommendations take precedence over personal recommendations and base reviews.
+
+Full responses replace only highlight membership. A Place excluded after the viewer logs/bookmarks
+it returns to the base review layer rather than disappearing. Empty or failed recommendations leave
+base layers available. Up to eight exact-view snapshots remain fresh for one minute; pans/zooms
+request full bboxes after 250 ms, and successful reviews invalidate rankings. See
+[discovery-data.md](discovery-data.md) for base-layer caching and precedence.
 
 | Trigger | Call |
 |---|---|
