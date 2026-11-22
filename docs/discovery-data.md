@@ -141,8 +141,10 @@ For a new Place replace `place_id` with `new_place` containing `name`, `latitude
 Run `npm install`, then `cd backend && uv run alembic upgrade head`. There are no new environment
 variables. Run both servers using the README commands. Database tables are never created at app
 startup, and development fixtures are never inserted automatically. An empty database stays empty
-until users log Experiences. Friend highlighting uses existing `follows` records; a friend-management
-interface is outside this change.
+until users author Places through Experiences or saved-place creation. Friend highlighting uses
+`follows` records, now manageable through the [social backend API](social-api.md); friend-management
+UI remains future work. Saving an unreviewed Place does not make it eligible for reviewed-place
+discovery until it has an Experience.
 For opt-in local fixtures, `npm run db:seed` inserts London Places and labeled mock reviews. A separate
 guarded reset command clears application rows; see [local-demo-data.md](local-demo-data.md).
 

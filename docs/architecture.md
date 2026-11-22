@@ -141,6 +141,26 @@ backend/app/services/experiences.py: ExperienceService.create_experience()
 
 The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. `POST /api/discovery/experiences` calls it through `DiscoveryService`, using `CurrentUser` and `VerifiedMutation`; a new Place participates in that same transaction.
 
+## Social interactions
+
+Public profiles/search, Experience detail/likes/comments, directed follows, private bookmarks, and
+the following feed use `social` modules in the API, schema, service, and repository layers. See
+[social-api.md](social-api.md) for every endpoint and frontend integration contract. No UI or frontend
+client changes accompany these APIs. Public personalized reads use `OptionalUser`; private saves
+and the feed require `CurrentUser`. Every mutation also requires `VerifiedMutation`. Public identity
+schemas exclude the diagnostic auth response's email and Auth0 fields. All social responses,
+including errors, use no-store headers.
+
+`SocialService` owns comment-author permissions and transaction commits/rollbacks. `SocialRepository`
+owns queries, conflict-safe relation inserts, SQL pagination, and batched social counts/viewer flags.
+Migration `0004` adds Experience likes, comments, and private Experience bookmarks; existing `follows`
+and Place `bookmarks` are reused. Place saving can atomically create an unreviewed, user-authored
+Place through the same repository path used by discovery review creation. Google IDs converge on
+one Place without overwriting existing fields. Saved review and Place collections are independent.
+Only Place bookmarks and follows affect existing recommendations; social likes/comments do not
+alter taste profiles. Experiences stay immutable. The feed queries all published Experiences of
+currently followed users, including repeat visits, ordered by publication time rather than visit date.
+
 ## Adding a feature
 
 Local maintenance commands in `backend/scripts/` validate a loopback PostgreSQL target and delegate

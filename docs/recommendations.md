@@ -114,6 +114,12 @@ value(e) = +1                    if verdict = recommend
 
 A log is **liked** when `value(e) > 0`.
 
+This scoring term is independent of social likes stored in `experience_likes`. The
+[social API](social-api.md) exposes likes/comments and private saved Experiences without changing
+taste scores or rating summaries. Directed follows and Place bookmarks reuse the recommender's
+existing tables and affect the next recommendation request. Saving an Experience does not save
+its Place or exclude that Place from recommendations.
+
 ### 2.2 Taste profile
 
 Each user has one score per category, stored in `TasteProfile`:
