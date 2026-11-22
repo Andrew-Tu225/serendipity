@@ -30,7 +30,7 @@ test("loads every result page and refreshes the database query after map movemen
   await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   expect(requests).toHaveLength(2);
   await bounds(page, { west: -75, south: 44, east: -74, north: 45 });
-  await expect.poll(() => requests.filter((bbox) => bbox === "-75,44,-74,45").length).toBe(2);
+  await expect.poll(() => requests.filter((bbox) => bbox === "-75.25,43.75,-73.75,45.25").length).toBe(2);
 });
 
 test("superseded viewport responses never overwrite the latest area", async ({ page }) => {
@@ -39,7 +39,7 @@ test("superseded viewport responses never overwrite the latest area", async ({ p
   let oldRequested = false;
   await page.route("**/api/discovery/places?**", async (route) => {
     const bbox = new URL(route.request().url()).searchParams.get("bbox");
-    if (bbox === "-75,44,-74,45") {
+    if (bbox === "-75.25,43.75,-73.75,45.25") {
       oldRequested = true;
       await new Promise((resolve) => setTimeout(resolve, 800));
       return route.fulfill({ json: { places: appPlaces, next_cursor: null } });
@@ -59,11 +59,11 @@ test("date-line viewports query two rectangles and deduplicate shared places", a
   const requests: string[] = [];
   await page.route("**/api/discovery/places?**", (route) => {
     requests.push(new URL(route.request().url()).searchParams.get("bbox")!);
-    return route.fulfill({ json: { places: [appPlaces[0]], next_cursor: null } });
+    return route.fulfill({ json: { places: [{ ...appPlaces[0], latitude: 0, longitude: 175 }], next_cursor: null } });
   });
   await bounds(page, { west: 170, south: -10, east: -170, north: 10 });
   await expect.poll(() => requests.length).toBe(2);
-  expect(requests).toEqual(["170,-10,180,10", "-180,-10,-170,10"]);
+  expect(requests).toEqual(["165,-15,180,15", "-180,-15,-165,15"]);
   await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(1);
 });
 
@@ -82,12 +82,12 @@ test("database failure offers retry without inserting demo places", async ({ pag
 });
 
 test("dense places cluster and can be expanded", async ({ page }) => {
-  const dense = appPlaces.slice(0, 3).map((place, index) => ({ ...place, latitude: 43.65 + index * .00001, longitude: -79.4 }));
+  const dense = appPlaces.slice(0, 3).map((place, index) => ({ ...place, latitude: 42.9849 + index * .00001, longitude: -81.2453 }));
   await page.route("**/api/discovery/places?**", (route) => route.fulfill({ json: { places: dense, next_cursor: null } }));
   await open(page);
   await expect(page.getByRole("button", { name: "Zoom to 3 places" })).toBeVisible();
   await page.getByRole("button", { name: "Zoom to 3 places" }).click();
-  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-bounds", /43\.65/);
+  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-bounds", /42\.984/);
   await page.evaluate(() => (window as unknown as { __zoomTestMap: (zoom: number) => void }).__zoomTestMap(18));
   await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(3);
 });
@@ -131,6 +131,7 @@ test("review submission sends CSRF, preserves errors, and refreshes ratings only
     return route.fulfill({ status: 201, json: { place: updated, experiences: [], next_offset: null } });
   });
   await choosePlace(page);
+  const markerId = await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).getAttribute("data-marker-id");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Your rating").selectOption("4.5");
   await dialog.getByLabel("Your take").selectOption("recommend");
@@ -144,6 +145,7 @@ test("review submission sends CSRF, preserves errors, and refreshes ratings only
   await dialog.getByRole("button", { name: "Share experience" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("article")).toContainText("4.5/5 · 24 reviewers");
+  await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toHaveAttribute("data-marker-id", markerId!);
   await expect(page.getByText("Your experience was shared", { exact: false })).toBeVisible();
   await expect.poll(() => posted).toBe(true);
 });

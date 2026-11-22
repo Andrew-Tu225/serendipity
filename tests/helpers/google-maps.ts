@@ -5,6 +5,7 @@ import type { Page } from "@playwright/test";
 const sdk = String.raw`
 (() => {
   let currentMap;
+  let markerSerial = 0;
   const markers = new Set();
   const events = new WeakMap();
   function listen(target, name, callback) {
@@ -74,6 +75,7 @@ const sdk = String.raw`
       this.slot = markers.size;
       this.node = document.createElement('button');
       this.node.type = 'button';
+      this.node.dataset.markerId = String(++markerSerial);
       this.node.setAttribute('aria-label', options.title);
       this.node.dataset.position = JSON.stringify(options.position);
       this.node.style.cssText = 'position:absolute;border:0;background:transparent;left:40%;top:35%';
@@ -81,6 +83,7 @@ const sdk = String.raw`
       markers.add(this);
       this.map = options.map;
     }
+    set title(value) { this.node.setAttribute('aria-label', value); }
     set map(map) {
       if (!map) { this.node.remove(); return; }
       map.host.append(this.node);

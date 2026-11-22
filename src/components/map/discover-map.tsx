@@ -18,8 +18,9 @@ function externalUrl(value?: string | null) {
   } catch { return undefined; }
 }
 
-export default function DiscoverMap({ active, revision, selected, onSelect, onReview, picking, onPick, onCancelPick }: {
+export default function DiscoverMap({ active, revision, reviewedPlace, selected: selectedInput, onSelect, onReview, picking, onPick, onCancelPick }: {
   active: boolean; revision: number; selected: MapPlace | null;
+  reviewedPlace: MapPlace | null;
   onSelect: (place: MapPlace | null) => void; onReview: (place: MapPlace | null) => void;
   picking: boolean; onPick: (point: Coordinates) => void; onCancelPick: () => void;
 }) {
@@ -35,7 +36,18 @@ export default function DiscoverMap({ active, revision, selected, onSelect, onRe
   const [locationError, setLocationError] = useState("");
   const [resolveError, setResolveError] = useState("");
   const resolveRequest = useRef<AbortController | null>(null);
-  const discovery = useDiscovery(map, active, revision);
+  const discovery = useDiscovery(map, active, revision, reviewedPlace);
+  const selected = selectedInput?.source === "app"
+    ? discovery.getPlace(selectedInput.place_id) ?? { ...selectedInput, friend: undefined, friend_count: 0 }
+    : selectedInput;
+  const markerPlaces = new Map(discovery.places.map((place) => [`app:${place.place_id}`, place]));
+  if (selected?.source === "app") markerPlaces.set(`app:${selected.place_id}`, selected);
+  if (searchPlace) {
+    for (const [key, place] of markerPlaces) {
+      if (place.google_place_id === searchPlace.place_id) markerPlaces.delete(key);
+    }
+    markerPlaces.set(`google:${searchPlace.place_id}`, searchPlace);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -120,15 +132,13 @@ export default function DiscoverMap({ active, revision, selected, onSelect, onRe
       {!map && !mapError && <div className="discovery-map-message" role="status">Finding your next favorite corner…</div>}
       {mapError && <div className="discovery-map-message" role="alert"><strong>The map couldn’t load</strong><p>{mapError}</p><button type="button" onClick={() => { setMap(null); setMapError(""); setAttempt((n) => n + 1); }}>Try again</button></div>}
       {map && <>
-        {discovery.places.filter((place) => !searchPlace || place.google_place_id !== searchPlace.place_id).map((place) => <PlaceMarker key={place.place_id} map={map} place={place} selected={selected?.place_id === place.place_id} onSelect={selectPlace}/>)}
-        {searchPlace && <PlaceMarker key={searchPlace.place_id} map={map} place={searchPlace} selected={selected?.place_id === searchPlace.place_id} onSelect={selectPlace}/>}
-        {selected?.source === "app" && !discovery.places.some((place) => place.place_id === selected.place_id) && <PlaceMarker map={map} place={selected} selected onSelect={selectPlace}/>}
+        {[...markerPlaces].map(([key, place]) => <PlaceMarker key={key} map={map} place={place} selected={selected?.source === place.source && selected.place_id === place.place_id} onSelect={selectPlace}/>)}
         {picking ? <div className="discovery-data-status" role="status">Tap the map to place your pin, or review an existing place.
           <button onClick={() => onPick(map.center())}>Use map center</button><button onClick={onCancelPick}>Cancel</button>
         </div> : <>
           {discovery.loading && <div className="discovery-data-status" role="status">Loading app-reviewed places…</div>}
           {discovery.error && <div className="discovery-data-status" role="alert">{discovery.error} <button onClick={discovery.retry}>Reload places</button></div>}
-          {!discovery.loading && !discovery.error && !discovery.places.length && <div className="discovery-data-status" role="status">No app reviews in this area yet. <button onClick={() => onReview(null)}>Review a place</button></div>}
+          {discovery.complete && !discovery.loading && !discovery.error && !discovery.hasVisiblePlaces && <div className="discovery-data-status" role="status">No app reviews in this area yet. <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
         <button type="button" className="discovery-locate" aria-label="Center on my location" aria-busy={active && locating}
           onClick={locate}><span aria-hidden="true">◎</span></button>
@@ -141,7 +151,7 @@ export default function DiscoverMap({ active, revision, selected, onSelect, onRe
             <strong>★ {selected.rating_summary.average.toFixed(1)}/5</strong> · {selected.rating_summary.count} reviewers · Serendipity
           </p>}
           {selected.friend && <p className="discovery-friend-note">{selected.friend.name} {selected.friend.note}{(selected.friend_count ?? 0) > 1 ? ` · ${selected.friend_count} friends reviewed` : ""}</p>}
-          {selected.app_id && active && <PlaceReviews key={`${selected.app_id}-${revision}`} placeId={selected.app_id}/>}
+          {selected.app_id && active && discovery.identityReady && <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id}/>}
           {resolveError && selected.source === "google" && <p role="alert">{resolveError}</p>}
           <button className="discovery-review-button" onClick={() => onReview(selected)}>Write a review</button>
           <a href={externalUrl(selected.google_maps_uri)} target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>

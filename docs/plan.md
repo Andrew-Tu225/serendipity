@@ -233,6 +233,9 @@ Discover fills the phone above navigation, with floating search, location contro
 Google supplies the basemap and global place/city search through FastAPI. App-reviewed Places come
 from PostgreSQL for the visible map area after initial load, panning, zooming, search, or geolocation.
 Every reviewed Place is eligible, including low ratings; recommendation ranking remains separate.
+Pins remain stable while moving around the map. Buffered app-data coverage is cached in memory,
+newly exposed areas load incrementally, and stale ratings refresh quietly after one minute. New
+reviews update their marker immediately.
 Dense locations cluster rather than being dropped. London, Ontario is the initial camera position; location
 permission is requested only on tap.
 

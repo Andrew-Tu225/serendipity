@@ -68,6 +68,7 @@ function App() {
   const [picking, setPicking] = useState(false)
   const [reviewBusy, setReviewBusy] = useState(false)
   const [reviewRevision, setReviewRevision] = useState(0)
+  const [reviewedPlace, setReviewedPlace] = useState<MapPlace | null>(null)
 
   const startReview = (place: MapPlace | null) => {
     setReviewTarget(place)
@@ -85,6 +86,7 @@ function App() {
   }
   const reviewSaved = (result: PlaceExperiences) => {
     setSelectedPlace(mapPlace(result.place))
+    setReviewedPlace(mapPlace(result.place))
     setReviewRevision((value) => value + 1)
     setReviewBusy(false)
     setSheet(null)
@@ -128,7 +130,7 @@ function App() {
 
         <div className="app-content">
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
-            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision}
+            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision} reviewedPlace={reviewedPlace}
               selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
               picking={picking} onCancelPick={() => setPicking(false)}
               onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}

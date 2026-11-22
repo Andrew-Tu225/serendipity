@@ -37,11 +37,17 @@ UI components do not make ad hoc `fetch` calls or contain backend endpoint strin
 
 Discover loads the Maps JavaScript SDK only after the tab opens. Its client-side map adapter owns
 the Google map, geographic markers, location indicator, camera operations, and listener cleanup.
-React portals supply custom marker contents, including initials identifying followed users.
+React portals supply custom marker contents, including initials identifying followed users. Marker
+instances are keyed by stable Place identity/coordinates and their contents update in place. The
+discovery hook retains a viewer-scoped in-memory cache with buffered geographic coverage, delta
+queries, incremental pagination, and quiet one-minute revalidation. Existing HTTP contracts and
+no-store response headers remain unchanged; this cache is private to the mounted UI.
 Discover occupies the full phone area above navigation, with search and previews layered over the
 map. App-reviewed Places and friend snippets come from the discovery API; dense pins are clustered.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
-cancels pending search/details requests. Home, Buddy, and Profile keep their existing behavior.
+cancels pending search/details/discovery requests and suspends refresh timers. Fresh discovery
+coverage is reused on return, and session changes invalidate personalized cached data. Home, Buddy,
+and Profile keep their existing behavior.
 
 Place search follows `UI → placesClient → /api proxy → places router → PlacesService → GooglePlacesClient`.
 The integration uses Google Places API **New**, separate from the browser Maps SDK. No repository,

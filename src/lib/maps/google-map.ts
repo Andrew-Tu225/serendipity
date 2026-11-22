@@ -13,6 +13,7 @@ export interface MapHandle {
   locate(position: Coordinates): void;
   marker(position: Coordinates, element: HTMLElement, title: string, onClick: () => void, cluster?: boolean): {
     select(selected: boolean): void;
+    title(value: string): void;
     remove(): void;
   };
   resize(): void;
@@ -118,11 +119,15 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       map.panTo(latLng(position));
     },
     marker(position, element, title, onClick, cluster = true) {
-      const marker = new AdvancedMarkerElement({ map, position: latLng(position), content: element, title, zIndex: 1 });
+      const marker = new AdvancedMarkerElement({ map, position: latLng(position), content: element, title, zIndex: 1, collisionBehavior: google.maps.CollisionBehavior.REQUIRED });
+      let selection = false;
       if (cluster) { clusters.addMarker(marker, true); renderClusters(); }
       const listener = marker.addListener("click", onClick);
       return {
+        title(value) { marker.title = value; },
         select(selected) {
+          if (selection === selected) return;
+          selection = selected;
           element.classList.toggle("is-selected", selected);
           marker.zIndex = selected ? 1000 : 1;
           marker.collisionBehavior = selected

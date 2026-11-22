@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MapHandle } from "@/lib/maps/google-map";
 import type { MapPlace } from "@/types/places";
@@ -12,7 +12,7 @@ export function PlaceGlyph({ category }: { category?: string }) {
   </svg>;
 }
 
-export function PlaceMarker({ map, place, selected, onSelect }: {
+export const PlaceMarker = memo(function PlaceMarker({ map, place, selected, onSelect }: {
   map: MapHandle; place: MapPlace; selected: boolean; onSelect: (place: MapPlace) => void;
 }) {
   const [element] = useState(() => {
@@ -21,11 +21,20 @@ export function PlaceMarker({ map, place, selected, onSelect }: {
     return node;
   });
   const marker = useRef<ReturnType<MapHandle["marker"]> | null>(null);
+  const latest = useRef({ place, onSelect });
+  useEffect(() => { latest.current = { place, onSelect }; }, [place, onSelect]);
+  const { latitude, longitude } = place.location;
+  const id = place.place_id;
+  const cluster = place.source === "app";
   useEffect(() => {
-    marker.current = map.marker(place.location, element, `View ${place.display_name}`, () => onSelect(place), place.source === "app");
-    return () => { marker.current?.remove(); marker.current = null; };
-  }, [map, place, element, onSelect]);
-  useEffect(() => { marker.current?.select(selected); }, [selected, map, place, element, onSelect]);
+    const handle = map.marker({ latitude, longitude }, element, `View ${latest.current.place.display_name}`, () => {
+      latest.current.onSelect(latest.current.place);
+    }, cluster);
+    marker.current = handle;
+    return () => { handle.remove(); marker.current = null; };
+  }, [map, id, latitude, longitude, cluster, element]);
+  useEffect(() => { marker.current?.select(selected); }, [selected, map, id, latitude, longitude, cluster, element]);
+  useEffect(() => { marker.current?.title(`View ${place.display_name}`); }, [place.display_name, map, id, latitude, longitude, cluster, element]);
   return createPortal(<>
     {place.friend ? <span className="discovery-friend-avatar" aria-label={`${place.friend.name} reviewed this place`}>{place.friend.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("")}</span> : <span className="discovery-pin-icon"><PlaceGlyph category={place.category}/></span>}
     <span className="discovery-pin-label">{place.friend ? place.friend.name : place.display_name}</span>
@@ -33,4 +42,4 @@ export function PlaceMarker({ map, place, selected, onSelect }: {
       ★ {place.rating_summary.average.toFixed(1)} · {place.rating_summary.count}
     </span>}
   </>, element);
-}
+});

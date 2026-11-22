@@ -8,19 +8,53 @@ ranking and its positive-log requirements are a separate API and remain unchange
 
 ## Browsing
 
-Discover starts in London, Ontario and requests the visible geographic rectangle after the Google map becomes
-idle. Initial load, search navigation, panning, zooming, and device-location recentering all use the same
-path. A 250 ms debounce avoids issuing requests continuously while moving the camera. Date-line
-viewports are split into two ordinary rectangles. Requests are cancelled on newer map movement and
-when the tab is hidden; stale results cannot replace a newer area's data. Returning to Discover
-preserves the camera and selection and refetches the area.
+Discover starts in London, Ontario. It keeps an in-memory cache of app Places by internal UUID and
+of fully fetched geographic rectangles. The initial request extends 25% beyond each visible edge.
+Panning or zooming within fresh coverage makes no data request; moving beyond it subtracts cached
+coverage and requests only the exposed rectangles, using the existing bbox API. Date-line views
+remain split into ordinary rectangles, and latitude/longitude buffers stay within geographic limits.
+Map idle events are debounced by 250 ms. Returning to a freshly loaded area reuses cached data.
 
-The API returns pages of 200 Places by default (maximum 500), ordered by internal UUID. The client
-loads every page and deduplicates by Place ID before replacing the marker set. Results are not limited
-to the recommendation API's top picks. `@googlemaps/markerclusterer` groups dense pins; a cluster's
-count represents its underlying Places and clicking it fits that area. Zooming in reveals individual
-pins. A selected app Place remains visible while its preview is open. Search-only Google markers and
-the device location dot are not part of app-place clusters.
+Coverage stays fresh for 60 seconds. Stale visible coverage refreshes quietly while the map is active
+and when the window/tab regains focus. No loading banner appears after the first successful area
+load. Existing pins remain visible during background requests and errors; retry is available. An
+empty-area message requires complete coverage of the visible viewport and zero Places inside it,
+so cached offscreen results do not hide an empty state or cause one during an unfinished fetch.
+
+The API returns pages of 200 Places by default (maximum 500), ordered by internal UUID. Each page
+merges into the current Place cache immediately. A region becomes complete only after its final
+page succeeds. Failed/aborted pagination cannot claim coverage or remove previous data. A complete
+refresh removes records no longer returned for that rectangle, while superseded responses cannot
+replace current data. In-flight requests covering the view are reused; obsolete work is cancelled
+when navigating elsewhere or hiding the tab. Browser-hidden pages suspend refresh timers and work.
+
+Marker creation depends on stable identity and coordinates, rather than each response object.
+Unchanged Place objects are reused, marker components are memoized, and changed ratings/friend
+labels update their React portal contents. Click handlers read the latest Place. SDK marker objects
+are recreated only when identity, coordinates, or map change; title changes update in place. App and
+selected markers share one keyed list, so a selected pin stays alive when it moves between the
+visible results and selection fallback. The existing clusterer receives incremental membership
+changes batched into an animation frame. Selection updates are idempotent. Search-only Google
+markers and the device location dot remain outside the app-place clusterer.
+
+The cache targets 32 completed regions and 5,000 Place records, evicting least-recently-used offscreen
+coverage/data first. Active-area results are protected even if they exceed these soft budgets; no
+reviewed Places in the current area are dropped to meet a cache cap. Evicting records also invalidates
+their coverage so returning later cannot incorrectly treat missing data as complete. Markers outside
+the buffered area are released; the selected marker remains pinned. Cache state lasts only for the
+mounted map, including navigation between app tabs, and is reset by page reload.
+
+Session identity is checked on entering Discover, window/tab return, and freshness revalidation.
+An account change/expiry clears friend-specific fields and coverage while retaining public ratings
+and coordinates, then reloads the current area for the new viewer. Identity-check failures keep only
+public cached marker data and offer retry; they are not treated as signed-out success. Selected
+review panels reload when viewer identity changes. No cache is shared between browser sessions or
+persisted to localStorage, and all existing HTTP no-store headers remain in place.
+
+After a successful review submission, its returned Place merges immediately and invalidates the
+coverage containing that point. Other cached areas remain available; background revalidation then
+reconciles that area's data. The selected marker and open preview are preserved while its rating
+updates. No backend API, schema, provider cache, or dependency changes are needed for this behavior.
 
 One user's latest Experience per Place contributes to the rating average and reviewer count, using
 `visited_on`, then `created_at`, then UUID as descending tie breakers, consistently with recommendations.
@@ -33,7 +67,7 @@ failures remain errors. Every discovery response, including errors, is `Cache-Co
 Selecting an app marker fetches its public reviews in pages of 20. Reviews show author name, rating,
 verdict or written text, and visit date; signed-in viewers also see Friend/You labels. Blank areas show
 an empty state with a review action. Database failures offer retry and never insert demo pins. During
-a refresh, previously loaded geographic pins may remain visible until the replacement arrives.
+a refresh, previously loaded pins within the buffered area remain visible while updates arrive.
 
 ## Writing an Experience
 
