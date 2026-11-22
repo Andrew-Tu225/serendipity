@@ -316,16 +316,18 @@
 .discovery-locate { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid #e1d8e6; border-radius: 16px; color: #76548f; background: #fff; box-shadow: 0 3px 12px #36263f14; }
 .discovery-locate:disabled { opacity: .55; cursor: default; }
 .discovery-locate[aria-busy="true"] { color: #76548f; background: #eee5f4; cursor: wait; }
-.discovery-pin { display: flex; flex-direction: column; align-items: center; width: max-content; max-width: 130px; color: #76548f; }
-.discovery-pin-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50% 50% 50% 8px; border: 3px solid white; background: white; box-shadow: 0 4px 12px #39284340; transform: rotate(-45deg); }
-.discovery-pin-icon svg { transform: rotate(45deg); }
+.discovery-pin { position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: #76548f; }
+.discovery-pin-caption { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; width: max-content; max-width: 130px; padding-bottom: 3px; visibility: hidden; pointer-events: none; }
+.discovery-pin.has-label .discovery-pin-caption, .discovery-pin.is-selected .discovery-pin-caption { visibility: visible; }
+.discovery-pin-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid white; background: white; box-shadow: 0 3px 8px #39284330; }
+.discovery-pin-icon svg { width: 17px; height: 17px; }
 .discovery-pin .friend-avatar { width: 42px; height: 64px; filter: drop-shadow(0 3px 3px #39284333); }
 .discovery-pin-label { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 6px; margin-top: 3px; background: #fffffff2; border-radius: 6px; color: #55405f; font-size: 10px; font-weight: 700; box-shadow: 0 2px 5px #36263f14; }
 .discovery-pin-rating { margin-top: 2px; padding: 2px 5px; border-radius: 5px; color: #654577; background: #fffffff2; font-size: 9px; font-weight: 600; white-space: nowrap; }
-.discovery-pin.is-selected .discovery-pin-icon { color: white; background: #76548f; transform: rotate(-45deg) scale(1.12); }
+.discovery-pin.is-selected .discovery-pin-icon { color: white; background: #76548f; transform: scale(1.12); }
 .discovery-pin.is-selected .discovery-pin-label { background: #76548f; color: white; }
 .discovery-pin.is-unreviewed { color: #897b95; }
-.discovery-pin.is-unreviewed .discovery-pin-icon { width: 30px; height: 30px; border-width: 2px; background: #f6f2f8; box-shadow: 0 2px 6px #39284326; }
+.discovery-pin.is-unreviewed .discovery-pin-icon { width: 24px; height: 24px; border-width: 2px; background: #f6f2f8; box-shadow: 0 2px 6px #39284326; }
 .discovery-pin.is-unreviewed .discovery-pin-icon svg { width: 16px; height: 16px; }
 .discovery-pin.is-unreviewed .discovery-pin-label { color: #786985; font-weight: 500; font-size: 9px; }
 .discovery-pin.is-unreviewed.is-selected .discovery-pin-icon { color: white; background: #76548f; }
@@ -347,7 +349,7 @@
 .discovery-view button:focus-visible, .discovery-preview a:focus-visible { outline: 2px solid #76548f; outline-offset: 2px; }
 .discovery-data-status { position: absolute; z-index: 3; top: calc(128px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; padding: 10px 12px; border-radius: 12px; color: #654577; background: #fff; font-size: 12px; box-shadow: 0 4px 18px #36263f14; }
 .discovery-data-status button { margin: 5px 8px 0 0; padding: 4px 0; color: #654577; border: 0; background: transparent; text-decoration: underline; }
-.discovery-friend-avatar { display: grid; place-items: center; width: 42px; height: 42px; border: 3px solid #fff; border-radius: 50%; color: #fff; background: #76548f; box-shadow: 0 4px 12px #39284340; font-size: 14px; font-weight: 700; }
+.discovery-friend-avatar { display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #76548f; box-shadow: 0 3px 8px #39284330; font-size: 11px; font-weight: 700; }
 .discovery-cluster { display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 8px; border: 3px solid white; border-radius: 50%; background: #76548f; color: white; box-shadow: 0 4px 15px #39284340; font-size: 15px; font-weight: 700; }
 .discovery-reviews { margin-top: 8px; }
 .discovery-review { padding: 8px 0; border-top: 1px solid #eee7f1; font-size: 11px; }

@@ -44,18 +44,23 @@ queries, incremental pagination, and quiet one-minute revalidation. Existing HTT
 no-store response headers remain unchanged; this cache is private to the mounted UI.
 Discover occupies the full phone area above navigation, with search and previews layered over the
 map. App-reviewed Places and friend snippets come from the discovery API; dense pins are clustered.
-A separate `useRecommendations` hook requests 30 ranked Places per full visible bbox, with up to
-8 exact viewport snapshots cached for one minute. `mergeMapLayers` combines provider results,
+A separate `useRecommendations` hook requests 30 ranked Places per buffered bbox (25% beyond each
+visible edge), with up to 8 full-area snapshots cached for one minute. Small pans reuse the active
+snapshot and applicable pending request; crossing coverage requests a new area after 500 ms idle.
+Focus/tab return retain fresh coverage; expiry refreshes the same area quietly. `mergeMapLayers` combines provider results,
 review summaries, and recommendation metadata by app UUID/exact provider ID. Friend recommendations
 are purple, personal recommendations amber, reviews white, and nearby unreviewed results grey. A
 colour-preserving selection and marker tooltips expose those relationships; there is no legend. Followed-user reviews
 alone remain white. Empty/failed rankings leave the independently loaded base layers available.
-The map adapter suppresses overlapping grey pins after 150 ms of camera/marker-set quiet, with
-stable existing-pin preference and different hide/reveal gaps. Grey pins remain outside app-place
+The map adapter lays out compact icons and independently positioned captions after 150 ms of
+camera/marker-set quiet. Rendered footprints determine collisions. Labels yield first, prioritizing
+selection, friend recommendations, personal recommendations, reviews, then nearby Places. Nearby
+icons yield only to actual visible icons/clusters; hidden cluster members occupy no space. Existing
+visibility and separate hide/reveal gaps stabilize results. Grey pins remain outside app-place
 clusters, so nearby batches cannot rebuild review clusters. All SDK markers use `REQUIRED`; native
-collision handling does not compete with this settled layout. Unchanged visibility never reattaches
-markers, and selection keeps a grey pin visible. Layer changes update priority in place. The map
-canvas isolates marker stacking below the floating controls.
+collision handling does not compete with this layout. The clusterer owns attachment of its members:
+colour/evidence updates never reattach hidden reviews. Selection retains its colour and stays visible.
+The map canvas isolates marker stacking below the floating controls.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
 cancels pending search/details/discovery requests and suspends refresh timers. Fresh discovery
 coverage is reused on return, and session changes invalidate personalized cached data. Home, Buddy,

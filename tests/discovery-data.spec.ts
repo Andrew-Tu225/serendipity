@@ -35,7 +35,7 @@ test("recommendation responses highlight the original reviewed places without du
   await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
   expect(requests).toHaveLength(1);
-  requests[0].split(",").map(Number).forEach((coordinate, i) => expect(coordinate).toBeCloseTo([-81.3453,42.8849,-81.1453,43.0849][i], 7));
+  requests[0].split(",").map(Number).forEach((coordinate, i) => expect(coordinate).toBeCloseTo([-81.3953,42.8349,-81.0953,43.1349][i], 7));
   expect(databaseLists).toBeGreaterThan(0); expect(nearbyLists).toBe(0); expect(details).toBe(0);
 });
 
@@ -45,7 +45,7 @@ test("superseded viewport responses never overwrite the latest recommendations",
   let oldRequested = false;
   await page.route("**/api/recommendations?**", async (route) => {
     const bbox = new URL(route.request().url()).searchParams.get("bbox");
-    if (bbox === "-75,44,-74,45") {
+    if (Number(bbox?.split(",")[0]) === -75.25) {
       oldRequested = true;
       await new Promise((resolve) => setTimeout(resolve, 800));
       return route.fulfill({ json: { items: [recommendation({ ...appPlaces[0], longitude: -72.5, latitude: 44.5 })] } });
@@ -70,7 +70,7 @@ test("date-line viewports query two recommendation rectangles and deduplicate", 
   });
   await bounds(page, { west: 170, south: -10, east: -170, north: 10 });
   await expect.poll(() => requests.length).toBe(2);
-  expect(new Set(requests)).toEqual(new Set(["170,-10,180,10", "-180,-10,-170,10"]));
+  expect(new Set(requests)).toEqual(new Set(["165,-15,180,15", "-180,-15,-165,15"]));
   await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(1);
 });
 

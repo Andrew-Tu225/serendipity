@@ -116,15 +116,17 @@ Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values a
 Discover initially centers on London, Ontario and keeps the original results visible beneath
 recommendation highlights. Pins use neutral grey for nearby places, white for reviews,
 amber for personalized recommendations, and purple for friends' recommendations. Recommendation
-colours come from `GET /api/recommendations` (`limit=30` per visible bbox), preserving its supporting
+colours come from `GET /api/recommendations` (`limit=30` per buffered bbox), preserving its supporting
 reviews. A followed-user review alone stays white. App UUIDs and exact Google IDs prevent duplicate
-pins, and selection preserves a pin's colour. Overlapping grey pins hide while reviews and
-recommendation highlights remain visible. No legend is displayed.
+pins, and selection preserves a pin's colour. Compact icons show more destinations; overlapping
+labels yield first, and grey icons hide only where visible icons/clusters overlap. No legend is displayed.
 
 Base database review queries and temporary Google nearby searches continue independently. Ranked
 responses highlight those results; an empty or failed ranking leaves the original map available.
 A successful review updates the white base marker and refetches rankings. Recommendation snapshots
-stay fresh for one minute; the original base coverage cache and nearby request budget remain.
+stay fresh for one minute and extend 25% beyond the viewport, so small pans and focus/tab return
+reuse them. Leaving coverage requests another area after 500 ms idle. The original base coverage
+cache and nearby request budget remain.
 Use Add to name a new Place and choose its map point, or Write a review on a selected Place.
 
 Run `npm install` and `cd backend && uv run alembic upgrade head` for the existing setup. This map

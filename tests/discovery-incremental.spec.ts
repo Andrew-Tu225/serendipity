@@ -2,9 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 import { appPlaces, mockDiscovery, recommendation, signedIn } from "./helpers/discovery";
 import { mockGoogleMaps } from "./helpers/google-maps";
 import type { MapBounds } from "../src/types/discovery";
+import { bufferBounds } from "../src/lib/maps/bounds";
 
 const initial = { west: -81.3453, east: -81.1453, south: 42.8849, north: 43.0849 };
-const shifted = { ...initial, west: initial.west + .02, east: initial.east + .02 };
+const shifted = { ...initial, west: initial.west + .06, east: initial.east + .06 };
 const marker = (page: Page) => page.getByRole("button", { name: "View St. Lawrence Market", exact: true });
 async function bounds(page: Page, value: MapBounds) {
   await page.evaluate((value) => (window as unknown as { __boundsTestMap: (bounds: MapBounds) => void }).__boundsTestMap(value), value);
@@ -23,20 +24,68 @@ async function ranked(page: Page, handler: (bbox: string) => Promise<unknown> | 
   });
 }
 
-test("pan requests the full viewport, preserves shared markers, and caches exact return views", async ({ page }) => {
+test("small pans, focus, and tab return reuse buffered rankings; leaving coverage requests a new area", async ({ page }) => {
   const requests: string[] = [];
   await ranked(page, (bbox) => { requests.push(bbox); return { items: [recommendation(appPlaces[0])] }; });
   await open(page);
   await expect(marker(page)).toBeVisible();
   const identity = await marker(page).getAttribute("data-marker-id");
+  const small = { ...initial, west: initial.west + .02, east: initial.east + .02 };
+  await bounds(page, small);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.waitForTimeout(650);
+  expect(requests).toHaveLength(1);
+  const [firstArea] = bufferBounds([initial]);
+  requests[0].split(",").map(Number).forEach((value, i) => expect(value).toBeCloseTo([firstArea.west, firstArea.south, firstArea.east, firstArea.north][i], 7));
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await page.waitForTimeout(650);
+  expect(requests).toHaveLength(1);
   await bounds(page, shifted);
   await expect.poll(() => requests.length).toBe(2);
-  expect(requests[1]).toBe([shifted.west, shifted.south, shifted.east, shifted.north].join(","));
+  const [nextArea] = bufferBounds([shifted]);
+  requests[1].split(",").map(Number).forEach((value, i) => expect(value).toBeCloseTo([nextArea.west, nextArea.south, nextArea.east, nextArea.north][i], 7));
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
   await bounds(page, initial);
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(650);
   expect(requests).toHaveLength(2);
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
+});
+
+test("a small pan preserves an applicable in-flight ranking", async ({ page }) => {
+  let calls = 0;
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  await ranked(page, async () => {
+    calls++;
+    await blocked;
+    return { items: [recommendation(appPlaces[0])] };
+  });
+  await open(page);
+  await expect.poll(() => calls).toBe(1);
+  await bounds(page, { ...initial, west: initial.west + .02, east: initial.east + .02 });
+  await page.waitForTimeout(650);
+  expect(calls).toBe(1);
+  release();
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
+  expect(calls).toBe(1);
+});
+
+test("an obsolete delayed ranking cannot overwrite the new browsing area", async ({ page }) => {
+  let calls = 0;
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  await ranked(page, async () => {
+    if (++calls === 1) { await blocked; return { items: [recommendation(appPlaces[0])] }; }
+    return { items: [recommendation(appPlaces[1])] };
+  });
+  await open(page);
+  await expect.poll(() => calls).toBe(1);
+  await bounds(page, shifted);
+  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
+  release();
+  await page.waitForTimeout(650);
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
 });
 
 test("a place leaving recommendations returns to the white review layer without replacing its marker", async ({ page }) => {

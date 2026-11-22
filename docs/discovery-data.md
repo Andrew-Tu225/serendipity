@@ -21,21 +21,23 @@ exact Google IDs suppress duplicate provider pins. Recommendation metadata overl
 existing aggregate rating/identity. Each Place has one marker, with friend recommendation first,
 then personalized recommendation, then base review, then an unreviewed provider result.
 
-Grey nearby pins hide overlaps after the camera/marker set settles for 150 ms. They stay outside the
-review clusterer, so new nearby batches do not redraw reviews. Existing visible grey pins take
-precedence over new arrivals; separate hide/reveal gaps prevent oscillation along overlap edges.
-Reviews, recommendations, clusters, the location dot, and selected Places take precedence over grey
-pins. All SDK markers use `REQUIRED`; one adapter-owned pass controls grey visibility instead of
-native automatic collision hiding. Unchanged visibility never reattaches a marker. Selection keeps
-a grey Place visible. Reviews retain white backgrounds and purple glyphs/initials, including while
-selected. App Places still cluster; all data sources remain.
+Compact icons remain visible when names overlap: the settled layout hides captions before icons.
+Selected Places, friend recommendations, personal recommendations, reviews, and nearby Places receive
+label priority in that order. Full names and evidence remain available in previews and accessible
+marker names. Nearby icons yield to actual visible icon/cluster footprints, with existing-pin
+preference and separate hide/reveal gaps. Cluster-hidden reviews occupy no space, and colour updates
+never reattach them. Grey pins remain outside the review clusterer; all SDK markers use `REQUIRED`.
+The [map layout documentation](discovery-map.md#overlapping-nearby-pins) describes sizing and settling.
 
-Ranked results request up to 30 Places per exact visible bbox after a 250 ms idle debounce. Date-line
-views use two ordinary bboxes and deduplicate IDs. Up to eight exact-view snapshots stay fresh for
-one minute. Full rankings replace recommendation membership, while base review coverage remains
-independent. A Place leaving recommendations returns to its white review marker rather than
-vanishing. Supporting logs and relations remain visible in the selected preview; an aggregate
-rating is shown when available, otherwise the supporting log rating is labelled as such.
+Ranked results request up to 30 Places per buffered bbox (25% beyond each visible edge) after a
+500 ms idle debounce when the viewport leaves fresh coverage. Date-line views use two ordinary
+bboxes and deduplicate IDs. Up to eight full-area snapshots stay fresh for one minute. Small pans,
+focus, and tab return reuse the active fresh snapshot and applicable pending request. Expiry quietly
+refreshes the same ranking area. Successful reviews invalidate rankings; viewer changes clear them.
+Full successful responses replace recommendation membership, while existing results survive pending
+or failed requests and base review coverage remains independent. A Place leaving recommendations
+returns to its white review marker rather than vanishing. Supporting logs and relations remain in
+the selected preview; aggregate ratings are used when available, otherwise supporting ratings are labelled.
 
 ## Browsing
 

@@ -36,28 +36,41 @@ aborted and stale responses ignored. Provider billing still follows Google's req
 
 ## Overlapping nearby pins
 
-Grey nearby markers yield to overlaps in a single adapter-owned layout pass, 150 ms after the camera
-or marker set settles. They do not join reviewed-place clusters, so nearby result batches cannot
-rebuild review clusters. Existing visible grey pins win over newly arriving grey pins; hidden pins
-need 10 px clearance to reappear, while visible pins retain a 2 px gap. This prevents oscillation at
-overlap edges. The pass uses projected CSS-pixel footprints (130×62 for nearby pins, 130×84 for app
-pins, 54×54 for clusters), conservatively including labels. Date-line views use the nearest world copy.
+Compact pins have a fixed 44 px interaction area with 24 px nearby icons and 30 px app icons.
+Names and ratings live in an independently positioned caption, so hiding labels never moves the
+pin anchor. The place name identifies the destination; friend identity and evidence remain in the preview.
 
-Reviews, recommendation highlights, clusters, the location dot, and selected Places suppress grey pins.
-Selection keeps a grey pin visible until deselection. Visibility is held during camera motion;
-unchanged decisions never detach/reattach SDK markers. All SDK markers use `REQUIRED`, so native
-collision hiding does not compete with clustering or hide/reveal basemap labels during updates.
-White reviews, amber personal recommendations, and purple friend recommendations stay distinct.
-No legend is displayed.
+A single adapter-owned pass runs 150 ms after the camera/marker set settles. It measures rendered
+icons and captions in CSS pixels, using the nearest world copy at the date line. Labels yield before
+icons: selected Place, friend recommendation, personal recommendation, review, then nearby Place.
+Within a priority, existing labels win. A selected caption is always visible. Labels avoid other
+visible icons, clusters, the location dot, and higher-priority captions.
+
+Nearby icons hide only when their icon footprint overlaps another visible icon or cluster. Existing
+visible grey pins win over new arrivals; hidden pins need 10 px clearance to reappear, while visible
+pins retain a 2 px gap. Hidden cluster members reserve no space. Nearby pins remain outside review
+clusters, so result batches cannot rebuild those clusters. Colour changes update priority in place
+without attaching cluster-hidden reviews. Visibility is held during camera motion; unchanged
+decisions never detach/reattach SDK markers. All SDK markers use `REQUIRED`, so native collision
+hiding does not compete with this settled layout. Selection retains the layer colour and keeps the
+Place visible. White reviews, amber personal recommendations, and purple friend recommendations
+stay distinct; no legend is displayed.
 
 ## Recommendation overlay
 
-`GET /api/recommendations` supplies up to 30 results per exact visible bbox, preserving kind, score,
-positive supporting logs, and relation labels. Full rankings replace only the recommendation
-membership, with one-minute exact-view snapshots and stale-response cancellation. The original
-review/nearby layers continue loading independently. Pins leaving recommendations revert to their
-base colour without replacing stable markers. A successful review updates the white base layer and
-invalidates rankings. See [discovery-data.md](discovery-data.md) for colour precedence and caching.
+`GET /api/recommendations` supplies up to 30 results per bbox expanded 25% beyond each visible
+edge, preserving kind, score, positive supporting logs, and relation labels. Rankings describe this
+buffered browsing area rather than the exact viewport. Up to eight complete ranking snapshots stay
+fresh for one minute; the active snapshot wins while it contains the viewport. Small pans, focus,
+and tab return reuse fresh coverage and applicable in-flight requests. Crossing coverage starts a
+new full buffered ranking after 500 ms of idle; date-line areas use two ordinary bboxes. Expiry
+refreshes the same area quietly. Review submission invalidates rankings, and account changes clear
+personalized snapshots. Superseded requests are cancelled and stale responses ignored.
+
+Full successful rankings replace only recommendation membership. Existing results remain during
+refreshes and failures. The original review/nearby layers continue independently. Pins leaving
+recommendations revert to their base colour without replacing stable markers. A successful review
+updates the white base layer. See [discovery-data.md](discovery-data.md) for colour precedence and caching.
 
 ## Nearby places without app reviews
 

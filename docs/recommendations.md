@@ -277,7 +277,7 @@ Response: `{ "place": {...}, "logs": [...] }`. Errors: `401` as in 3.1; `404` `"
 ### 3.3 When the frontend calls it
 
 Home retains its original prototype UI; its redesign and data integration are separate frontend work.
-Discover calls the same API with `limit=30` for its full visible bbox. Date-line views use two ordinary
+Discover calls the same API with `limit=30` for a bbox expanded 25% beyond each visible edge. Date-line views use two ordinary
 bboxes and deduplicate by app Place ID. These results highlight the original reviewed/Google nearby
 map rather than replacing its background results.
 
@@ -289,14 +289,17 @@ Friend recommendations take precedence over personal recommendations and base re
 
 Full responses replace only highlight membership. A Place excluded after the viewer logs/bookmarks
 it returns to the base review layer rather than disappearing. Empty or failed recommendations leave
-base layers available. Up to eight exact-view snapshots remain fresh for one minute; pans/zooms
-request full bboxes after 250 ms, and successful reviews invalidate rankings. See
+base layers available. Up to eight buffered-area snapshots remain fresh for one minute. Small pans,
+focus, and tab return reuse fresh rankings and applicable in-flight requests. Leaving coverage
+requests a new full buffered area after 500 ms idle; expiry refreshes the same area quietly. Successful
+reviews invalidate rankings. Existing pins remain during pending/failed refreshes; colour updates
+preserve cluster visibility. See
 [discovery-data.md](discovery-data.md) for base-layer caching and precedence.
 
 | Trigger | Call |
 |---|---|
-| Map first load | `GET /recommendations` for the visible bbox |
-| Map stops moving after a pan/zoom | Full viewport bbox, debounced |
+| Map first load | `GET /recommendations` for the buffered bbox |
+| Map stops moving after a pan/zoom | New buffered bbox only when outside fresh coverage, debounced 500 ms |
 | Viewer logs, bookmarks, follows, or unfollows | Refetch the current bbox |
 | Pin tapped | Returned supporting logs plus `GET /discovery/places/{id}` for public review details |
 

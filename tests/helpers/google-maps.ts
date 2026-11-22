@@ -76,6 +76,7 @@ const sdk = String.raw`
     constructor(options) {
       this.attachments = 0; this.detachments = 0;
       this.position = options.position;
+      this.content = options.content;
       this.slot = markers.size;
       this.node = document.createElement('button');
       this.node.type = 'button';
