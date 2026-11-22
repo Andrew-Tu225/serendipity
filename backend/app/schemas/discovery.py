@@ -49,6 +49,7 @@ class ExperienceOut(BaseModel):
     rating: float
     verdict: Verdict
     review: str | None
+    photo_urls: list[str] = Field(default_factory=list)
     visited_on: date
     is_friend: bool
     is_self: bool

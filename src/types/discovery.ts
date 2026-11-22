@@ -10,6 +10,7 @@ export interface AppExperience {
   rating: number;
   verdict: "recommend" | "neutral" | "avoid";
   review: string | null;
+  photo_urls: string[];
   visited_on: string;
   is_friend: boolean;
   is_self: boolean;

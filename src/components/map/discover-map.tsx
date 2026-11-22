@@ -165,14 +165,15 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
         </>}
       </>}
       {selected && !picking && <article className="discovery-preview" aria-label="Selected place">
-        <div className="discovery-place-art" aria-hidden="true"><PlaceGlyph category={selected.category}/></div>
         <div className="discovery-preview-copy"><span>{selected.source === "app" ? `${selected.app_category} · Serendipity` : selected.category ?? "Place"}</span>
-          <h2>{selected.display_name}</h2><p>{selected.address}</p>
-          {selected.rating_summary && <p className="discovery-rating-summary">
-            <strong>★ {selected.rating_summary.average.toFixed(1)}/5</strong> · {selected.rating_summary.count} reviewers · Serendipity
-          </p>}
+          <h2>{selected.display_name}</h2>
+          <p className="discovery-place-description">{selected.address
+            ? `${selected.display_name} is located at ${selected.address}.`
+            : `A ${selected.app_category ?? selected.category?.toLowerCase() ?? "local"} place shared by the Serendipity community.`}</p>
+          {selected.app_id && active
+            ? <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id} ratingSummary={selected.rating_summary}/>
+            : <PlaceProfileSummary ratingSummary={selected.rating_summary} />}
           {selected.friend && <p className="discovery-friend-note">{selected.friend.name} {selected.friend.note}{(selected.friend_count ?? 0) > 1 ? ` · ${selected.friend_count} friends reviewed` : ""}</p>}
-          {selected.app_id && active && discovery.identityReady && <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id}/>}
           {resolveError && selected.source === "google" && <p role="alert">{resolveError}</p>}
           {selected.source === "google" && reviewLookup === "checking" && <p role="status">Checking app reviews…</p>}
           {selected.source === "google" && reviewLookup === "empty" && <p>No Serendipity reviews yet. Be the first to review it.</p>}
@@ -189,7 +190,16 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   </section>;
 }
 
-function PlaceReviews({ placeId }: { placeId: string }) {
+function PlaceProfileSummary({ ratingSummary }: { ratingSummary?: MapPlace["rating_summary"] }) {
+  return <>
+    <div className="discovery-place-photo discovery-place-photo-empty" role="img" aria-label="No place photo has been shared yet">
+      <PlaceGlyph category="Place"/><span>Photos from visits will show here</span>
+    </div>
+    {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
+  </>;
+}
+
+function PlaceReviews({ placeId, ratingSummary }: { placeId: string; ratingSummary?: MapPlace["rating_summary"] }) {
   const [data, setData] = useState<PlaceExperiences | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -217,8 +227,15 @@ function PlaceReviews({ placeId }: { placeId: string }) {
       if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Could not load reviews.");
     } finally { if (!controller.signal.aborted) setLoading(false); }
   }
+  const photo = data?.experiences.flatMap((review) => review.photo_urls ?? [])[0];
   return <div className="discovery-reviews">
     {!data && !error && <p role="status">Loading reviews…</p>}
+    {photo ? <img className="discovery-place-photo" src={photo} alt={`A photo shared from ${data?.place.name ?? "this place"}`} />
+      : <div className="discovery-place-photo discovery-place-photo-empty" role="img" aria-label="No place photo has been shared yet">
+        <PlaceGlyph category="Place"/><span>Photos from visits will show here</span>
+      </div>}
+    {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
+    <h3 className="discovery-friends-heading">Friends’ reviews</h3>
     {data?.experiences.map((review) => <div className="discovery-review" key={review.id}>
       <strong>{review.author_name}{review.is_self ? " · You" : review.is_friend ? " · Friend" : ""} · {review.rating}/5</strong>
       <p>{review.review || (review.verdict === "recommend" ? "Recommends this place" : review.verdict === "avoid" ? "Would avoid this place" : "Visited this place")}</p>
