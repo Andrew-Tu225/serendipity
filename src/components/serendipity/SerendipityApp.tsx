@@ -12,6 +12,7 @@ import { ProfileExperiencePanels } from '@/components/profile/profile-experience
 import { demoPlaceLists } from '@/components/profile/demo-place-lists'
 import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
 import { ProfileConnections } from '@/components/profile/profile-connections'
+import { SettingsMenu } from '@/components/profile/settings-menu'
 import { BuddyDeckCard } from '@/components/buddy/buddy-deck-card'
 import { BuddyChat } from '@/components/buddy/buddy-messages'
 import { BuddyInbox } from '@/components/buddy/buddy-inbox'
@@ -130,7 +131,9 @@ function App() {
                 <button ref={inboxTrigger} type="button" className="round-button" aria-label="Inbox" onClick={() => setBuddyScreen({ kind: 'inbox' })}>
                   <Icon name="message" size={20}/>
                 </button>
-              ) : <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>}
+              ) : activeTab === 'Profile' ? <SettingsMenu /> : (
+                <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>
+              )}
             </header>
           </>
         )}
@@ -352,6 +355,24 @@ function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacte
     lists: 1,
   } : null
 
+  if (profile.status === 'loading') {
+    return (
+      <section className="profile-view profile-loading" role="status" aria-live="polite">
+        <span className="profile-spinner" aria-hidden="true"/>
+        <span className="sr-only">Loading your profile…</span>
+      </section>
+    )
+  }
+  if (profile.status === 'error') {
+    return (
+      <section className="profile-view">
+        <div className="profile-experience-message" role="alert">
+          Couldn’t load your profile. <button type="button" className="profile-history-button" onClick={retry}>Try again</button>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="profile-view">
       <div className="profile-card">
@@ -381,17 +402,12 @@ function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacte
 
       {profile.status === 'demo' && <><ProfileExperiencePanels /><ActivityCalendar /></>}
       {profile.status === 'ready' && <ProfileExperiencePanels data={profile.data} />}
-      {profile.status === 'loading' && <p className="profile-experience-message" role="status">Loading your experiences…</p>}
-      {profile.status === 'error' && (
-        <div className="profile-experience-message" role="alert">
-          Couldn’t load your experiences. <button type="button" className="profile-history-button" onClick={retry}>Try again</button>
-        </div>
-      )}
       {draft && <CharacterCustomizer value={draft} onChange={setDraft} onClose={() => setDraft(null)}
         onSave={saveCharacter} saving={saving} error={saveError}/>}
     </section>
   )
 }
+
 
 function CharacterCustomizer({ value, onChange, onClose, onSave, saving, error }: {
   value: CharacterAppearance

@@ -17,7 +17,7 @@ export function recommendationPlace(item: Recommendation): MapPlace {
       : ["trail", "park", "viewpoint", "gym", "climbing"].includes(place.category) ? "Outdoors" : "Culture",
     google_maps_uri: `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`,
     attributions: [], recommendation: { kind, score, logs },
-    friend: friend ? { name: friend.author.display_name, note: "recommends this",
-      review: friend.review ?? "", variant: "one" } : undefined,
+    friend: friend ? { id: friend.author.id, name: friend.author.display_name, note: "recommends this",
+      review: friend.review ?? "" } : undefined,
   };
 }
