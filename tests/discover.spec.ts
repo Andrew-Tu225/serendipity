@@ -195,21 +195,20 @@ test("Google authorization failures show a useful error", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Google Maps authorization failed");
 });
 
-test("app-rated places include friends’ reviews and community-only ratings", async ({ page }) => {
+test("recommended pins show the API reason and its supporting review", async ({ page }) => {
   await mockGoogleMaps(page);
   await openDiscover(page);
-  await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
+  await expect(page.getByLabel(/Recommendation review rating:/)).toHaveCount(6);
+  await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(0);
   await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).click();
   const preview = page.getByRole("article", { name: "Selected place" });
-  await expect(preview).toContainText("4.7/5 · 23 reviewers · Serendipity");
+  await expect(preview).toContainText("Recommended by people you follow");
   await expect(preview).toContainText("Go early, grab something warm");
+  await expect(preview).not.toContainText("23 reviewers");
   await page.getByRole("button", { name: "Close place preview" }).click();
   await page.getByRole("button", { name: "View Trinity Bellwoods Park", exact: true }).click();
-  await expect(preview).toContainText("4.4/5 · 31 reviewers · Serendipity");
-  await expect(preview.locator(".discovery-friend-note")).toHaveCount(0);
-  await page.getByRole("button", { name: "Close place preview" }).click();
-  await page.getByRole("button", { name: "View Toronto Music Garden", exact: true }).click();
-  await expect(preview).toContainText("Alex recommends this");
+  await expect(preview).toContainText("Something new to you");
+  await expect(preview).toContainText("Community reviewer");
 });
 
 for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 1280, height: 844 }]) {

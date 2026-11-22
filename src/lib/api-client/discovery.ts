@@ -1,12 +1,7 @@
-import type { DiscoveryPlace, ExperienceDraft, MapBounds, PlaceExperiences } from "@/types/discovery";
+import type { DiscoveryPlace, ExperienceDraft, PlaceExperiences } from "@/types/discovery";
 import { apiRequest } from "./client";
 
 export const discoveryClient = {
-  places(bounds: MapBounds, cursor: string | null, signal?: AbortSignal) {
-    const params = new URLSearchParams({ bbox: [bounds.west, bounds.south, bounds.east, bounds.north].join(",") });
-    if (cursor) params.set("cursor", cursor);
-    return apiRequest<{ places: DiscoveryPlace[]; next_cursor: string | null }>(`/discovery/places?${params}`, { signal });
-  },
   resolve(googleId: string, signal?: AbortSignal) {
     return apiRequest<DiscoveryPlace>(`/discovery/places/by-google-id/${encodeURIComponent(googleId)}`, { signal });
   },

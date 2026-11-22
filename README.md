@@ -113,20 +113,22 @@ Google's cloud style editor, publish it, and associate it with that Map ID. See
 to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production requires an explicit
 Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
 
-Search, details, and nearby destination discovery are available without login or a database.
-Nearby places use matching custom category markers, even without app reviews. Neighborhood searches
-reuse temporary geographic cells; wider views retain app-reviewed places to limit paid Google calls.
-The existing backend key must allow Places API (New) Nearby Search; no new environment values are needed.
-Discover initially centers on London, Ontario.
-Run `npm install` for the marker clustering dependency and `cd backend && uv run alembic upgrade head`
-before using app-reviewed places. Migration 0003 links app Places to optional Google IDs; migration
-0002 supplies Places, Experiences, and follows. The map loads every app-reviewed Place in view from
-PostgreSQL. Visitors can browse public reviews; signed-in users can write reviews and see followed
-users highlighted. Use Add to name a new Place and choose its map point, or Write a review on an
-existing marker. An empty database can still show Google nearby destinations; app ratings appear after
-reviews are submitted. No demo data is inserted
-automatically. Photos, saving UI, friend-management UI, and filters are deferred. See
-[the database discovery guide](docs/discovery-data.md).
+Discover initially centers on London, Ontario. Its normal pins come exclusively from the signed-in
+recommendations API (`GET /api/recommendations`, 30 per visible bbox), with friend/similar-taste/explore
+labels and supporting reviews. Panning/zooming fetches a new full ranking; exact viewport snapshots
+stay fresh for one minute. Empty results remain empty. The UI does not fetch all database Places
+or automatically display Google nearby destinations. Explicit Google search can temporarily show
+one selected Place outside recommendations; closing the preview removes that selection marker.
+
+Run `npm install` for the marker clusterer and `cd backend && uv run alembic upgrade head` for the
+existing schema. No new migration, dependencies, or environment variables are required for the
+recommendation map. The all-reviewed-Places and public Nearby Search backend endpoints remain
+available, while the UI uses discovery endpoints only for exact search identity, review details,
+and review creation. Use Add to name a new Place and choose its map point, or Write a review on a
+selected Place. A successful review refetches recommendations; the API excludes the viewer's logged
+Places, so a new review does not force its Place onto their recommended map. No demo data is
+inserted automatically. Photos, saving UI, friend-management UI, and filters remain deferred.
+See [the discovery guide](docs/discovery-data.md).
 
 ### Social endpoints (backend only)
 

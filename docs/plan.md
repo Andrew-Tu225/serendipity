@@ -230,18 +230,14 @@ Ultimately, we want someone to open the app and think:
 ## Current implementation
 
 Discover fills the phone above navigation, with floating search, location controls, and place previews.
-Google supplies the basemap, global place/city search, and nearby experience destinations through FastAPI.
-Unreviewed destinations use smaller neutral custom category pins matching the app. Nearby searches
-sample neighborhood areas as users explore; they do not guarantee every Google listing. Existing pins
-remain stable as finer samples load on zoom-in. Nearby work runs up to three searches at once and
-is limited to 18 attempts per minute per open map, with automatic continuation when slots reopen.
-App markers take precedence for matching Google IDs. Provider results remain temporary and create no database rows.
-App-reviewed Places come
-from PostgreSQL for the visible map area after initial load, panning, zooming, search, or geolocation.
-Every reviewed Place is eligible, including low ratings; recommendation ranking remains separate.
-Pins remain stable while moving around the map. Buffered app-data coverage is cached in memory,
-newly exposed areas load incrementally, and stale ratings refresh quietly after one minute. New
-reviews update their marker immediately.
+Google supplies the basemap and explicit global place/city search through FastAPI.
+Normal map pins come exclusively from the recommendations API for the current viewport, including
+friend, similar-taste, and explore picks backed by positive Experiences. The map no longer displays
+all reviewed database Places or automatic Google nearby results. Empty recommendations have no
+fallback. Panning and zooming request complete viewport rankings, with one-minute exact-view
+caching and stable overlapping markers. Reviews invalidate rankings; logged/bookmarked Places are
+excluded by the API. An explicitly searched Place may have one temporary selection marker outside
+the ranking until its preview is closed. Provider results remain temporary and create no rows.
 Dense locations cluster rather than being dropped. London, Ontario is the initial camera position; location
 permission is requested only on tap.
 

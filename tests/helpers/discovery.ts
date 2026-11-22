@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { Recommendation } from "../../src/types/recommendations";
 import type { DiscoveryPlace } from "../../src/types/discovery";
 
 const names = ["St. Lawrence Market", "Art Gallery of Ontario", "Toronto Music Garden", "Trinity Bellwoods Park", "Distillery District", "Kensington Market"];
@@ -19,14 +20,28 @@ export const signedIn = {
   user: { id: "viewer", display_name: "Viewer", picture_url: null, onboarding_completed_at: "2026-11-22T12:00:00Z" }, auth0: {}, csrf_token: "review-csrf",
 };
 
+export function recommendation(place: DiscoveryPlace, index = 0): Recommendation {
+  const friend = place.friends[0];
+  return {
+    place: { id: place.id, name: place.name, lat: place.latitude, lng: place.longitude, category: place.category },
+    kind: friend ? "friend" : index % 2 ? "explore" : "similar_taste", score: friend ? 1 : .8,
+    logs: [{ experience_id: friend?.id ?? `evidence-${place.id}`,
+      author: { id: friend?.author_id ?? "community-user", display_name: friend?.author_name ?? "Community reviewer", avatar_url: null },
+      relation: friend ? "following" : index % 2 ? "community" : "similar_taste", rating: 4.5,
+      verdict: "recommend", review: friend?.review ?? "A wonderful place to discover.", photo_urls: [], visited_on: "2026-10-01" }],
+  };
+}
+
 export async function mockDiscovery(page: Page) {
-  await page.route("**/api/recommendations?**", (route) => route.fulfill({ json: { items: [] } }));
+  await page.route("**/api/recommendations?**", (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    if (params.get("limit") === "12") return route.fulfill({ json: { items: [] } });
+    const [west, south, east, north] = params.get("bbox")!.split(",").map(Number);
+    return route.fulfill({ json: { items: appPlaces.filter((place) => place.longitude >= west && place.longitude <= east && place.latitude >= south && place.latitude <= north).map(recommendation) } });
+  });
   await page.route("**/api/places/nearby?**", (route) => route.fulfill({ json: { places: [] } }));
   await page.route("**/api/auth/me", (route) => route.fulfill({ json: signedIn }));
-  await page.route("**/api/discovery/places?**", (route) => {
-    const [west, south, east, north] = new URL(route.request().url()).searchParams.get("bbox")!.split(",").map(Number);
-    return route.fulfill({ json: { places: appPlaces.filter((place) => place.longitude >= west && place.longitude <= east && place.latitude >= south && place.latitude <= north), next_cursor: null } });
-  });
+  await page.route("**/api/discovery/places?**", (route) => route.fulfill({ json: { places: appPlaces, next_cursor: null } }));
   await page.route("**/api/discovery/places/by-google-id/**", (route) => route.fulfill({ status: 404, json: { detail: "Place has no app record yet" } }));
   await page.route(/\/api\/discovery\/places\/00000000[^?]+\?/, (route) => {
     const id = new URL(route.request().url()).pathname.split("/").pop();

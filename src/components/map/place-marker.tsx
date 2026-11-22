@@ -41,6 +41,9 @@ export const PlaceMarker = memo(function PlaceMarker({ map, place, selected, onS
   return createPortal(<>
     {place.friend ? <span className="discovery-friend-avatar" aria-label={`${place.friend.name} reviewed this place`}>{place.friend.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("")}</span> : <span className="discovery-pin-icon"><PlaceGlyph category={place.category}/></span>}
     <span className="discovery-pin-label">{place.friend ? place.friend.name : place.display_name}</span>
+    {place.recommendation?.logs[0] && <span className="discovery-pin-rating" aria-label={`Recommendation review rating: ${place.recommendation.logs[0].rating} out of 5`}>
+      ★ {place.recommendation.logs[0].rating.toFixed(1)} · {place.recommendation.kind === "friend" ? "Following" : place.recommendation.kind === "similar_taste" ? "Similar taste" : "Explore"}
+    </span>}
     {place.rating_summary && <span className="discovery-pin-rating" aria-label={`Serendipity rating: ${place.rating_summary.average} out of 5`}>
       ★ {place.rating_summary.average.toFixed(1)} · {place.rating_summary.count}
     </span>}

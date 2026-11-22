@@ -276,18 +276,26 @@ Response: `{ "place": {...}, "logs": [...] }`. Errors: `401` as in 3.1; `404` `"
 
 ### 3.3 When the frontend calls it
 
-Home now calls the ranked endpoint for up to 12 Places around London, Ontario (`-81.4,42.85,-81.1,43.12`), displays its supporting reviews, and refreshes after a successful review. Cards open their Place in Discover. The table below describes future map-ranked integration points. The current Discover
-map uses the separate public `/api/discovery` endpoints to show every app-reviewed Place in view,
-including neutral/negative and self-reviewed Places. Its review form calls the existing Experience
-service via `POST /api/discovery/experiences`, keeping taste profiles current. See
-[discovery-data.md](discovery-data.md).
+Home calls the ranked endpoint for up to 12 Places around London, Ontario (`-81.4,42.85,-81.1,43.12`).
+Discover calls the same API with `limit=30` and its exact visible bbox. Crossing the date line uses
+two ordinary bboxes and deduplicates by Place ID. Normal map pins come exclusively from these
+responses; `/api/discovery/places` and automatic Google nearby results are not fallback sources.
+The UI preserves `kind`, `score`, supporting logs, and author relations. Pin ratings come from
+supporting logs, not a fabricated aggregate. Complete responses replace viewport membership.
+
+Up to eight exact viewport responses remain fresh in mounted-map memory for one minute. Pans and
+zooms refetch the full bbox after a 250 ms idle debounce; they do not request only newly exposed
+strips because limited ranking is not additive. Successful reviews and window return invalidate
+snapshots. Existing shared marker IDs remain stable while obsolete responses are ignored.
+Selecting a pin loads public review details through the existing discovery client. Explicit search
+may show one transient non-recommended selection until it is closed. See [discovery-data.md](discovery-data.md).
 
 | Trigger | Call |
 |---|---|
 | Map first load | `GET /recommendations` for the visible bbox |
-| Map stops moving outside the fetched bbox | Same, debounced |
+| Map stops moving after a pan/zoom | Full viewport bbox, debounced |
 | Viewer logs, bookmarks, follows, or unfollows | Refetch the current bbox |
-| Pin tapped | `GET /places/{id}/logs` |
+| Pin tapped | Returned supporting logs plus `GET /discovery/places/{id}` for public review details |
 
 ---
 
