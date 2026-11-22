@@ -282,3 +282,7 @@ overwrote them. Compact circular pins, decluttered place captions, relationship 
 marker-layer updates stay aligned with the shared map adapter. Search, nearby loading, and stable
 clustering keep their existing implementations; profile, Buddy, and onboarding changes remain in
 place. Recommendation mapping supplies the followed author's ID to the merged friend type.
+
+When checking a map restoration locally, verify the served stylesheet as well as source files:
+the development CSS cache can retain the earlier marker rules while JavaScript has updated.
+The compiled stylesheet must include `.discovery-pin-caption` and the `data-layer` colour rules.

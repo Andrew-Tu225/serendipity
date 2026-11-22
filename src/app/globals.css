@@ -271,7 +271,7 @@
 .toast { position: fixed; z-index: 30; left: 50%; bottom: 99px; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; width: max-content; padding: 10px 14px; color: white; background: #3e3148; border-radius: 99px; font-size: 10px; box-shadow: 0 10px 25px rgba(37, 24, 45, .25); }
 
 
-/* Live discovery map. Keep preview cards clear of Google's bottom-edge attribution. */
+/* Live discovery map: compact pins and relationship colours. Keep previews clear of Google's attribution. */
 .app-shell.is-discover { --discovery-nav-height: max(87px, calc(64px + env(safe-area-inset-bottom, 0px))); }
 .is-discover .app-content { position: absolute; inset: 0 0 var(--discovery-nav-height); height: auto; padding: 0; overflow: hidden; }
 .is-discover .bottom-nav { position: absolute; left: 0; bottom: 0; width: 100%; height: var(--discovery-nav-height); transform: none; padding-bottom: env(safe-area-inset-bottom, 0px); }
