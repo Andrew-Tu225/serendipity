@@ -9,7 +9,8 @@ const FRESH_MS = 5 * 60_000;
 const MAX_CONCURRENT = 3;
 // Provider results are transient display state, never persisted or put in app-data cache.
 export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
-  const cells = useRef(new Map<string, { places: MapPlace[]; fetched: number }>());
+  const cells = useRef(new Map<string, { places: MapPlace[]; fetched: number; version: number }>());
+  const version = useRef(0);
   const budget = useRef(new NearbyRequestBudget());
   const [attempt, setAttempt] = useState(0);
   const [view, setView] = useState({ places: [] as MapPlace[], error: "", zoomIn: false, waiting: false });
@@ -27,13 +28,30 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
       if (disposed) return;
       const now = Date.now(), area = bufferBounds(map!.bounds());
       for (const [key, value] of cells.current) if (now - value.fetched >= 3 * FRESH_MS) cells.current.delete(key);
-      while (cells.current.size > 48) cells.current.delete(cells.current.keys().next().value!);
-      const places = new Map<string, MapPlace>();
+      const wanted = new Set(wantedCells().map((cell) => cell.key));
+      while (cells.current.size > 48) {
+        const entries = [...cells.current];
+        const removable = entries.find(([key, value]) => !wanted.has(key) && !value.places.some((place) => area.some((rectangle) => containsPoint(rectangle, place.location))))
+          ?? entries.find(([key]) => !wanted.has(key)) ?? entries[0];
+        cells.current.delete(removable[0]);
+      }
+      const places = new Map<string, { place: MapPlace; version: number }>();
       for (const value of cells.current.values()) for (const place of value.places) {
-        if (area.some((rectangle) => containsPoint(rectangle, place.location))) places.set(place.place_id, place);
+        if (area.some((rectangle) => containsPoint(rectangle, place.location)) && (places.get(place.place_id)?.version ?? -1) < value.version) {
+          places.set(place.place_id, { place, version: value.version });
+        }
       }
       const waiting = wantedCells().some((cell) => !cells.current.has(cell.key)) && budget.current.retryAt(now) > now;
-      setView({ places: [...places.values()], error, zoomIn: !wantedCells().length, waiting });
+      const snapshot = { error, zoomIn: !wantedCells().length, waiting };
+      const rows = [...places.values()].map(({ place }) => place);
+      setView((previous) => {
+        const previousPlaces = new Map(previous.places.map((place) => [place.place_id, place]));
+        const next = rows.map((place) => {
+          const old = previousPlaces.get(place.place_id);
+          return old && JSON.stringify(old) === JSON.stringify(place) ? old : place;
+        });
+        return { ...snapshot, places: next.length === previous.places.length && next.every((place, index) => place === previous.places[index]) ? previous.places : next };
+      });
     }
     async function refresh() {
       if (disposed || document.hidden) return;
@@ -58,7 +76,7 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
             try {
               const result = await placesClient.nearby(cell.center, cell.radius, current.signal);
               if (disposed || current.signal.aborted) return;
-              cells.current.set(cell.key, { places: result.places.map(nearbyPlace), fetched: Date.now() });
+              cells.current.set(cell.key, { places: result.places.map(nearbyPlace), fetched: Date.now(), version: ++version.current });
               publish();
             } catch {
               if (disposed || current.signal.aborted) return;

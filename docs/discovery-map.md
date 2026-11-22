@@ -49,6 +49,12 @@ enclosing it, so overlapping results are expected and deduplicated
 by Google Place ID. This is a sample of destinations, not an exhaustive listing of all Google places.
 Results merge incrementally; unchanged markers retain their SDK objects. App Places with matching
 Google IDs take precedence. Names or coordinate proximity never establish identity.
+Overlapping cached cells resolve each Google ID using the most recently completed response, even
+when the cells were inserted in a different order. Unchanged place objects are reused. Updated
+labels and open nearby-place previews read current data without recreating an existing marker
+at unchanged coordinates. Offscreen search cells are evicted before current-view cells when the
+48-cell memory budget is reached. Changing search resolution does not clear coarser cached pins
+while finer results are in flight; selected places remain pinned even outside loaded coverage.
 Up to three nearby requests run concurrently, prioritizing cells closest to the map center. Each
 cell is requested once per batch, and small pans still reuse fresh results. Concurrency changes
 when existing calls run, not how many cells are searched. Results appear as individual requests

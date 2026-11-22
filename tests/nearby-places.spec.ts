@@ -205,3 +205,62 @@ test("exploring new areas pauses at the request budget and resumes automatically
   await page.clock.fastForward(61_000);
   await expect.poll(() => calls).toBeGreaterThan(NEARBY_REQUESTS_PER_MINUTE);
 });
+
+test("overlapping old cells cannot override a refreshed pin or its open preview", async ({ page }) => {
+  await page.clock.install();
+  let calls = 0, refreshing = false, unblocked = false;
+  const release: (() => void)[] = [];
+  await page.route("**/api/places/nearby?**", async (route) => {
+    calls++;
+    if (refreshing && !unblocked) await new Promise<void>((resolve) => release.push(resolve));
+    return route.fulfill({ json: { places: [{ ...nearby, display_name: refreshing ? "Fresh cafe name" : nearby.display_name }] } });
+  });
+  await open(page);
+  const marker = page.getByRole("button", { name: "View Nearby cafe", exact: true });
+  await expect(marker).toBeVisible();
+  await expect.poll(() => calls).toBe(nearbyCells([view], 16).length);
+  const identity = await marker.getAttribute("data-marker-id");
+  await marker.click();
+  await expect(page.getByRole("article")).toContainText("Nearby cafe");
+  refreshing = true;
+  await page.clock.fastForward(301_000);
+  await expect.poll(() => release.length).toBe(3);
+  await expect(marker).toHaveAttribute("data-marker-id", identity!);
+  release[0]();
+  const updated = page.getByRole("button", { name: "View Fresh cafe name", exact: true });
+  await expect(updated).toHaveAttribute("data-marker-id", identity!);
+  await expect(page.getByRole("article")).toContainText("Fresh cafe name");
+  await expect(page.getByRole("button", { name: /^View (Nearby cafe|Fresh cafe name)$/, exact: true })).toHaveCount(1);
+  unblocked = true;
+  release.forEach((resolve) => resolve());
+  await expect.poll(() => calls).toBe(2 * nearbyCells([view], 16).length);
+  await expect(updated).toHaveAttribute("data-marker-id", identity!);
+});
+
+test("zoom refinement retains a selected pin while new requests are slow or fail", async ({ page }) => {
+  let refine = false;
+  let fail!: () => void;
+  const blocked = new Promise<void>((resolve) => { fail = resolve; });
+  await page.route("**/api/places/nearby?**", async (route) => {
+    if (refine) { await blocked; return route.fulfill({ status: 503, json: { detail: "Unavailable" } }); }
+    return route.fulfill({ json: { places: [nearby] } });
+  });
+  await open(page);
+  const marker = page.getByRole("button", { name: "View Nearby cafe", exact: true });
+  await expect(marker).toBeVisible();
+  const identity = await marker.getAttribute("data-marker-id");
+  await marker.click();
+  await expect(page.getByRole("article")).toContainText("No Serendipity reviews yet");
+  refine = true;
+  await page.evaluate((bounds) => {
+    const map = window as unknown as { __zoomTestMap: (zoom: number) => void; __boundsTestMap: (value: typeof bounds) => void };
+    map.__zoomTestMap(17);
+    map.__boundsTestMap(bounds);
+  }, { west: -81.246, east: -81.240, south: 42.984, north: 42.989 });
+  await page.waitForTimeout(650);
+  await expect(marker).toHaveAttribute("data-marker-id", identity!);
+  fail();
+  await expect(page.getByText(/Nearby places couldn’t load/)).toBeVisible();
+  await expect(marker).toHaveAttribute("data-marker-id", identity!);
+  await expect(page.getByRole("article")).toContainText("Nearby cafe");
+});
