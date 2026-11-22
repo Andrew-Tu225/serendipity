@@ -1,49 +1,49 @@
 import type { MapBounds } from "@/types/discovery";
 import type { Coordinates, MapPlace, PlaceDetails } from "@/types/places";
 
-// Quantized levels preserve small-pan reuse while zooming reveals finer samples.
-// These search cells never claim exhaustive provider coverage.
-const MAX_CELLS = 9;
-function cellsAtLevel(bounds: MapBounds[], level: number, sample = false) {
+// Stable geographic roots are reused across camera zooms and queued for the whole viewport.
+const ROOT_LEVEL = 13;
+const MAX_VISIBLE_CELLS = 512;
+export interface NearbyCell {
+  key: string; level: number; x: number; y: number;
+  bounds: MapBounds; center: Coordinates; radius: number;
+}
+
+export function nearbyCell(level: number, x: number, y: number): NearbyCell {
   const size = 2 ** level;
-  const latitude = (y: number) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / size))) * 180 / Math.PI;
+  const latitude = (row: number) => Math.atan(Math.sinh(Math.PI * (1 - 2 * row / size))) * 180 / Math.PI;
+  const lat = latitude(y + .5);
+  const halfWidth = 40075017 / size * Math.cos(lat * Math.PI / 180) / 2;
+  return { key: `${level}:${x}:${y}`, level, x, y,
+    bounds: { west: x / size * 360 - 180, east: (x + 1) / size * 360 - 180, north: latitude(y), south: latitude(y + 1) },
+    center: { latitude: lat, longitude: (x + .5) / size * 360 - 180 },
+    radius: Math.max(50, Math.min(5000, Math.ceil(halfWidth * Math.SQRT2 * 1.01))) };
+}
+
+export function nearbyChildren(cell: NearbyCell) {
+  return [0, 1].flatMap((dx) => [0, 1].map((dy) => nearbyCell(cell.level + 1, cell.x * 2 + dx, cell.y * 2 + dy)));
+}
+
+export function nearbyCells(bounds: MapBounds[], zoom = 13): NearbyCell[] {
+  if (zoom < 9) return [];
+  const size = 2 ** ROOT_LEVEL;
   const tileY = (lat: number) => {
     const radians = Math.max(-85.05112878, Math.min(85.05112878, lat)) * Math.PI / 180;
     return Math.max(0, Math.min(size - 1, Math.floor((1 - Math.asinh(Math.tan(radians)) / Math.PI) / 2 * size)));
   };
-  const cells = new Map<string, { key: string; center: { latitude: number; longitude: number }; radius: number }>();
-  const indices = (first: number, last: number) => sample
-    ? [...new Set([0, 1, 2].map((i) => Math.min(last, first + Math.floor((last - first + 1) * (i + .5) / 3))))]
-    : Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  const cells = new Map<string, NearbyCell>();
   for (const area of bounds) {
     const left = Math.max(0, Math.floor((area.west + 180) / 360 * size));
     const right = Math.min(size - 1, Math.floor((area.east + 180) / 360 * size));
     const top = tileY(area.north), bottom = tileY(area.south);
-    if (!sample && (right - left + 1) * (bottom - top + 1) > MAX_CELLS) return [];
-    for (const x of indices(left, right)) for (const y of indices(top, bottom)) {
-      const lat = latitude(y + .5);
-      const halfWidth = 40075017 / size * Math.cos(lat * Math.PI / 180) / 2;
-      const key = `${level}:${x}:${y}`;
-      cells.set(key, { key, center: { latitude: lat, longitude: (x + .5) / size * 360 - 180 }, radius: Math.max(50, Math.ceil(halfWidth * Math.SQRT2 * 1.01)) });
-      if (!sample && cells.size > MAX_CELLS) return [];
+    if ((right - left + 1) * (bottom - top + 1) > MAX_VISIBLE_CELLS) return [];
+    for (let x = left; x <= right; x++) for (let y = top; y <= bottom; y++) {
+      const cell = nearbyCell(ROOT_LEVEL, x, y);
+      cells.set(cell.key, cell);
+      if (cells.size > MAX_VISIBLE_CELLS) return [];
     }
   }
-  const result = [...cells.values()];
-  // A date-line view can produce two sample grids; spread the budget across both.
-  return result.length <= MAX_CELLS ? result
-    : Array.from({ length: MAX_CELLS }, (_, i) => result[Math.floor((i + .5) * result.length / MAX_CELLS)]);
-}
-
-export function nearbyCells(bounds: MapBounds[], zoom = 13) {
-  const desired = Math.max(13, Math.min(16, Math.floor(zoom) - 1));
-  for (let level = desired; level >= 13; level--) {
-    const cells = cellsAtLevel(bounds, level);
-    if (cells.length) return cells;
-  }
-  const width = bounds.length ? bounds[bounds.length - 1].east - bounds[0].west + (bounds.length > 1 ? 360 : 0) : 0;
-  // City-sized views still discover destinations when full coverage exceeds the budget.
-  // World/continent views keep the explicit zoom-in state instead of arbitrary searches.
-  return zoom >= 9 && width > 0 && width < 180 ? cellsAtLevel(bounds, 13, true) : [];
+  return [...cells.values()];
 }
 
 export const NEARBY_REQUESTS_PER_MINUTE = 18;

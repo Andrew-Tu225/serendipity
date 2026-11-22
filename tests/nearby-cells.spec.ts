@@ -1,28 +1,18 @@
 import { expect, test } from "@playwright/test";
 import { nearbyCells } from "../src/lib/maps/nearby-places";
-import type { MapBounds } from "../src/types/discovery";
 
-// Actual Mercator bounds of a 430 x 740 map, rather than a zoom-independent SDK stub.
-function phoneBounds(latitude: number, longitude: number, zoom: number): MapBounds {
-  const scale = 256 * 2 ** zoom;
-  const x = (longitude + 180) / 360 * scale;
-  const sine = Math.sin(latitude * Math.PI / 180);
-  const y = (.5 - Math.log((1 + sine) / (1 - sine)) / (4 * Math.PI)) * scale;
-  const lat = (pixel: number) => Math.atan(Math.sinh(Math.PI * (1 - 2 * pixel / scale))) * 180 / Math.PI;
-  return { west: (x - 215) / scale * 360 - 180, east: (x + 215) / scale * 360 - 180,
-    north: lat(y - 370), south: lat(y + 370) };
-}
+import { phoneBounds } from "./helpers/map-bounds";
 
 for (const [city, latitude, longitude] of [
   ["London", 42.9849, -81.2453], ["Toronto", 43.6532, -79.3832],
   ["Montreal", 45.5019, -73.5674], ["New York", 40.7128, -74.006],
 ] as const) {
-  test(`${city} discovers nearby places at both city and street zooms`, () => {
+  test(`${city} schedules stable geographic searches at city and street zooms`, () => {
     for (const zoom of [10, 11, 12, 13, 14, 15, 17]) {
       const bounds = phoneBounds(latitude, longitude, zoom);
       const cells = nearbyCells([bounds], zoom);
       expect(cells.length).toBeGreaterThan(0);
-      expect(cells.length).toBeLessThanOrEqual(9);
+      expect(cells.length).toBeLessThanOrEqual(512);
       expect(new Set(cells.map((cell) => cell.key)).size).toBe(cells.length);
       for (const cell of cells) {
         expect(cell.radius).toBeGreaterThanOrEqual(50);
@@ -32,27 +22,30 @@ for (const [city, latitude, longitude] of [
   });
 }
 
-test("wide city samples are spread across the viewport and retain quantized request keys", () => {
+test("city coverage includes every intersecting root cell instead of nine samples", () => {
   const bounds = phoneBounds(43.6532, -79.3832, 11);
   const cells = nearbyCells([bounds], 11);
-  expect(cells).toHaveLength(9);
-  expect(new Set(cells.map((cell) => cell.center.longitude)).size).toBe(3);
-  expect(new Set(cells.map((cell) => cell.center.latitude)).size).toBe(3);
+  expect(cells.length).toBeGreaterThan(9);
+  const xs = [...new Set(cells.map((cell) => cell.x))].sort((a, b) => a - b);
+  const ys = [...new Set(cells.map((cell) => cell.y))].sort((a, b) => a - b);
+  expect(cells).toHaveLength(xs.length * ys.length);
+  xs.slice(1).forEach((x, i) => expect(x).toBe(xs[i] + 1));
+  ys.slice(1).forEach((y, i) => expect(y).toBe(ys[i] + 1));
   expect(nearbyCells([bounds], 11)).toEqual(cells);
   for (const cell of cells) {
-    expect(cell.center.longitude).toBeGreaterThan(bounds.west);
-    expect(cell.center.longitude).toBeLessThan(bounds.east);
-    expect(cell.center.latitude).toBeGreaterThan(bounds.south);
-    expect(cell.center.latitude).toBeLessThan(bounds.north);
+    expect(cell.bounds.east).toBeGreaterThan(bounds.west);
+    expect(cell.bounds.west).toBeLessThan(bounds.east);
+    expect(cell.bounds.north).toBeGreaterThan(bounds.south);
+    expect(cell.bounds.south).toBeLessThan(bounds.north);
   }
 });
 
-test("world views remain bounded and date-line city samples cover both sides", () => {
+test("world views remain bounded and date-line coverage searches both sides", () => {
   expect(nearbyCells([{ west: -180, east: 180, south: -85, north: 85 }], 3)).toEqual([]);
   expect(nearbyCells([{ west: -180, east: 180, south: -85, north: 85 }], 13)).toEqual([]);
-  const cells = nearbyCells([{ west: 179.5, east: 180, south: -1, north: 1 }, { west: -180, east: -179.5, south: -1, north: 1 }], 10);
+  const cells = nearbyCells([{ west: 179.95, east: 180, south: -.05, north: .05 }, { west: -180, east: -179.95, south: -.05, north: .05 }], 13);
   expect(cells.length).toBeGreaterThan(0);
-  expect(cells.length).toBeLessThanOrEqual(9);
+  expect(cells.length).toBeLessThanOrEqual(512);
   expect(cells.some((cell) => cell.center.longitude > 179)).toBe(true);
   expect(cells.some((cell) => cell.center.longitude < -179)).toBe(true);
 });

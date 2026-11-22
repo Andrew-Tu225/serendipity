@@ -293,7 +293,8 @@ base layers available. Up to eight buffered-area snapshots remain fresh for one 
 focus, and tab return reuse fresh rankings and applicable in-flight requests. Leaving coverage
 requests a new full buffered area after 500 ms idle; expiry refreshes the same area quietly. Successful
 reviews invalidate rankings. Existing pins remain during pending/failed refreshes; colour updates
-preserve cluster visibility. See
+preserve cluster visibility. Ranking does not gate base-map loading or empty-state readiness, and
+all loaded Places share counted clusters. See
 [discovery-data.md](discovery-data.md) for base-layer caching and precedence.
 
 | Trigger | Call |

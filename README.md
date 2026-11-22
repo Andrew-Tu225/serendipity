@@ -119,14 +119,16 @@ amber for personalized recommendations, and purple for friends' recommendations.
 colours come from `GET /api/recommendations` (`limit=30` per buffered bbox), preserving its supporting
 reviews. A followed-user review alone stays white. App UUIDs and exact Google IDs prevent duplicate
 pins, and selection preserves a pin's colour. Compact icons show more destinations; overlapping
-labels yield first, and grey icons hide only where visible icons/clusters overlap. No legend is displayed.
+labels yield while every loaded destination appears as a pin or contributes to a counted cluster. No legend is displayed.
 
 Base database review queries and temporary Google nearby searches continue independently. Ranked
 responses highlight those results; an empty or failed ranking leaves the original map available.
 A successful review updates the white base marker and refetches rankings. Recommendation snapshots
 stay fresh for one minute and extend 25% beyond the viewport, so small pans and focus/tab return
 reuse them. Leaving coverage requests another area after 500 ms idle. The original base coverage
-cache and nearby request budget remain.
+cache and nearby request budget remain. Nearby searches reuse geographic roots across zooms,
+fill visible areas progressively, and subdivide only capped responses; one failing area does not
+block the others. Recommendation refreshes do not block browsing.
 Use Add to name a new Place and choose its map point, or Write a review on a selected Place.
 
 Run `npm install` and `cd backend && uv run alembic upgrade head` for the existing setup. This map

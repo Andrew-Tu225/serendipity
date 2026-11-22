@@ -10,6 +10,8 @@ import { useNearbyPlaces } from "@/hooks/use-nearby-places";
 import { mergeMapLayers } from "@/lib/maps/layers";
 import { useRecommendations } from "@/hooks/use-recommendations";
 import { recommendationReasons } from "@/lib/maps/recommendations";
+import { mapBrowseStatus } from "@/lib/maps/browse-status";
+import { containsPoint } from "@/lib/maps/bounds";
 import { mapPlace, type PlaceExperiences } from "@/types/discovery";
 import { PlaceGlyph, PlaceMarker } from "./place-marker";
 import { PlaceSearch } from "./place-search";
@@ -50,7 +52,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
     ? { ...selectedInput, ...currentSelection,
       rating_summary: currentSelection?.rating_summary ?? selectedInput.rating_summary,
       recommendation: currentSelection?.recommendation,
-      friend: currentSelection?.friend ?? selectedInput.friend }
+      friend: currentSelection ? currentSelection.friend : selectedInput.friend }
     : currentSelection ?? selectedInput;
   if (searchPlace && searchPlace.place_id === selectedInput?.place_id &&
     !markerPlaces.has(`${searchPlace.source}:${searchPlace.place_id}`) && !markerPlaces.has(`app:${searchPlace.place_id}`)) {
@@ -60,6 +62,9 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   if (selected?.source === "app" && !markerPlaces.has(`app:${selected.place_id}`)) markerPlaces.set(`app:${selected.place_id}`, selected);
   const appGoogleIds = new Set([...markerPlaces.values()].filter((place) => place.source === "app").map((place) => place.google_place_id).filter(Boolean));
   for (const [key, place] of markerPlaces) if (place.source === "google" && appGoogleIds.has(place.place_id)) markerPlaces.delete(key);
+  const visibleBounds = map?.bounds() ?? [];
+  const visibleCount = [...markerPlaces.values()].filter((place) => visibleBounds.some((area) => containsPoint(area, place.location))).length;
+  const browseStatus = mapBrowseStatus(discovery, nearby, visibleCount);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,15 +173,15 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
         {picking ? <div className="discovery-data-status" role="status">Tap the map to place your pin, or review an existing place.
           <button onClick={() => onPick(map.center())}>Use map center</button><button onClick={onCancelPick}>Cancel</button>
         </div> : <>
-          {(discovery.loading || recommendations.loading) && <div className="discovery-data-status" role="status">Loading places and recommendations…</div>}
+          {browseStatus === "loading" && <div className="discovery-data-status" role="status">Loading places…</div>}
           {(discovery.error || recommendations.error || nearby.error) && <div className="discovery-data-status" role="alert">
             {discovery.error && <p>{discovery.error} <button onClick={discovery.retry}>Reload reviews</button></p>}
             {recommendations.error && <p>{recommendations.error} <button onClick={recommendations.retry}>Reload recommendations</button></p>}
             {nearby.error && <p>{nearby.error} <button onClick={nearby.retry}>Retry nearby places</button></p>}
           </div>}
-          {nearby.waiting && !nearby.error && !discovery.error && !recommendations.error && <div className="discovery-data-status" role="status">More nearby places will appear shortly.</div>}
-          {nearby.zoomIn && !nearby.error && !discovery.error && !recommendations.error && <div className="discovery-data-status" role="status">Zoom in to discover nearby places, or search for a destination.</div>}
-          {discovery.complete && recommendations.complete && !discovery.loading && !recommendations.loading && !discovery.error && !recommendations.error && !nearby.error && !nearby.loading && !nearby.waiting && !nearby.zoomIn && markerPlaces.size === 0 && <div className="discovery-data-status" role="status">No places in this area yet. Search for a place or zoom in. <button onClick={() => onReview(null)}>Review a place</button></div>}
+          {browseStatus === "waiting" && !nearby.error && <div className="discovery-data-status" role="status">Nearby searches are paused briefly. More places will load automatically.</div>}
+          {browseStatus === "zoom-in" && <div className="discovery-data-status" role="status">Zoom in to discover nearby places, or search for a destination.</div>}
+          {browseStatus === "empty" && <div className="discovery-data-status" role="status">No places in this area yet. Search for a place or zoom in. <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}
       {selected && !picking && <article className="discovery-preview" aria-label="Selected place">

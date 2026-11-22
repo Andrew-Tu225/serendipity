@@ -237,13 +237,14 @@ purple friends' recommendations. Friend > personalized recommendation > base rev
 each app Place's colour; exact provider IDs remove duplicate nearby pins. A followed-user review
 alone does not make a Place purple. The legend is removed; selection preserves the marker’s appearance.
 
-Reviewed-place coverage and temporary nearby search cells retain their original caches and provider
-budgets. Ranked results use separate one-minute snapshots for the full viewport; panning/zooming
-refetches rankings rather than combining strips. Empty or failed rankings leave the base map
-available. A new review updates the white base layer and refetches recommendation eligibility.
-Dense reviewed locations cluster. Grey nearby pins hide overlaps after the map settles, with stable
-visibility during camera movement. They remain separate from review clusters so background nearby
-loading does not redraw the social map.
+Reviewed-place coverage remains buffered and paginated. Nearby discovery reuses stable geographic
+roots across zooms, fills visible areas progressively, and refines capped responses while retaining
+parent results. One queue owns provider concurrency, cache, retries and request budgets. Ranked
+highlights use separate one-minute buffered-area snapshots and never block ordinary browsing.
+Empty or failed rankings leave the base map available. A new review updates the white base layer
+and refreshes recommendation eligibility. Every loaded Place has a pin or contributes to a numbered
+cluster, including grey nearby destinations. Only overlapping captions are suppressed; icons no
+longer disappear through a separate nearby collision filter. Selection retains its layer colour.
 London, Ontario is the initial camera position; location
 permission is requested only on tap.
 

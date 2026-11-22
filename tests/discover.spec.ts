@@ -77,6 +77,42 @@ test("search uses a session token, keyboard selection, and the result viewport",
   await expect(page.getByRole("listbox")).toHaveCount(0);
 });
 
+test("retrying a failed search selection reopens that place without restarting autocomplete", async ({ page }) => {
+  await mockGoogleMaps(page);
+  let suggestions = 0, detailCalls = 0;
+  await page.route("**/api/places/autocomplete?**", (route) => {
+    suggestions++; return route.fulfill({ json: { suggestions: [suggestion] } });
+  });
+  await page.route("**/api/places/garden?**", (route) => ++detailCalls === 1
+    ? route.fulfill({ status: 503, json: { detail: "Temporary details failure" } })
+    : route.fulfill({ json: details }));
+  await openDiscover(page);
+  await page.getByRole("combobox").fill("garden");
+  await page.getByRole("option").click();
+  await expect(page.getByRole("alert").filter({ hasText: "Temporary details failure" })).toBeVisible();
+  await page.getByRole("alert").filter({ hasText: "Temporary details failure" }).getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("article", { name: "Selected place" })).toContainText("A garden");
+  expect(detailCalls).toBe(2); expect(suggestions).toBe(1);
+});
+
+test("Discover reuses the app session and shows base places while rankings are pending", async ({ page }) => {
+  await mockGoogleMaps(page);
+  let sessions = 0;
+  await page.route("**/api/auth/me", (route) => {
+    sessions++;
+    return route.fulfill({ json: { user: { id: "viewer", display_name: "Viewer", picture_url: null, onboarding_completed_at: "2026-11-22T12:00:00Z" }, auth0: {}, csrf_token: "review-csrf" } });
+  });
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/recommendations?**", async (route) => { await blocked; return route.fulfill({ json: { items: [] } }); });
+  await openDiscover(page);
+  await expect(page.getByText("Loading places…", { exact: true })).toHaveCount(0);
+  expect(sessions).toBe(1);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect.poll(() => sessions).toBe(2);
+  release();
+});
+
 test("search handles empty results, stale responses, and retriable errors", async ({ page }) => {
   await mockGoogleMaps(page);
   let calls = 0;
@@ -149,7 +185,6 @@ test("details failures recover and selecting another result replaces its marker"
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Place details are unavailable");
   fail = false;
   await page.getByRole("button", { name: "Try again" }).click();
-  await page.getByRole("option").click();
   await expect(page.getByRole("article")).toContainText("Garden 1");
   await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-zoom", "16");
   await input.fill("another garden");

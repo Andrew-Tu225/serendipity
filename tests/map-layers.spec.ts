@@ -8,7 +8,7 @@ const places = appPlaces.slice(0, 3).map((place, i) => ({ ...place,
   google_place_id: i === 1 ? "linked-google-place" : null,
 }));
 
-test("white reviews and recommendation colours retain priority while grey pins can yield to overlaps", async ({ page }) => {
+test("white reviews and recommendation colours retain priority while all places share clustering", async ({ page }) => {
   await mockGoogleMaps(page); await mockDiscovery(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("**/api/discovery/places?**", (route) => route.fulfill({ json: { places, next_cursor: null } }));

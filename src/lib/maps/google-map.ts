@@ -1,6 +1,6 @@
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import type { MarkerLayer } from "./layers";
-import { visibleNearbyPins, visiblePinLabels, type PinBounds, type NearbyPinBounds, type PinLabelBounds } from "./declutter";
+import { visiblePinLabels, type PinBounds, type PinLabelBounds } from "./declutter";
 import type { Coordinates, PlaceDetails } from "@/types/places";
 import type { MapBounds } from "@/types/discovery";
 
@@ -74,25 +74,19 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
   const selectedMarkers = new Set<google.maps.marker.AdvancedMarkerElement>();
   interface Pin {
     id: number; position: Coordinates; marker: google.maps.marker.AdvancedMarkerElement;
-    layer: MarkerLayer; selected: boolean; visible: boolean;
+    layer: MarkerLayer; selected: boolean;
     element: HTMLElement; labelVisible: boolean;
     geometry?: { icon: PinBounds; caption?: PinBounds };
     contentObserver: MutationObserver;
   }
   const pins = new Set<Pin>();
   const priorities: Record<MarkerLayer, number> = { place: 1, review: 10, recommendation: 20, friend: 30 };
-  // Detached nearby pins still need real CSS measurements before deciding to reveal them.
-  const measuring = document.createElement("div");
-  measuring.style.cssText = "position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none";
-  measuring.setAttribute("aria-hidden", "true");
-  host.append(measuring);
   let serial = 0;
   let settling: ReturnType<typeof setTimeout>;
   let moving = false;
   function measure(pin: Pin) {
     if (pin.geometry) return pin.geometry;
-    const element = pin.element.isConnected ? pin.element : pin.element.cloneNode(true) as HTMLElement;
-    if (element !== pin.element) measuring.append(element);
+    const element = pin.element;
     const root = element.getBoundingClientRect();
     function box(child: Element): PinBounds {
       const rect = child.getBoundingClientRect();
@@ -102,7 +96,6 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
     const icon = element.querySelector(".discovery-pin-icon, .discovery-friend-avatar") ?? element;
     const caption = element.querySelector(".discovery-pin-caption");
     pin.geometry = { icon: box(icon), caption: caption ? box(caption) : undefined };
-    if (element !== pin.element) element.remove();
     return pin.geometry;
   }
   function declutter() {
@@ -119,35 +112,26 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       const dx = ((point.x - origin!.x + 128) % 256 + 256) % 256 - 128;
       return { ...shape, x: dx * scale + shape.x, y: (point.y - origin!.y) * scale + shape.y };
     }
-    const foreground: (PinBounds & { id?: number })[] = [];
-    const nearby: NearbyPinBounds[] = [];
+    const icons: (PinBounds & { id?: number })[] = [];
     for (const pin of pins) {
-      // Clustered-away reviews occupy no screen space; only their group marker does.
-      if (pin.layer !== "place" && pin.marker.map !== map) continue;
+      // Hidden cluster members occupy no screen space; only their group marker does.
+      if (pin.marker.map !== map) continue;
       const box = bounds(pin.position, measure(pin).icon);
       if (!box) continue;
-      if (pin.layer === "place" && !pin.selected) nearby.push({ ...box, id: pin.id, visible: pin.visible });
-      else foreground.push({ ...box, id: pin.id });
+      icons.push({ ...box, id: pin.id });
     }
     for (const [marker, position] of groupMarkers) {
       if (marker.map !== map) { groupMarkers.delete(marker); continue; }
       const rect = (marker.content as HTMLElement).getBoundingClientRect();
       const box = bounds({ latitude: position.lat(), longitude: position.lng() }, { x: 0, y: 0, width: rect.width, height: rect.height });
-      if (box) foreground.push(box);
+      if (box) icons.push(box);
     }
     if (locationPosition) {
       const rect = (locationMarker!.content as HTMLElement).getBoundingClientRect();
       const box = bounds(locationPosition, { x: 0, y: 0, width: rect.width, height: rect.height });
-      if (box) foreground.push(box);
+      if (box) icons.push(box);
     }
-    const visible = visibleNearbyPins(nearby, foreground);
-    const icons = [...foreground, ...nearby.filter((pin) => visible.has(pin.id))];
     const labels: PinLabelBounds[] = [];
-    for (const pin of pins) if (pin.layer === "place" && !pin.selected) {
-      const next = visible.has(pin.id);
-      pin.visible = next;
-      if (pin.marker.map !== (next ? map : null)) pin.marker.map = next ? map : null;
-    }
     for (const pin of pins) {
       if (pin.marker.map !== map) continue;
       const caption = measure(pin).caption;
@@ -241,9 +225,9 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
           collisionBehavior: google.maps.CollisionBehavior.REQUIRED,
         };
       }
-      const marker = new AdvancedMarkerElement({ map: layer === "place" ? null : map, position: latLng(position), content: element, title, ...visibility() });
+      const marker = new AdvancedMarkerElement({ map: cluster ? null : map, position: latLng(position), content: element, title, ...visibility() });
       const contentObserver = new MutationObserver(() => { pin.geometry = undefined; settle(); });
-      const pin: Pin = { id: ++serial, marker, position, layer, selected: false, visible: layer !== "place",
+      const pin: Pin = { id: ++serial, marker, position, layer, selected: false,
         element, labelVisible: false, contentObserver };
       pins.add(pin);
       contentObserver.observe(element, { childList: true, characterData: true, subtree: true });
@@ -252,7 +236,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       if (caption) resized.observe(caption);
       let inCluster = false;
       function membership() {
-        const next = cluster && layer !== "place" && !selection;
+        const next = cluster && !selection;
         if (next === inCluster) return;
         inCluster = next;
         if (next) clusters.addMarker(marker, true);
@@ -274,9 +258,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
           pin.geometry = undefined;
           applyVisibility(); membership();
           // Cluster membership owns attachment; a colour update cannot reveal a hidden member.
-          if (selection || (!inCluster && layer !== "place")) {
-            pin.visible = true; if (marker.map !== map) marker.map = map;
-          }
+          if (!inCluster && marker.map !== map) marker.map = map;
           settle();
         },
         title(value) { marker.title = value; },
@@ -289,7 +271,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
           applyVisibility();
           if (selected) selectedMarkers.add(marker); else selectedMarkers.delete(marker);
           membership();
-          if (selected) { pin.visible = true; if (marker.map !== map) marker.map = map; }
+          if (selected && marker.map !== map) marker.map = map;
           settle();
         },
         remove() {
@@ -318,7 +300,6 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       motion.remove(); idle.remove(); clustered.remove();
       resized.disconnect();
       for (const pin of pins) { pin.contentObserver.disconnect(); pin.marker.map = null; }
-      measuring.remove();
       pins.clear(); groupMarkers.clear();
       clusters.clearMarkers(true);
       clusters.setMap(null);

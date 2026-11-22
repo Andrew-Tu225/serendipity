@@ -52,15 +52,15 @@ review summaries, and recommendation metadata by app UUID/exact provider ID. Fri
 are purple, personal recommendations amber, reviews white, and nearby unreviewed results grey. A
 colour-preserving selection and marker tooltips expose those relationships; there is no legend. Followed-user reviews
 alone remain white. Empty/failed rankings leave the independently loaded base layers available.
-The map adapter lays out compact icons and independently positioned captions after 150 ms of
-camera/marker-set quiet. Rendered footprints determine collisions. Labels yield first, prioritizing
-selection, friend recommendations, personal recommendations, reviews, then nearby Places. Nearby
-icons yield only to actual visible icons/clusters; hidden cluster members occupy no space. Existing
-visibility and separate hide/reveal gaps stabilize results. Grey pins remain outside app-place
-clusters, so nearby batches cannot rebuild review clusters. All SDK markers use `REQUIRED`; native
-collision handling does not compete with this layout. The clusterer owns attachment of its members:
-colour/evidence updates never reattach hidden reviews. Selection retains its colour and stays visible.
-The map canvas isolates marker stacking below the floating controls.
+One clusterer owns all destination marker attachment, including nearby Google results. Every loaded
+Place appears as an individual marker or contributes to a counted group. Selection temporarily leaves
+clustering and remains visible; colour changes only update priority and never reveal hidden members.
+The adapter measures visible icon/caption footprints after 150 ms of camera/marker-set quiet and
+suppresses overlapping captions only, prioritizing selection, friends, personal recommendations,
+reviews, then nearby Places. That pass never changes SDK marker attachment. All SDK markers use
+`REQUIRED`; native collision handling cannot independently hide Places. The map canvas isolates
+marker stacking below floating controls. Browsing readiness derives from the two base layers;
+recommendations are a nonblocking metadata overlay. Identity comes from the shared session gate.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
 cancels pending search/details/discovery requests and suspends refresh timers. Fresh discovery
 coverage is reused on return, and session changes invalidate personalized cached data. Home, Buddy,
@@ -74,13 +74,15 @@ and a 50–5,000 m radius. The provider filters experience destinations and retu
 per search. `useNearbyPlaces` reuses bounded geographic search cells in temporary display memory,
 separately from the app's reviewed-place cache. Google IDs deduplicate results and let app Places
 take precedence. Nearby markers use our custom category glyphs, with no Google ratings or reviews.
-The map adapter exposes zoom so nearby search can refine geographic cells as users zoom in.
-City views that exceed the nine-cell coverage budget sample up to nine level-13 cells across the
-viewport, preserving provider discovery outside seeded areas. World-scale views show an explicit
-zoom-in hint. Pending nearby work and budget waits cannot produce a premature empty-area message.
-The UI schedules up to three center-prioritized searches concurrently, with a separate mounted-map
-budget of 18 attempts per rolling minute. These limits control provider work without changing the
-backend contracts, persistence, or shared process rate limits.
+`useNearbyPlaces` is a lifecycle adapter around one `NearbyDiscovery` queue. Stable level-13 roots
+are reused across zooms. Every visible root is queued; uncached root coverage precedes dense-area
+refinement and stale refreshes. Only responses reaching 20 Places subdivide (up to level 16, when
+zoom permits), retaining parent results. This replaces per-zoom grid invalidation and nine-cell sampling.
+The queue owns three concurrent requests, an 18-attempt rolling-minute budget, per-cell one-minute
+failure backoff, five-minute freshness, latest-response deduplication, and offscreen cache eviction.
+Budget waits automatically resume; one failed cell cannot block healthy areas. More than 512 root
+cells or zoom below 9 produces a zoom-in hint, not an unbounded scan. Base loading, budget pauses,
+zoom limits and empty results are distinct states. Backend contracts and process limits are unchanged.
 See [discovery-map.md](discovery-map.md) for sampling, freshness, density, and billing limits.
 
 Discovery follows `UI → discoveryClient → discovery router → DiscoveryService → DiscoveryRepository

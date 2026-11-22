@@ -165,7 +165,7 @@ test("nearby searches run three at a time, prioritize the center, and never dupl
   expect(calls).toHaveLength(wanted.length);
 });
 
-test("zooming refines search cells without re-fetching the same zoom band", async ({ page }) => {
+test("zooming reuses sparse geographic responses instead of fetching every zoom band", async ({ page }) => {
   const radii: number[] = [];
   await page.route("**/api/places/nearby?**", (route) => {
     radii.push(Number(new URL(route.request().url()).searchParams.get("radius")));
@@ -177,13 +177,12 @@ test("zooming refines search cells without re-fetching the same zoom band", asyn
   await page.evaluate((bounds) => (window as unknown as { __boundsTestMap: (value: typeof bounds) => void }).__boundsTestMap(bounds), view);
   const coarseCount = nearbyCells([view], 13).length;
   await expect.poll(() => radii.length).toBe(coarseCount);
-  const coarseRadius = Math.min(...radii);
   await move(page);
-  await expect.poll(() => radii.length).toBe(coarseCount + nearbyCells([view], 16).length);
-  expect(Math.max(...radii.slice(coarseCount))).toBeLessThan(coarseRadius / 2);
+  await page.waitForTimeout(650);
+  expect(radii).toHaveLength(coarseCount);
   await page.evaluate(() => (window as unknown as { __zoomTestMap: (zoom: number) => void }).__zoomTestMap(13));
   await page.waitForTimeout(650);
-  expect(radii).toHaveLength(coarseCount + nearbyCells([view], 16).length);
+  expect(radii).toHaveLength(coarseCount);
 });
 
 test("request budget bounds attempts and releases slots at the rolling-minute boundary", () => {
@@ -195,7 +194,7 @@ test("request budget bounds attempts and releases slots at the rolling-minute bo
   expect(budget.take(61_000)).toBe(false);
   const coarse = nearbyCells([view], 13), fine = nearbyCells([view], 16);
   expect(fine.length).toBeLessThanOrEqual(9);
-  expect(fine.every((cell) => !coarse.some((other) => other.key === cell.key))).toBe(true);
+  expect(fine).toEqual(coarse);
 });
 
 test("exploring new areas pauses at the request budget and resumes automatically", async ({ page }) => {
@@ -219,7 +218,7 @@ test("exploring new areas pauses at the request budget and resumes automatically
   }
   await move(page, { ...view, west: view.west + index * .4, east: view.east + index * .4 });
   await page.clock.fastForward(600);
-  await expect(page.getByText("More nearby places will appear shortly.")).toBeVisible();
+  await expect(page.getByText("Nearby searches are paused briefly. More places will load automatically.")).toBeVisible();
   expect(calls).toBe(NEARBY_REQUESTS_PER_MINUTE);
   await page.clock.fastForward(61_000);
   await expect.poll(() => calls).toBeGreaterThan(NEARBY_REQUESTS_PER_MINUTE);
@@ -243,7 +242,7 @@ test("overlapping old cells cannot override a refreshed pin or its open preview"
   await expect(page.getByRole("article")).toContainText("Nearby cafe");
   refreshing = true;
   await page.clock.fastForward(301_000);
-  await expect.poll(() => release.length).toBe(3);
+  await expect.poll(() => release.length).toBe(Math.min(3, nearbyCells([view]).length));
   await expect(marker).toHaveAttribute("data-marker-id", identity!);
   release[0]();
   const updated = page.getByRole("button", { name: "View Fresh cafe name", exact: true });
@@ -256,7 +255,8 @@ test("overlapping old cells cannot override a refreshed pin or its open preview"
   await expect(updated).toHaveAttribute("data-marker-id", identity!);
 });
 
-test("zoom refinement retains a selected pin while new requests are slow or fail", async ({ page }) => {
+test("selection survives slow refreshes, zoom changes and failed nearby requests", async ({ page }) => {
+  await page.clock.install();
   let refine = false;
   let fail!: () => void;
   const blocked = new Promise<void>((resolve) => { fail = resolve; });
@@ -271,12 +271,13 @@ test("zoom refinement retains a selected pin while new requests are slow or fail
   await marker.click();
   await expect(page.getByRole("article")).toContainText("No Serendipity reviews yet");
   refine = true;
+  await page.clock.fastForward(301_000);
   await page.evaluate((bounds) => {
     const map = window as unknown as { __zoomTestMap: (zoom: number) => void; __boundsTestMap: (value: typeof bounds) => void };
     map.__zoomTestMap(17);
     map.__boundsTestMap(bounds);
   }, { west: -81.246, east: -81.240, south: 42.984, north: 42.989 });
-  await page.waitForTimeout(650);
+  await page.clock.fastForward(650);
   await expect(marker).toHaveAttribute("data-marker-id", identity!);
   fail();
   await expect(page.getByText(/Nearby places couldn’t load/)).toBeVisible();
