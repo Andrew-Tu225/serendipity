@@ -77,6 +77,42 @@ test("search uses a session token, keyboard selection, and the result viewport",
   await expect(page.getByRole("listbox")).toHaveCount(0);
 });
 
+test("retrying a failed search selection reopens that place without restarting autocomplete", async ({ page }) => {
+  await mockGoogleMaps(page);
+  let suggestions = 0, detailCalls = 0;
+  await page.route("**/api/places/autocomplete?**", (route) => {
+    suggestions++; return route.fulfill({ json: { suggestions: [suggestion] } });
+  });
+  await page.route("**/api/places/garden?**", (route) => ++detailCalls === 1
+    ? route.fulfill({ status: 503, json: { detail: "Temporary details failure" } })
+    : route.fulfill({ json: details }));
+  await openDiscover(page);
+  await page.getByRole("combobox").fill("garden");
+  await page.getByRole("option").click();
+  await expect(page.getByRole("alert").filter({ hasText: "Temporary details failure" })).toBeVisible();
+  await page.getByRole("alert").filter({ hasText: "Temporary details failure" }).getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("article", { name: "Selected place" })).toContainText("A garden");
+  expect(detailCalls).toBe(2); expect(suggestions).toBe(1);
+});
+
+test("Discover reuses the app session and shows base places while rankings are pending", async ({ page }) => {
+  await mockGoogleMaps(page);
+  let sessions = 0;
+  await page.route("**/api/auth/me", (route) => {
+    sessions++;
+    return route.fulfill({ json: { user: { id: "viewer", display_name: "Viewer", picture_url: null, onboarding_completed_at: "2026-11-22T12:00:00Z" }, auth0: {}, csrf_token: "review-csrf" } });
+  });
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/recommendations?**", async (route) => { await blocked; return route.fulfill({ json: { items: [] } }); });
+  await openDiscover(page);
+  await expect(page.getByText("Loading places…", { exact: true })).toHaveCount(0);
+  expect(sessions).toBe(1);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect.poll(() => sessions).toBe(2);
+  release();
+});
+
 test("search handles empty results, stale responses, and retriable errors", async ({ page }) => {
   await mockGoogleMaps(page);
   let calls = 0;
@@ -149,7 +185,6 @@ test("details failures recover and selecting another result replaces its marker"
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Place details are unavailable");
   fail = false;
   await page.getByRole("button", { name: "Try again" }).click();
-  await page.getByRole("option").click();
   await expect(page.getByRole("article")).toContainText("Garden 1");
   await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-zoom", "16");
   await input.fill("another garden");
@@ -195,21 +230,19 @@ test("Google authorization failures show a useful error", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Google Maps authorization failed");
 });
 
-test("app-rated places include friends’ reviews and community-only ratings", async ({ page }) => {
+test("reviewed pins retain aggregates and recommendation evidence in the layered map", async ({ page }) => {
   await mockGoogleMaps(page);
   await openDiscover(page);
   await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).click();
   const preview = page.getByRole("article", { name: "Selected place" });
-  await expect(preview).toContainText("4.7/5 · 23 reviews");
+  await expect(preview).toContainText("Recommended by people you follow");
   await expect(preview).toContainText("Go early, grab something warm");
+  await expect(preview).toContainText("23 reviews");
   await page.getByRole("button", { name: "Close place preview" }).click();
   await page.getByRole("button", { name: "View Trinity Bellwoods Park", exact: true }).click();
-  await expect(preview).toContainText("4.4/5 · 31 reviews");
-  await expect(preview.locator(".discovery-friend-note")).toHaveCount(0);
-  await page.getByRole("button", { name: "Close place preview" }).click();
-  await page.getByRole("button", { name: "View Toronto Music Garden", exact: true }).click();
-  await expect(preview).toContainText("Alex recommends this");
+  await expect(preview).toContainText("Something new to you");
+  await expect(preview).toContainText("Community reviewer");
 });
 
 for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 1280, height: 844 }]) {
@@ -247,6 +280,6 @@ for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, heig
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight)).toBe(false);
     await page.screenshot({ path: `test-results/discover-${width}.png`, fullPage: true });
     await page.getByRole("button", { name: "Home", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Serendipity" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What feels fun?" })).toBeVisible();
   });
 }

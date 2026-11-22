@@ -1,6 +1,6 @@
+import { markerLayer, markerLayerLabels } from "@/lib/maps/layers";
 import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CharacterPortrait } from "@/components/profile/character-portrait";
 import type { MapHandle } from "@/lib/maps/google-map";
 import type { MapPlace } from "@/types/places";
 
@@ -29,23 +29,32 @@ export const PlaceMarker = memo(function PlaceMarker({ map, place, selected, onS
   const { latitude, longitude } = place.location;
   const id = place.place_id;
   const cluster = true;
+  const layer = markerLayer(place);
+  useEffect(() => {
+    element.setAttribute("data-layer", layer);
+    element.setAttribute("title", markerLayerLabels[layer]);
+    marker.current?.layer(layer);
+  }, [element, layer]);
   useEffect(() => { element.classList.toggle("is-unreviewed", place.source === "google"); }, [element, place.source]);
   useEffect(() => {
     const handle = map.marker({ latitude, longitude }, element, `View ${latest.current.place.display_name}`, () => {
       latest.current.onSelect(latest.current.place);
-    }, cluster);
+    }, cluster, markerLayer(latest.current.place));
     marker.current = handle;
     return () => { handle.remove(); marker.current = null; };
   }, [map, id, latitude, longitude, cluster, element]);
   useEffect(() => { marker.current?.select(selected); }, [selected, map, id, latitude, longitude, cluster, element]);
   useEffect(() => { marker.current?.title(`View ${place.display_name}`); }, [place.display_name, map, id, latitude, longitude, cluster, element]);
   return createPortal(<>
-    {place.friend ? <span className="discovery-friend-avatar" aria-label={`${place.friend.name} reviewed this place`}>
-      <CharacterPortrait identity={place.friend.id} appearance={place.friend.character} size={36} />
-    </span> : <span className="discovery-pin-icon"><PlaceGlyph category={place.category}/></span>}
-    <span className="discovery-pin-label">{place.friend ? place.friend.name : place.display_name}</span>
-    {place.rating_summary && <span className="discovery-pin-rating" aria-label={`Serendipity rating: ${place.rating_summary.average} out of 5`}>
-      ★ {place.rating_summary.average.toFixed(1)} · {place.rating_summary.count}
-    </span>}
+    {place.friend ? <span className="discovery-friend-avatar" aria-label={`${place.friend.name} reviewed this place`}>{place.friend.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("")}</span> : <span className="discovery-pin-icon"><PlaceGlyph category={place.category}/></span>}
+    <span className="discovery-pin-caption">
+      <span className="discovery-pin-label">{place.display_name}</span>
+      {!place.rating_summary && place.recommendation?.logs[0] && <span className="discovery-pin-rating" aria-label={`Recommendation review rating: ${place.recommendation.logs[0].rating} out of 5`}>
+        ★ {place.recommendation.logs[0].rating.toFixed(1)} · {place.recommendation.kind === "friend" ? "Following" : place.recommendation.kind === "similar_taste" ? "Similar taste" : "Explore"}
+      </span>}
+      {place.rating_summary && <span className="discovery-pin-rating" aria-label={`Serendipity rating: ${place.rating_summary.average} out of 5 · ${markerLayerLabels[layer]}`}>
+        ★ {place.rating_summary.average.toFixed(1)} · {place.rating_summary.count}
+      </span>}
+    </span>
   </>, element);
 });
