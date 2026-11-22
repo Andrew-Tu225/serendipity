@@ -24,7 +24,7 @@ test("loads only on Discover, selects app places, and preserves the map across t
   expect(loads()).toBe(0);
   await page.getByRole("button", { name: "Discover", exact: true }).click();
   await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toBeVisible();
-  await expect(page.getByText("Serendipity ratings · Friends highlighted")).toBeVisible();
+  await expect(page.getByText("Serendipity ratings · Friends highlighted")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Map filters" })).toHaveCount(0);
   await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).click();
   await expect(page.getByRole("article", { name: "Selected place" })).toContainText("Elena recommends this");

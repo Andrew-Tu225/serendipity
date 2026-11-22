@@ -123,7 +123,6 @@ export default function DiscoverMap({ active, revision, selected, onSelect, onRe
         {discovery.places.filter((place) => !searchPlace || place.google_place_id !== searchPlace.place_id).map((place) => <PlaceMarker key={place.place_id} map={map} place={place} selected={selected?.place_id === place.place_id} onSelect={selectPlace}/>)}
         {searchPlace && <PlaceMarker key={searchPlace.place_id} map={map} place={searchPlace} selected={selected?.place_id === searchPlace.place_id} onSelect={selectPlace}/>}
         {selected?.source === "app" && !discovery.places.some((place) => place.place_id === selected.place_id) && <PlaceMarker map={map} place={selected} selected onSelect={selectPlace}/>}
-        <div className="discovery-demo-key">Serendipity ratings · Friends highlighted</div>
         {picking ? <div className="discovery-data-status" role="status">Tap the map to place your pin, or review an existing place.
           <button onClick={() => onPick(map.center())}>Use map center</button><button onClick={onCancelPick}>Cancel</button>
         </div> : <>

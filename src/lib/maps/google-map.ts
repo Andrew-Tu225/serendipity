@@ -50,9 +50,8 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
   signal.throwIfAborted();
   const map = new Map(host, {
     center: latLng(TORONTO), zoom: 13, mapId,
-    disableDefaultUI: true, zoomControl: true, clickableIcons: false,
-    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
-    gestureHandling: "greedy", keyboardShortcuts: true,
+    disableDefaultUI: true, clickableIcons: false,
+    gestureHandling: "greedy", keyboardShortcuts: false,
   });
   const clusters = new MarkerClusterer({ map, renderer: {
     render({ count, position }) {
