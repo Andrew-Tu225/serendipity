@@ -52,7 +52,10 @@ const sdk = String.raw`
     }
     getCenter() { return new LatLng(this.position); }
     getBounds() { const p=this.position; return { toJSON: () => this.bounds ?? { south:p.lat-.1,west:p.lng-.1,north:p.lat+.1,east:p.lng+.1 } }; }
-    getProjection() { return {}; }
+    getProjection() { return { fromLatLngToPoint(position) {
+      const sine = Math.max(-.9999, Math.min(.9999, Math.sin(position.lat() * Math.PI / 180)));
+      return { x: 256 * (.5 + position.lng() / 360), y: 256 * (.5 - Math.log((1 + sine) / (1 - sine)) / (4 * Math.PI)) };
+    } }; }
     getZoom() { return Number(this.host.dataset.zoom); }
     addListener(name, callback) { return listen(this, name, callback); }
     setCenter(position) {
@@ -71,6 +74,7 @@ const sdk = String.raw`
   }
   class TestMarker {
     constructor(options) {
+      this.attachments = 0; this.detachments = 0;
       this.position = options.position;
       this.slot = markers.size;
       this.node = document.createElement('button');
@@ -88,7 +92,10 @@ const sdk = String.raw`
     set collisionBehavior(value) { this.node.dataset.collisionBehavior = String(value); }
     set zIndex(value) { this.node.dataset.priority = String(value); this.node.style.zIndex = String(value); }
     set title(value) { this.node.setAttribute('aria-label', value); }
+    get map() { return this.currentMap ?? null; }
     set map(map) {
+      this.currentMap = map;
+      if (map) this.attachments++; else this.detachments++;
       if (!map) { this.node.remove(); return; }
       map.host.append(this.node);
       const i = this.slot % 6;
@@ -114,6 +121,11 @@ const sdk = String.raw`
   window.__panTestMap = (lat, lng) => currentMap.panTo({ lat, lng });
   window.__zoomTestMap = (zoom) => currentMap.setZoom(zoom);
   window.__boundsTestMap = (bounds) => { currentMap.bounds = bounds; trigger(currentMap, 'idle'); };
+  window.__movingTestMap = (zoom) => { if (zoom != null) currentMap.host.dataset.zoom = String(zoom); trigger(currentMap, 'bounds_changed'); };
+  window.__markerTestStats = () => [...markers].map(marker => ({
+    title: marker.node.getAttribute('aria-label'), id: marker.node.dataset.markerId,
+    attachments: marker.attachments, detachments: marker.detachments, visible: !!marker.map,
+  }));
   maps.__ib__();
 })();
 `;

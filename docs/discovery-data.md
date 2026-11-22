@@ -21,12 +21,14 @@ exact Google IDs suppress duplicate provider pins. Recommendation metadata overl
 existing aggregate rating/identity. Each Place has one marker, with friend recommendation first,
 then personalized recommendation, then base review, then an unreviewed provider result.
 
-Grey nearby pins use Google’s optional collision handling: they hide when overlapping a higher-priority
-marker or another grey pin. Reviews, personal recommendations, friends’ recommendations, clusters,
-and the selected place hide overlapping optional pins. Priority is selected Place > friends > personal
-recommendation > review > grey nearby Place; selection always keeps a grey Place visible. Changing
-a Place’s layer updates its SDK collision policy without recreating its marker. Reviews retain white
-backgrounds and purple glyphs/initials, including while selected. Clustering and all data sources remain.
+Grey nearby pins hide overlaps after the camera/marker set settles for 150 ms. They stay outside the
+review clusterer, so new nearby batches do not redraw reviews. Existing visible grey pins take
+precedence over new arrivals; separate hide/reveal gaps prevent oscillation along overlap edges.
+Reviews, recommendations, clusters, the location dot, and selected Places take precedence over grey
+pins. All SDK markers use `REQUIRED`; one adapter-owned pass controls grey visibility instead of
+native automatic collision hiding. Unchanged visibility never reattaches a marker. Selection keeps
+a grey Place visible. Reviews retain white backgrounds and purple glyphs/initials, including while
+selected. App Places still cluster; all data sources remain.
 
 Ranked results request up to 30 Places per exact visible bbox after a 250 ms idle debounce. Date-line
 views use two ordinary bboxes and deduplicate IDs. Up to eight exact-view snapshots stay fresh for
@@ -63,8 +65,8 @@ labels update their React portal contents. Click handlers read the latest Place.
 are recreated only when identity, coordinates, or map change; title changes update in place. App and
 selected markers share one keyed list, so a selected pin stays alive when it moves between the
 visible results and selection fallback. The existing clusterer receives incremental membership
-changes batched into an animation frame. Selection updates are idempotent. Google destination
-markers join the clusterer; the device location dot remains separate. Selected markers are pinned
+changes for app Places batched into an animation frame. Selection updates are idempotent. Grey Google
+destination markers use settled overlap suppression separately; the device location dot remains separate. Selected markers are pinned
 outside clusters. App Places override Google markers with the same linked provider ID.
 
 The cache targets 32 completed regions and 5,000 Place records, evicting least-recently-used offscreen

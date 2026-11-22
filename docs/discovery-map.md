@@ -3,7 +3,7 @@
 Discover is a live Google map with custom markers and place search. The tab loads the SDK on first
 use and begins at London, Ontario (42.9849, -81.2453), zoom 13. Browsing pins combine app-reviewed Places
 in PostgreSQL with temporary Google Nearby Search results and the signed-in recommendations overlay. All use our custom marker design: smaller,
-neutral category pins for Google places, ratings and friend highlights for app Places. Dense pins cluster. Existing pins persist
+neutral category pins for Google places, ratings and friend highlights for app Places. Dense reviewed pins cluster. Existing pins persist
 across viewport updates; nearby areas are prefetched and newly exposed rectangles load in the
 background. There are no
 hard-coded demo pins or demo fallback on errors. Selecting a marker checks/opens its app reviews; closing
@@ -36,14 +36,19 @@ aborted and stale responses ignored. Provider billing still follows Google's req
 
 ## Overlapping nearby pins
 
-Grey nearby markers are optional and yield to overlaps. Reviews, recommendation highlights, clusters,
-and selected Places remain visible and hide overlapping grey pins. Layer priority is selected Place,
-friends’ recommendation, personal recommendation, review, then nearby Place. A selected nearby pin
-stays visible until deselection, then returns to optional collision handling. The map adapter applies
-policy changes in place as recommendation membership changes. White review pins keep their original
-purple details; amber and purple highlight colours remain distinct. No legend is displayed.
+Grey nearby markers yield to overlaps in a single adapter-owned layout pass, 150 ms after the camera
+or marker set settles. They do not join reviewed-place clusters, so nearby result batches cannot
+rebuild review clusters. Existing visible grey pins win over newly arriving grey pins; hidden pins
+need 10 px clearance to reappear, while visible pins retain a 2 px gap. This prevents oscillation at
+overlap edges. The pass uses projected CSS-pixel footprints (130×62 for nearby pins, 130×84 for app
+pins, 54×54 for clusters), conservatively including labels. Date-line views use the nearest world copy.
 
-Google documents the supported modes in [collision behaviour](https://developers.google.com/maps/documentation/javascript/advanced-markers/collision-behavior).
+Reviews, recommendation highlights, clusters, the location dot, and selected Places suppress grey pins.
+Selection keeps a grey pin visible until deselection. Visibility is held during camera motion;
+unchanged decisions never detach/reattach SDK markers. All SDK markers use `REQUIRED`, so native
+collision hiding does not compete with clustering or hide/reveal basemap labels during updates.
+White reviews, amber personal recommendations, and purple friend recommendations stay distinct.
+No legend is displayed.
 
 ## Recommendation overlay
 

@@ -50,9 +50,12 @@ review summaries, and recommendation metadata by app UUID/exact provider ID. Fri
 are purple, personal recommendations amber, reviews white, and nearby unreviewed results grey. A
 colour-preserving selection and marker tooltips expose those relationships; there is no legend. Followed-user reviews
 alone remain white. Empty/failed rankings leave the independently loaded base layers available.
-The map adapter makes grey nearby markers optional for collision handling, while reviews,
-recommendations, clusters, and selected Places hide overlapping optional markers. Layer changes
-update priority in place. The map canvas isolates marker stacking below the floating controls.
+The map adapter suppresses overlapping grey pins after 150 ms of camera/marker-set quiet, with
+stable existing-pin preference and different hide/reveal gaps. Grey pins remain outside app-place
+clusters, so nearby batches cannot rebuild review clusters. All SDK markers use `REQUIRED`; native
+collision handling does not compete with this settled layout. Unchanged visibility never reattaches
+markers, and selection keeps a grey pin visible. Layer changes update priority in place. The map
+canvas isolates marker stacking below the floating controls.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
 cancels pending search/details/discovery requests and suspends refresh timers. Fresh discovery
 coverage is reused on return, and session changes invalidate personalized cached data. Home, Buddy,

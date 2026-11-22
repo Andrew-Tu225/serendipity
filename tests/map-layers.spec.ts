@@ -46,8 +46,7 @@ test("white reviews and recommendation colours retain priority while grey pins c
   const personalMarker = page.getByRole("button", { name: `View ${places[1].name}`, exact: true });
   const reviewMarker = page.getByRole("button", { name: `View ${places[2].name}`, exact: true });
   const nearbyMarker = page.getByRole("button", { name: "View Nearby park", exact: true });
-  await expect(nearbyMarker).toHaveAttribute("data-collision-behavior", "optional");
-  for (const marker of [friendMarker, personalMarker, reviewMarker]) await expect(marker).toHaveAttribute("data-collision-behavior", "required");
+  for (const marker of [nearbyMarker, friendMarker, personalMarker, reviewMarker]) await expect(marker).toHaveAttribute("data-collision-behavior", "always");
   await expect(friendMarker).toHaveAttribute("data-priority", "30");
   await expect(personalMarker).toHaveAttribute("data-priority", "20");
   await expect(reviewMarker).toHaveAttribute("data-priority", "10");
@@ -58,10 +57,10 @@ test("white reviews and recommendation colours retain priority while grey pins c
   await page.getByRole("button", { name: "Close place preview" }).click();
   const identity = await nearbyMarker.getAttribute("data-marker-id");
   await nearbyMarker.focus(); await nearbyMarker.press("Enter");
-  await expect(nearbyMarker).toHaveAttribute("data-collision-behavior", "required");
+  await expect(nearbyMarker).toHaveAttribute("data-collision-behavior", "always");
   await expect(nearbyMarker).toHaveAttribute("data-priority", "1000");
   await page.getByRole("button", { name: "Close place preview" }).click();
-  await expect(nearbyMarker).toHaveAttribute("data-collision-behavior", "optional");
+  await expect(nearbyMarker).toHaveAttribute("data-collision-behavior", "always");
   await expect(nearbyMarker).toHaveAttribute("data-priority", "1");
   await expect(nearbyMarker).toHaveAttribute("data-marker-id", identity!);
   await reviewMarker.focus(); await reviewMarker.press("Enter");

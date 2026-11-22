@@ -241,7 +241,9 @@ Reviewed-place coverage and temporary nearby search cells retain their original 
 budgets. Ranked results use separate one-minute snapshots for the full viewport; panning/zooming
 refetches rankings rather than combining strips. Empty or failed rankings leave the base map
 available. A new review updates the white base layer and refetches recommendation eligibility.
-Dense locations cluster; overlapping grey nearby pins yield to reviews and recommendation highlights.
+Dense reviewed locations cluster. Grey nearby pins hide overlaps after the map settles, with stable
+visibility during camera movement. They remain separate from review clusters so background nearby
+loading does not redraw the social map.
 London, Ontario is the initial camera position; location
 permission is requested only on tap.
 
