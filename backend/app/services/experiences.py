@@ -5,10 +5,9 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Experience, Place, User, domain
+from app.models import Experience, User, domain
 from app.repositories.experiences import ExperienceRepository, TasteProfileRepository
 from app.repositories.places import PlaceRepository
-from app.schemas.profile import ProfileExperience, ProfileExperiences
 
 
 class ExperienceService:
@@ -17,32 +16,6 @@ class ExperienceService:
         self.places = PlaceRepository(database)
         self.experiences = ExperienceRepository(database)
         self.profiles = TasteProfileRepository(database)
-
-    async def profile_experiences(self, user: User, offset: int, limit: int) -> ProfileExperiences:
-        favorites = await self.experiences.list_by_author(user.id, limit=4, highest_rated=True)
-        recent = await self.experiences.list_by_author(user.id, offset=offset, limit=limit + 1)
-        return ProfileExperiences(
-            display_name=user.display_name,
-            total=await self.experiences.count_by_author(user.id),
-            favorites=[
-                self._profile_experience(experience, place) for experience, place in favorites
-            ],
-            recent=[
-                self._profile_experience(experience, place) for experience, place in recent[:limit]
-            ],
-            next_offset=offset + limit if len(recent) > limit else None,
-        )
-
-    @staticmethod
-    def _profile_experience(experience: Experience, place: Place) -> ProfileExperience:
-        return ProfileExperience(
-            id=experience.id,
-            place_name=place.name,
-            category=place.category,
-            rating=experience.rating,
-            verdict=experience.verdict,
-            rated_on=experience.created_at.date(),
-        )
 
     async def create_experience(
         self,

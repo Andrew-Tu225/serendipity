@@ -38,7 +38,7 @@ test("uses the signed-in viewer's ratings and loads their older entries on deman
   await page.route("**/api/profile/experiences?**", (route) => {
     const offset = new URL(route.request().url()).searchParams.get("offset");
     return route.fulfill({ json: {
-      display_name: "Alex", total: 2, favorites: [entry],
+      display_name: "Alex", total: 2, follower_count: 3, following_count: 5, bookmark_count: 1, favorites: [entry],
       recent: offset === "0" ? [entry] : [{ ...entry, id: "older", place_name: "Tea house" }],
       next_offset: offset === "0" ? 1 : null,
     } });
@@ -53,4 +53,62 @@ test("uses the signed-in viewer's ratings and loads their older entries on deman
   await recent.getByRole("button", { name: "See all" }).click();
   await expect(page.getByRole("region", { name: "All ratings" }).getByText("Tea house")).toBeVisible();
   await expect(page.getByText("Mia Morgan")).toHaveCount(0);
+});
+
+test("opens the lists screen and shows each saved place's name and location", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 790 });
+  await page.route("**/api/profile/experiences?**", (route) => route.fulfill({ status: 401 }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await expect(page.getByText("Followers", { exact: true })).toBeVisible();
+  await expect(page.getByText("Following", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Lists", exact: true }).click();
+
+  await expect(page.getByRole("heading", { name: "Lists", exact: true })).toBeFocused();
+  await expect(page.getByRole("region", { name: "Lists", exact: true })).toHaveCSS("display", "flex");
+  await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeHidden();
+  await page.getByRole("button", { name: /Date-night spots/ }).click();
+  await expect(page.getByRole("heading", { name: "Date-night spots" })).toBeFocused();
+  const saved = page.getByRole("list", { name: "Saved places" });
+  await expect(saved.getByRole("listitem")).toHaveCount(4);
+  await expect(saved.getByRole("listitem").first()).toContainText("Violet Note");
+  await expect(saved.getByRole("listitem").first()).toContainText("Lower East Side, Manhattan");
+  await page.getByRole("button", { name: "Back to lists" }).click();
+  await page.getByRole("button", { name: "Back to profile" }).click();
+  await expect(page.getByRole("button", { name: "Lists", exact: true })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Top 4 experiences" })).toBeVisible();
+});
+
+test("creates a demo list with a place and reads signed-in bookmarks from the API", async ({ page }) => {
+  let signedIn = false;
+  await page.route("**/api/profile/experiences?**", (route) => signedIn ? route.fulfill({ json: {
+    display_name: "Alex", total: 0, follower_count: 2, following_count: 3, bookmark_count: 1,
+    favorites: [], recent: [], next_offset: null,
+  } }) : route.fulfill({ status: 401 }));
+  await page.route("**/api/profile/bookmarks?**", (route) => route.fulfill({ json: {
+    places: [{ id: "river", name: "River Trail", latitude: 43.1, longitude: -81.2 }], next_offset: null,
+  } }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await page.getByRole("button", { name: "Lists", exact: true }).click();
+  await page.getByRole("button", { name: "New list" }).click();
+  await page.getByLabel("List name").fill("Sunday walks");
+  await page.getByLabel("Place name").fill("Maple Lookout");
+  await page.getByLabel("Location").fill("London, ON");
+  await page.getByRole("button", { name: "Create list" }).click();
+  await expect(page.getByRole("heading", { name: "Sunday walks" })).toBeVisible();
+  await expect(page.getByText("London, ON")).toBeVisible();
+  await page.getByRole("button", { name: "Back to lists" }).click();
+  await expect(page.getByRole("button", { name: /Sunday walks/ })).toBeVisible();
+
+  signedIn = true;
+  await page.reload();
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await page.getByRole("button", { name: "Lists", exact: true }).click();
+  await page.getByRole("button", { name: /Saved places/ }).click();
+  await expect(page.getByText("River Trail")).toBeVisible();
+  await expect(page.getByText("43.1000° N, 81.2000° W")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open River Trail in Google Maps" })).toHaveAttribute(
+    "href", "https://www.google.com/maps/search/?api=1&query=43.1%2C-81.2",
+  );
 });

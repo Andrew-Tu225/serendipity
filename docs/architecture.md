@@ -86,12 +86,20 @@ attribution and returned provider attributions remain visible. See [discovery-ma
 ## Profile experience history
 
 The Profile tab fetches `GET /api/profile/experiences` through `profileClient`. `CurrentUser` supplies
-the author, and `ExperienceService` asks `ExperienceRepository` for that user's highest-rated and
+the author, and `ProfileService` asks `ExperienceRepository` for that user's highest-rated and
 most recently created Experiences. Ties in favorites use creation time and then ID. Recent activity
 shows four rows initially and uses offset pagination to open the rest of the user's rating history.
 Every response uses `Cache-Control: no-store`. A signed-out visitor sees the illustrated demo
 profile. Accounts with no ratings see empty states, and database-backed entries use category icons
 for thumbnails.
+
+The Profile response also includes follower, following, and Bookmark counts. The Lists button opens
+a dedicated in-app screen, and selecting a collection opens its Place list. The signed-out preview
+includes 12 sample collections with named locations and supports creating a temporary list during the
+current page session. Signed-in users see their default Saved places collection. Its rows come from
+`GET /api/profile/bookmarks` through `profileClient`, `ProfileService`, and `ProfileRepository`.
+The API pages through the current user's Bookmarks, and each row shows the Place name, stored map
+coordinates, and a link to open those coordinates. Both profile endpoints require `CurrentUser`.
 
 ## Authentication flow
 

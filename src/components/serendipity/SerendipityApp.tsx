@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode, type Ref } from 'react'
 import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
 import DiscoverMap from '@/components/map/discover-map'
@@ -10,50 +10,10 @@ import { mapPlace, type PlaceExperiences } from '@/types/discovery'
 import type { Coordinates, MapPlace } from '@/types/places'
 import { FriendAvatar } from '@/components/map/friend-avatar'
 import { ProfileExperiencePanels } from '@/components/profile/profile-experiences'
+import { demoPlaceLists } from '@/components/profile/demo-place-lists'
+import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
 import { useProfileExperiences } from '@/hooks/use-profile-experiences'
-
-type IconName =
-  | 'home'
-  | 'compass'
-  | 'plus'
-  | 'users'
-  | 'user'
-  | 'bell'
-  | 'map'
-  | 'heart'
-  | 'bookmark'
-  | 'arrow'
-  | 'close'
-  | 'sparkle'
-  | 'pin'
-  | 'globe'
-  | 'lock'
-
-function Icon({ name, size = 22, filled = false }: { name: IconName; size?: number; filled?: boolean }) {
-  const paths: Record<IconName, ReactNode> = {
-    home: <><path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></>,
-    compass: <><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2Z"/></>,
-    plus: <><path d="M12 5v14M5 12h14"/></>,
-    users: <><path d="M16 19v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V19"/><circle cx="9.5" cy="7.5" r="3.5"/><path d="M17 4.6a3.5 3.5 0 0 1 0 6.8M20 19v-1.5a4 4 0 0 0-2.5-3.7"/></>,
-    user: <><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></>,
-    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
-    map: <><path d="m9 18-5 2V6l5-2 6 2 5-2v14l-5 2-6-2Z"/><path d="M9 4v14M15 6v14"/></>,
-    heart: <path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.4 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>,
-    bookmark: <path d="M6 4.8A1.8 1.8 0 0 1 7.8 3h8.4A1.8 1.8 0 0 1 18 4.8V21l-6-3.5L6 21V4.8Z"/>,
-    arrow: <><path d="M5 12h14M13 6l6 6-6 6"/></>,
-    close: <><path d="m6 6 12 12M18 6 6 18"/></>,
-    sparkle: <><path d="m12 3 1.2 4.1a5 5 0 0 0 3.4 3.4L21 12l-4.4 1.5a5 5 0 0 0-3.4 3.4L12 21l-1.2-4.1a5 5 0 0 0-3.4-3.4L3 12l4.4-1.5a5 5 0 0 0 3.4-3.4L12 3Z"/></>,
-    pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
-    globe: <><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></>,
-    lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
-  }
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {paths[name]}
-    </svg>
-  )
-}
+import { Icon, type IconName } from '@/components/ui/icon'
 
 const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
 function App() {
@@ -71,6 +31,9 @@ function App() {
   const [reviewBusy, setReviewBusy] = useState(false)
   const [reviewRevision, setReviewRevision] = useState(0)
   const [reviewedPlace, setReviewedPlace] = useState<MapPlace | null>(null)
+  const [listOwner, setListOwner] = useState<ListOwner | null>(null)
+  const [demoLists, setDemoLists] = useState(demoPlaceLists)
+  const listsButton = useRef<HTMLButtonElement>(null)
 
   const startReview = (place: MapPlace | null) => {
     setReviewTarget(place)
@@ -113,7 +76,7 @@ function App() {
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
       <div className={`app-shell${activeTab === 'Discover' ? ' is-discover' : ''}`}>
-        {activeTab !== 'Discover' && (
+        {activeTab !== 'Discover' && !listOwner && (
           <>
             <div className="status-bar" aria-hidden="true">
               <span>9:41</span>
@@ -130,7 +93,7 @@ function App() {
           </>
         )}
 
-        <div className="app-content">
+        <div className="app-content" hidden={listOwner !== null}>
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
             {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision} reviewedPlace={reviewedPlace}
               selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
@@ -140,7 +103,7 @@ function App() {
           {activeTab === 'Buddy' ? (
             <BuddyView />
           ) : activeTab === 'Profile' ? (
-            <ProfileView />
+            <ProfileView demoListCount={demoLists.length} listsButton={listsButton} onOpenLists={setListOwner} />
           ) : activeTab === 'Discover' ? null : (
             <>
               <section className="filters" aria-label="Experience categories">
@@ -195,13 +158,22 @@ function App() {
 
         {posted && <div className="review-saved" role="status">Your experience was shared <button onClick={() => setPosted(false)} aria-label="Dismiss confirmation">×</button></div>}
 
-        <nav className="bottom-nav" aria-label="Primary navigation">
+        {!listOwner && <nav className="bottom-nav" aria-label="Primary navigation">
           <NavButton label="Home" icon="home" active={activeTab === 'Home'} onClick={() => changeTab('Home')}/>
           <NavButton label="Discover" icon="pin" active={activeTab === 'Discover'} onClick={() => changeTab('Discover')}/>
           <button className="add-button" onClick={() => changeTab('Add')} aria-label="Add a post"><span><Icon name="plus" size={27}/></span><small>Add</small></button>
           <NavButton label="Buddy" icon="users" active={activeTab === 'Buddy'} onClick={() => changeTab('Buddy')}/>
           <NavButton label="Profile" icon="user" active={activeTab === 'Profile'} onClick={() => changeTab('Profile')}/>
-        </nav>
+        </nav>}
+
+        {listOwner && (
+          <ProfilePlaceLists owner={listOwner} demoLists={demoLists}
+            onAdd={(list) => setDemoLists((current) => [list, ...current])}
+            onClose={() => {
+              setListOwner(null)
+              requestAnimationFrame(() => listsButton.current?.focus())
+            }} />
+        )}
 
         {sheet && (
           <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && !reviewBusy && setSheet(null)}>
@@ -306,7 +278,11 @@ function WorldwideLock() {
   )
 }
 
-function ProfileView() {
+function ProfileView({ demoListCount, listsButton, onOpenLists }: {
+  demoListCount: number
+  listsButton: Ref<HTMLButtonElement>
+  onOpenLists: (owner: ListOwner) => void
+}) {
   const { profile, retry } = useProfileExperiences()
   const [customizing, setCustomizing] = useState(false)
   const [character, setCharacter] = useState<CharacterOptions>({
@@ -318,6 +294,17 @@ function ProfileView() {
     shoes: '#eee8f2',
     hat: 'none',
   })
+  const identity = profile.status === 'demo' ? {
+    owner: { name: 'Mia Morgan', demo: true } as const,
+    followers: 382,
+    following: 214,
+    lists: demoListCount,
+  } : profile.status === 'ready' ? {
+    owner: { name: profile.data.display_name || 'Your profile', demo: false, bookmarkCount: profile.data.bookmark_count } as const,
+    followers: profile.data.follower_count,
+    following: profile.data.following_count,
+    lists: 1,
+  } : null
 
   return (
     <section className="profile-view">
@@ -326,20 +313,20 @@ function ProfileView() {
           <CharacterFigure options={character} compact/>
           <span><Icon name="sparkle" size={13}/></span>
         </button>
-        {profile.status === 'demo' ? <>
-          <div className="profile-name"><h2>Mia Morgan</h2><p>@miatastes · Brooklyn, NY</p></div>
-          <p className="profile-bio">Always looking for tiny restaurants, tactile workshops, and plans worth crossing town for.</p>
-          <div className="profile-stats">
-            <div><strong>38</strong><span>Experiences</span></div>
-            <div><strong>126</strong><span>Saved</span></div>
-            <div><strong>24</strong><span>Buddies</span></div>
-          </div>
-        </> : profile.status === 'ready' && (
+        {identity && <>
           <div className="profile-name">
-            <h2>{profile.data.display_name || 'Your profile'}</h2>
-            <p>{profile.data.total} {profile.data.total === 1 ? 'experience' : 'experiences'} rated</p>
+            <h2>{identity.owner.name}</h2>
+            {identity.owner.demo && <p>@miatastes · Brooklyn, NY</p>}
           </div>
-        )}
+          {identity.owner.demo && <p className="profile-bio">Always looking for tiny restaurants, tactile workshops, and plans worth crossing town for.</p>}
+          <div className="profile-stats">
+            <div><strong>{identity.followers}</strong><span>Followers</span></div>
+            <div><strong>{identity.following}</strong><span>Following</span></div>
+            <button ref={listsButton} type="button" aria-label="Lists" onClick={() => onOpenLists(identity.owner)}>
+              <strong>{identity.lists}</strong><span>Lists</span>
+            </button>
+          </div>
+        </>}
       </div>
 
       {profile.status === 'demo' && <><ProfileExperiencePanels /><ActivityCalendar /></>}
