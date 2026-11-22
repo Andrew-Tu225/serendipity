@@ -3,7 +3,7 @@ from datetime import date
 
 import pytest
 
-from app.models.domain import Experience, User, Verdict
+from app.models.domain import Experience, Follow, User, Verdict
 from app.recommend.config import EXPLORE_RATIO, LOGS_PER_PLACE
 from app.recommend.service import (
     PinKind,
@@ -14,6 +14,7 @@ from app.recommend.service import (
     build_user_weights,
     daily_seed,
     find_hidden_gems,
+    followee_ids,
     label_pin_kind,
     merge_top_and_gems,
     pick_most_liked_gems,
@@ -22,6 +23,7 @@ from app.recommend.service import (
     recommend,
     score_places,
     sort_logs_by_relation,
+    sort_logs_liked_first,
 )
 from app.recommend.taste import SimilarUser
 from tests.recommend import fixtures as fx
@@ -227,6 +229,34 @@ def test_sort_logs_by_relation_orders_following_then_similar_then_community():
 def test_sort_logs_by_relation_rejects_unknown_author():
     with pytest.raises(ValueError, match="u_ghost"):
         sort_logs_by_relation([make_log("e_1", "u_ghost")], fx.USERS, FOLLOWEES, SIMILAR)
+
+
+# followee_ids
+
+
+def test_followee_ids_keeps_only_the_viewers_follows():
+    follows = (
+        Follow(follower_id="u_1", followee_id="u_2"),
+        Follow(follower_id="u_3", followee_id="u_4"),
+    )
+
+    assert followee_ids("u_1", follows) == frozenset({"u_2"})
+
+
+# sort_logs_liked_first
+
+
+def test_sort_logs_liked_first_keeps_relation_order_within_each_group():
+    logs = (
+        shown(make_log("e_1", "a", verdict=Verdict.AVOID), Relation.FOLLOWING),
+        shown(make_log("e_2", "a", verdict=Verdict.RECOMMEND), Relation.FOLLOWING),
+        shown(make_log("e_3", "a", rating=2.0), Relation.SIMILAR_TASTE),
+        shown(make_log("e_4", "a", rating=4.0), Relation.COMMUNITY),
+    )
+
+    ordered = sort_logs_liked_first(logs)
+
+    assert [s.experience.id for s in ordered] == ["e_2", "e_4", "e_1", "e_3"]
 
 
 # pick_pin_logs

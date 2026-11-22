@@ -4,9 +4,9 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
+import app.models  # noqa: F401  (registers every table on Base.metadata)
 from app.config import get_settings
 from app.database import Base
-from app.models import AuthSession, User  # noqa: F401
 
 target_metadata = Base.metadata
 

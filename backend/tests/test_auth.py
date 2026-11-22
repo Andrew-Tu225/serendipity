@@ -8,20 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuthSession, User
 from app.services.auth import hash_token
+from tests.auth_helpers import authenticate
 
 pytestmark = pytest.mark.anyio
-
-
-async def authenticate(client, identity_provider):
-    login = await client.get("/api/auth/login")
-    assert login.status_code == 302
-    params = identity_provider.remember_login(login)
-    callback = await client.get(
-        "/api/auth/callback", params={"code": "valid-code", "state": params["state"][0]}
-    )
-    assert callback.status_code == 303
-    assert callback.headers["location"] == "http://localhost:3000/success"
-    return callback
 
 
 async def test_login_provisions_user_and_rotates_session(

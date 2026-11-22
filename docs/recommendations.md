@@ -24,7 +24,18 @@ This is the minimal version, sized for the hackathon demo (~10 users, ~60 Places
 
 ## 1. Data schema
 
-Field types map onto Pydantic models in `backend/app/models/`.
+Field types map onto the Pydantic domain models in `backend/app/models/domain.py`. Storage is Postgres (migration `0002_places_experiences_social.py`), with one SQLAlchemy model per table:
+
+| Entity | Table | Model | Indexes |
+|---|---|---|---|
+| User | `users` (from auth, migration `0001`) | `models/auth.py` | |
+| Follow | `follows` | `models/social.py` | `(followee_id)` |
+| Place | `places` | `models/places.py` | `(lat, lng)` |
+| Experience | `experiences` | `models/experiences.py` | `(place_id)`, `(user_id, place_id, visited_on)` |
+| Bookmark | `bookmarks` | `models/places.py` | |
+| TasteProfile | `taste_profiles` | `models/experiences.py` | |
+
+Ids are UUIDs, exposed to the recommender and the API as strings. Foreign keys cascade on delete. CHECK constraints repeat the rules in the tables below (rating range and half steps, verdict and category values, review length, coordinates, no self-follow), so rows written outside the API are rejected too. In `users`, `display_name` is optional and unbounded; the recommender shows an empty name as `"Anonymous"` and cuts names to 60 characters.
 
 **User**
 
@@ -83,7 +94,7 @@ A user may log the same Place more than once; the recommender uses only the late
 | `category` | Category | PK part |
 | `score` | float | Σ `value(e)` over the user's logs in this category (2.2) |
 
-Updated whenever an Experience is created. Experiences are never edited or deleted. Everything else in section 2 is computed per request.
+Updated in the same transaction that creates an Experience (`ExperienceService.create_experience`), by an atomic `score = score + value(e)` upsert. Experiences are never edited or deleted. Everything else in section 2 is computed per request.
 
 ---
 
@@ -201,12 +212,15 @@ In `backend/app/recommend/config.py`.
 | `SIMILAR_K` / `SIMILAR_MIN` | 10 / 0.2 | 2.2 |
 | `EXPLORE_RATIO` | 0.2 | 2.5 |
 | `LOGS_PER_PLACE` | 3 | 2.7 |
+| `MAX_PLACES_IN_VIEW` | 2000 | 3.1 (places loaded per request) |
 
 ---
 
 ## 3. API
 
-Routes live in `backend/app/routers/recommendations.py`. The viewer comes from a `get_current_user` dependency; until auth is chosen it reads an `X-Demo-User` header, enabled only in debug mode.
+Routes live in `backend/app/api/recommendations.py` and follow the repo's router → service → repository layering (`docs/architecture.md`). The viewer is the signed-in user from the Auth0 session cookie (`CurrentUser`); there is no way to ask for another user's recommendations. Both routes are read-only, so they need no CSRF token.
+
+Results are per viewer, so every response carries `Cache-Control: no-store`. User ids are the `users.id` UUID as a string; a user with no display name is shown as `"Anonymous"`, and names are cut to 60 characters.
 
 ### 3.1 `GET /api/recommendations`
 
@@ -243,11 +257,13 @@ Routes live in `backend/app/routers/recommendations.py`. The viewer comes from a
 
 `relation` is `following`, `similar_taste`, or `community` (anyone else). Explore items have `score: 0`.
 
-**Errors:** `401` no viewer; `422` invalid parameters. An empty `items` list is a valid `200`.
+**Errors:** `401` `"Sign in to continue"` when the session is missing or expired; `422` invalid parameters (malformed `bbox`, or `limit` outside 1–100). An empty `items` list is a valid `200`.
 
 ### 3.2 `GET /api/places/{place_id}/logs`
 
-All logs at a Place, for the panel when a pin is tapped, ordered as in 2.8 with non-liked logs after liked ones. Same log shape as 3.1. Response: `{ "items": [...] }`. `404` if the Place does not exist.
+All logs at a Place, for the panel when a pin is tapped: liked logs first, then the rest, each group ordered as in 2.8. There is no cap. Same log shape as 3.1.
+
+Response: `{ "place": {...}, "logs": [...] }`. Errors: `401` as in 3.1; `404` `"Place not found"`.
 
 ### 3.3 When the frontend calls it
 
@@ -266,19 +282,24 @@ All logs at a Place, for the panel when a pin is tapped, ordered as in 2.8 with 
 
 ```
 backend/app/
-  models/                  Pydantic models for section 1
-  repositories/
-    base.py                Repository Protocol
-    memory.py              in-memory implementation loaded from seed JSON
+  models/domain.py                  Pydantic domain models for section 1
   recommend/
-    config.py              constants (2.10)
-    similarity.py          value(e), category vector, taste_sim, N(u)
-    service.py             scoring, slots, log selection -> response
-  routers/recommendations.py
-backend/seed/              demo data (JSON)
+    config.py                       constants (2.10)
+    taste.py                        log value, taste profile, taste_sim, N(u)
+    service.py                      weights, place scores, hidden gems, slots, pin logs, recommend()
+  schemas/recommendations.py        BBox and the response models (3.1, 3.2)
+  models/places.py, experiences.py, social.py   SQLAlchemy tables
+  models/conversions.py             rows -> domain models
+  repositories/recommendations.py   RecommendationRepository Protocol, SqlRecommendationRepository
+  repositories/experiences.py       ExperienceRepository, TasteProfileRepository
+  repositories/places.py            PlaceRepository
+  services/recommendations.py       RecommendationService
+  services/experiences.py           ExperienceService.create_experience
+  api/recommendations.py            the two routes
+  dependencies.py                   get_recommendation_repository, get_recommendation_service, get_today
 ```
 
-`recommend/` functions take plain data; only `service.py` touches the repository.
+`recommend/` is pure: it takes plain data and never touches storage. `RecommendationService` loads that data through `SqlRecommendationRepository` and calls it.
 
 ### 4.2 Seed data
 

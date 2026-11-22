@@ -186,6 +186,15 @@ def pick_pin_logs(logs: Sequence[ShownLog]) -> tuple[ShownLog, ...]:
     return tuple(s for s in logs if is_liked(s.experience))[:LOGS_PER_PLACE]
 
 
+def sort_logs_liked_first(logs: Sequence[ShownLog]) -> tuple[ShownLog, ...]:
+    """Liked logs, then the rest; the given order is kept within each group."""
+    return tuple(sorted(logs, key=lambda s: not is_liked(s.experience)))
+
+
+def followee_ids(viewer_id: str, follows: Iterable[Follow]) -> frozenset[str]:
+    return frozenset(f.followee_id for f in follows if f.follower_id == viewer_id)
+
+
 def label_pin_kind(slot: Slot, pin_logs: Sequence[ShownLog]) -> PinKind:
     if slot.is_gem:
         return PinKind.EXPLORE
@@ -198,7 +207,7 @@ def recommend(data: RecommendInput) -> tuple[RecommendationItem, ...]:
     viewer_id = data.viewer.id
     places = {p.id: p for p in data.places}
     logs = tuple(log for log in data.logs if log.place_id in places)
-    followees = frozenset(f.followee_id for f in data.follows if f.follower_id == viewer_id)
+    followees = followee_ids(viewer_id, data.follows)
     excluded = frozenset(
         {b.place_id for b in data.bookmarks if b.user_id == viewer_id}
         | {log.place_id for log in logs if log.user_id == viewer_id}

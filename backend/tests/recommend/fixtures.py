@@ -23,7 +23,8 @@ from app.recommend.service import RecommendInput
 
 TODAY = date(2026, 11, 21)
 
-VIEWER = User(id="u_viewer", display_name="Viewer")
+# A UUID string, like real user ids, so API tests can sign in as this viewer.
+VIEWER = User(id="00000000-0000-0000-0000-000000000001", display_name="Viewer")
 MAYA = User(id="u_maya", display_name="Maya")
 LEO = User(id="u_leo", display_name="Leo")
 KAI = User(id="u_kai", display_name="Kai")
