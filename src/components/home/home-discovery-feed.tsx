@@ -137,7 +137,7 @@ export function HomeDiscoveryFeed() {
       <section className="landmark-carousel" aria-label="Local places to discover">
         {heroSlides.map((slide, index) => (
           <div className={`landmark-slide${index === activeSlide ? ' is-active' : ''}`} key={slide.place} aria-hidden={index !== activeSlide}>
-            <Image src={slide.image} alt={slide.alt} fill sizes="(max-width: 430px) 100vw, 430px" priority={index === 0} unoptimized/>
+            <Image src={slide.image} alt={slide.alt} width={430} height={270} sizes="(max-width: 430px) 100vw, 430px" priority={index === 0} unoptimized/>
             <div className="landmark-shade"/>
             <div className="landmark-copy">
               <span className="landmark-eyebrow">{slide.eyebrow}</span>
@@ -181,7 +181,7 @@ export function HomeDiscoveryFeed() {
             <p className="post-area">{item.area}</p>
             <p className="post-review">{item.review}</p>
             <div className="post-media">
-              <Image src={item.image} alt={item.imageAlt} fill sizes="(max-width: 430px) 92vw, 390px" unoptimized={typeof item.image === 'string' && item.image.endsWith('.svg')}/>
+              <Image src={item.image} alt={item.imageAlt} width={390} height={264} sizes="(max-width: 430px) 92vw, 390px" unoptimized={typeof item.image === 'string' && item.image.endsWith('.svg')}/>
               {item.mediaType === 'video' && <span className="post-video"><Icon name="play" size={17}/><span>0:18</span></span>}
               <span className="post-media-place">{item.place}</span>
             </div>

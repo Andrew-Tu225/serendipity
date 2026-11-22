@@ -17,9 +17,10 @@ Previews and search suggestions scroll internally when needed. Selecting a Googl
 viewport or centers at zoom 16. Unknown Google Places remain temporary markers, displaying
 provider name/address/link and returned attributions without invented app activity.
 Place previews show the address, app rating summary, recommendation evidence, and app reviews.
-App review requests wait for the active viewer identity to be ready. The app shell, map preview,
-and shared styles retain the layout from before PR consolidation; the imported Home carousel and
-expanded photo preview are not mounted in the app.
+App review requests wait for the active viewer identity to be ready. Discover retains its
+pre-consolidation implementation, including live global place search and the stable map renderer.
+The separate Home tab mounts the new landmark carousel and Experience feed; its scoped layout
+styles do not replace map styles. Home images use explicit dimensions rather than absolute fill.
 Reviewed Places retain their original white pins; personal recommendations are amber and friends’ recommendations purple. No legend is shown.
 Recommended and base Places merge by UUID, preserving aggregate ratings. Exact Google IDs suppress
 duplicate provider pins. A followed-user review is white unless the recommendations API classifies
