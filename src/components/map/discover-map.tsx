@@ -42,12 +42,12 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   const nearby = useNearbyPlaces(map, active && !picking);
   const selected = selectedInput?.source === "app"
     ? discovery.getPlace(selectedInput.place_id) ?? { ...selectedInput, friend: undefined, friend_count: 0 }
-    : selectedInput;
+    : nearby.places.find((place) => place.place_id === selectedInput?.place_id) ?? selectedInput;
   const markerPlaces = new Map(nearby.places.map((place) => [`google:${place.place_id}`, place]));
   for (const place of discovery.places) markerPlaces.set(`app:${place.place_id}`, place);
   if (selected?.source === "app") markerPlaces.set(`app:${selected.place_id}`, selected);
   if (searchPlace) {
-    markerPlaces.set(`google:${searchPlace.place_id}`, searchPlace);
+    markerPlaces.set(`google:${searchPlace.place_id}`, nearby.places.find((place) => place.place_id === searchPlace.place_id) ?? searchPlace);
   }
   const appGoogleIds = new Set([...markerPlaces.values()].filter((place) => place.source === "app").map((place) => place.google_place_id));
   for (const [key, place] of markerPlaces) if (place.source === "google" && appGoogleIds.has(place.place_id)) markerPlaces.delete(key);
@@ -160,6 +160,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           {discovery.loading && <div className="discovery-data-status" role="status">Loading app-reviewed places…</div>}
           {discovery.error && <div className="discovery-data-status" role="alert">{discovery.error} <button onClick={discovery.retry}>Reload places</button></div>}
           {nearby.error && !discovery.error && <div className="discovery-data-status" role="alert">{nearby.error} <button onClick={nearby.retry}>Retry nearby places</button></div>}
+          {nearby.waiting && !nearby.error && !discovery.error && <div className="discovery-data-status" role="status">More nearby places will appear shortly.</div>}
           {discovery.complete && !discovery.loading && !discovery.error && !nearby.error && !discovery.hasVisiblePlaces && nearby.places.length === 0 && <div className="discovery-data-status" role="status">No app reviews in this area yet. {nearby.zoomIn && "Zoom in to discover nearby places."} <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}
