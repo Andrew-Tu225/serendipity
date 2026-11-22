@@ -433,6 +433,15 @@
 .account-intro { font-size: 21px; margin-bottom: 12px; }
 .account-note { font-size: 12px; color: #766b7f; margin-top: 22px; }
 .onboarding-symbol { display: grid; place-items: center; width: 64px; height: 64px; background: #eee5f4; color: #73508b; border-radius: 22px; font-size: 38px; margin-top: 28px; }
+.onboarding-shell { display: flex; flex-direction: column; }
+.onboarding-shell .status-bar { flex-shrink: 0; }
+.onboarding-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.onboarding-page { max-width: none; margin: 0; padding: 24px 24px 20px; border-radius: 0; }
+.onboarding-page h1 { overflow-wrap: anywhere; }
+.onboarding-actions { flex-shrink: 0; padding: 12px 24px max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid #eee7f1; background: #faf8fc; }
+.onboarding-actions .primary-button { margin-top: 0; }
+.onboarding-actions .text-button { margin: 5px auto 0; }
+.onboarding-actions [role="alert"] { margin-bottom: 12px; font-size: 13px; }
 .interest-fieldset { margin-top: 28px; }
 .interest-fieldset legend { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
 .interest-grid { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }

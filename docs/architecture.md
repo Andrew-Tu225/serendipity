@@ -184,6 +184,8 @@ After verification, commit with a descriptive conventional commit message, push 
 
 ## First-login personalization and Home
 
+Onboarding uses the same 430px phone frame, desktop rounded corners/shadow, and status bar as the app. Interests scroll inside the frame while the continue/sign-out actions stay at its bottom; mobile screens fill the viewport without document overflow.
+
 `api/onboarding.py` → `OnboardingService` → `OnboardingRepository` owns `/api/me/profile` and `/api/me/onboarding`. Private profile responses expose a public user summary, interests, completion timestamp, and counts for Experiences, saved Places, and following. Requests never accept an owner ID. Category values match the domain enum; unknown/duplicate/empty interests are rejected. `users.onboarding_completed_at` starts null for existing users. Interests are unique by user/category and cascade when a user is removed.
 
 Home calls the typed recommendations client for up to 12 Places in the London bbox `-81.4,42.85,-81.1,43.12`. Cards show returned positive review evidence and relation labels, with no invented match percentages. Selection loads real discovery details and focuses the existing map. Successful reviews invalidate Home recommendations. Profile uses Auth0 name/avatar with an initials fallback and real database counts; mock scores, activity, and character customization are removed. The unrelated Buddy prototype remains.
