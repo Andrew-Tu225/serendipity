@@ -397,6 +397,26 @@
 .profile-stats strong { color: #493750; font-size: 15px; }
 .profile-stats span { color: #71617e; font-size: 9px; }
 .profile-stats button:hover { background: #f8f3fb; }
+.profile-loading { min-height: 60%; display: grid; place-items: center; }
+.profile-spinner { width: 34px; height: 34px; border: 3px solid #e8dff0; border-top-color: #76548f; border-radius: 50%; animation: profile-spin 800ms linear infinite; }
+@keyframes profile-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .profile-spinner { animation-duration: 2.4s; } }
+.settings-anchor { position: relative; }
+.settings-anchor .round-button { color: #4c3d56; transition: background 160ms ease, border-color 160ms ease; }
+.settings-anchor .round-button svg { transition: transform 300ms ease; }
+.settings-anchor .round-button:hover, .settings-anchor .round-button.is-open { border-color: #d9cce2; background: #f4eef8; }
+.settings-anchor .round-button.is-open svg { transform: rotate(60deg); }
+.settings-anchor .round-button:focus-visible { outline: 2px solid #936eaa; outline-offset: 2px; }
+.settings-popover { position: absolute; z-index: 30; top: calc(100% + 8px); right: 0; width: 228px; padding: 7px; border: 1px solid #e8e0ec; border-radius: 18px; background: #fff; box-shadow: 0 14px 34px #36263f26; transform-origin: top right; animation: settings-in 160ms ease-out; }
+@keyframes settings-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+.settings-account { display: flex; flex-direction: column; gap: 3px; padding: 8px 9px 10px; border-bottom: 1px solid #f0ebf2; }
+.settings-account .eyebrow { font-size: 8px; }
+.settings-account strong { overflow: hidden; color: #433749; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.settings-signout { width: 100%; display: flex; align-items: center; gap: 9px; margin-top: 5px; padding: 10px 9px; color: #a34a61; border: 0; border-radius: 12px; background: transparent; font-size: 12px; font-weight: 700; text-align: left; }
+.settings-signout:hover:not(:disabled), .settings-signout:focus-visible { outline: none; background: #fbf0f3; }
+.settings-signout:disabled { opacity: .6; cursor: wait; }
+.settings-error { padding: 4px 9px 6px; color: #8c3348; font-size: 11px; }
+@media (prefers-reduced-motion: reduce) { .settings-popover { animation: none; } .settings-anchor .round-button svg { transition: none; } }
 
 .app-content[hidden] { display: none; }
 .place-lists-screen { display: flex; flex-direction: column; height: 100%; background: #faf8fc; }

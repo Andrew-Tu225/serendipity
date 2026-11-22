@@ -178,7 +178,7 @@ The repository creates the user on first login and updates the same account on l
 4. The auth service upserts the user through `UserRepository`, using the verified Auth0 `sub` as the identity link. It creates a fresh session through `SessionRepository` and commits before redirecting to `/`.
 5. The shared session provider calls `authClient.getSession()`. `GET /api/auth/me` returns the current user row (including onboarding completion), verified claims snapshot, and a CSRF token. The UI does not display claims or the token.
 6. Incomplete accounts choose categories at `/onboarding`. `PUT /api/me/onboarding` uses `CurrentUser` and `VerifiedMutation`; the onboarding service owns the atomic commit/rollback, and its repository locks the user while replacing interests and setting first completion. Auth0 profile updates preserve these fields.
-7. Profile loads `GET /api/me/profile` for real counts and interests. Its sign-out button calls `authClient.signOut()`, revokes the session, and navigates to the Auth0 logout URL.
+7. Profile shows the viewer's saved character portrait (or the deterministic default from their user ID) with follower, following, and list counts from `GET /api/profile/experiences`. The settings button in the Profile header opens a popover whose Sign out action calls `authClient.signOut()` with the session CSRF token, revokes the session, and navigates to the Auth0 logout URL.
 
 The browser authenticates API requests with an HttpOnly session cookie. Auth0 credentials stay in backend configuration, and raw Auth0 tokens are discarded after callback processing. Authenticated responses use `Cache-Control: no-store`; the UI does not render the CSRF token.
 
