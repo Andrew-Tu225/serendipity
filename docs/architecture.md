@@ -184,7 +184,7 @@ After verification, commit with a descriptive conventional commit message, push 
 
 ## First-login personalization and Home
 
-Onboarding uses the same 430px phone frame, desktop rounded corners/shadow, and status bar as the app. Interests scroll inside the frame while the continue/sign-out actions stay at its bottom; mobile screens fill the viewport without document overflow.
+Onboarding uses the same 430px phone frame, desktop rounded corners/shadow, and status bar as the app. Interests scroll inside the frame while an explicit Continue button and sign-out action stay at its bottom; mobile screens fill the viewport without document overflow. Continue stays visible while disabled, with a hint to select at least one interest, then saves onboarding before entering Home. If a running local dev server serves stale CSS and clips these actions, restart it with a fresh `SERENDIPITY_DIST_DIR` before verifying layout.
 
 `api/onboarding.py` → `OnboardingService` → `OnboardingRepository` owns `/api/me/profile` and `/api/me/onboarding`. Private profile responses expose a public user summary, interests, completion timestamp, and counts for Experiences, saved Places, and following. Requests never accept an owner ID. Category values match the domain enum; unknown/duplicate/empty interests are rejected. `users.onboarding_completed_at` starts null for existing users. Interests are unique by user/category and cascade when a user is removed.
 

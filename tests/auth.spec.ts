@@ -53,8 +53,9 @@ test("first login requires interests, retries failed saves, then persists comple
   await expect(page.getByRole("navigation")).toHaveCount(0);
   await page.reload();
   await expect(page).toHaveURL(/\/onboarding$/);
-  const finish = page.getByRole("button", { name: "Start discovering" });
+  const finish = page.getByRole("button", { name: "Continue", exact: true });
   await expect(finish).toBeDisabled();
+  await expect(finish).toBeInViewport({ ratio: 1 });
   const cafe = page.getByRole("button", { name: "Cafés" });
   await cafe.focus();
   await cafe.press("Space");
@@ -178,3 +179,22 @@ test("expired session on a private request clears the app", async ({ page }) => 
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("navigation")).toHaveCount(0);
 });
+
+for (const [width, height] of [[320, 568], [390, 844], [1280, 900]]) {
+  test(`onboarding Continue stays visible before and after selecting interests at ${width}×${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await page.route("**/api/auth/me", (route) => route.fulfill({ json: {
+      ...signedIn, user: { ...signedIn.user, onboarding_completed_at: null },
+    } }));
+    await page.goto("/onboarding");
+    const button = page.getByRole("button", { name: "Continue", exact: true });
+    await expect(button).toBeDisabled();
+    await expect(button).toBeInViewport({ ratio: 1 });
+    await expect(page.getByText("Choose at least one interest to continue.")).toBeVisible();
+    await page.getByRole("button", { name: "Something else", exact: true }).click();
+    await expect(button).toBeEnabled();
+    await expect(button).toBeInViewport({ ratio: 1 });
+    await expect(page.getByText("1 interest selected", { exact: true })).toBeVisible();
+    await page.screenshot({ path: `test-results/onboarding-continue-${width}.png`, fullPage: true });
+  });
+}

@@ -10,19 +10,19 @@ import { categoryLabels } from "@/types/profile";
 export function OnboardingPanel() {
   const { session, refresh } = useSession();
   const [interests, setInterests] = useState<PlaceCategory[]>([]);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"save" | "logout" | null>(null);
   const [error, setError] = useState("");
   if (!session) return null;
   const name = session.user.display_name?.trim().split(/\s+/)[0];
   async function finish() {
     if (!session || pending || !interests.length) return;
-    setPending(true); setError("");
+    setPending("save"); setError("");
     try {
       await profileClient.complete(interests, session.csrf_token);
       await refresh();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Could not save your interests.");
-    } finally { setPending(false); }
+    } finally { setPending(null); }
   }
   return <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
     <div className="app-shell onboarding-shell">
@@ -37,7 +37,7 @@ export function OnboardingPanel() {
           <h1>Welcome{name ? `, ${name}` : ""}.</h1>
           <p className="account-intro">What do you love discovering?</p>
           <p>Pick the places you’re drawn to. We’ll help you discover experiences shared by people with similar taste.</p>
-          <fieldset disabled={pending} className="interest-fieldset">
+          <fieldset disabled={pending !== null} className="interest-fieldset">
             <legend>Choose at least one interest</legend>
             <div className="interest-grid">{placeCategories.map((category) => <button type="button" key={category}
               aria-pressed={interests.includes(category)} className="interest-chip"
@@ -51,13 +51,16 @@ export function OnboardingPanel() {
       </div>
       <footer className="onboarding-actions">
         {error && <p role="alert">{error}</p>}
-        <button className="primary-button" disabled={pending || !interests.length} onClick={() => void finish()}>
-          {pending ? "Saving your interests…" : "Start discovering"}
+        <p id="onboarding-continue-hint" className="onboarding-continue-hint" aria-live="polite">
+          {interests.length ? `${interests.length} ${interests.length === 1 ? "interest" : "interests"} selected` : "Choose at least one interest to continue."}
+        </p>
+        <button className="primary-button" aria-describedby="onboarding-continue-hint" disabled={pending !== null || !interests.length} onClick={() => void finish()}>
+          {pending === "save" ? "Saving your interests…" : "Continue"}
         </button>
-        <button className="text-button" disabled={pending} onClick={() => {
-          setPending(true);
-          void authClient.signOut(session.csrf_token).catch((failure: Error) => { setError(failure.message); setPending(false); });
-        }}>Sign out</button>
+        <button className="text-button" disabled={pending !== null} onClick={() => {
+          setPending("logout");
+          void authClient.signOut(session.csrf_token).catch((failure: Error) => { setError(failure.message); setPending(null); });
+        }}>{pending === "logout" ? "Signing out…" : "Sign out"}</button>
       </footer>
     </div>
   </main>;

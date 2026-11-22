@@ -442,6 +442,7 @@
 .onboarding-actions .primary-button { margin-top: 0; }
 .onboarding-actions .text-button { margin: 5px auto 0; }
 .onboarding-actions [role="alert"] { margin-bottom: 12px; font-size: 13px; }
+.onboarding-continue-hint { margin-bottom: 8px; color: #766b7f; font-size: 12px; text-align: center; }
 .interest-fieldset { margin-top: 28px; }
 .interest-fieldset legend { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
 .interest-grid { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }
