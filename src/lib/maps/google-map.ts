@@ -2,7 +2,7 @@ import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import type { Coordinates, PlaceDetails } from "@/types/places";
 import type { MapBounds } from "@/types/discovery";
 
-export const TORONTO = { latitude: 43.651, longitude: -79.386 };
+export const LONDON = { latitude: 42.9849, longitude: -81.2453 };
 
 export interface MapHandle {
   center(): Coordinates;
@@ -49,7 +49,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
   const { MarkerClusterer } = await import("@googlemaps/markerclusterer");
   signal.throwIfAborted();
   const map = new Map(host, {
-    center: latLng(TORONTO), zoom: 13, mapId,
+    center: latLng(LONDON), zoom: 13, mapId,
     disableDefaultUI: true, clickableIcons: false,
     gestureHandling: "greedy", keyboardShortcuts: false,
   });
@@ -96,7 +96,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
     },
     center() {
       const center = map.getCenter();
-      return center ? { latitude: center.lat(), longitude: center.lng() } : TORONTO;
+      return center ? { latitude: center.lat(), longitude: center.lng() } : LONDON;
     },
     focus(place) {
       if (place.viewport) {

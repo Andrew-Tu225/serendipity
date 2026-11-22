@@ -46,7 +46,7 @@ test("search uses a session token, keyboard selection, and the result viewport",
   await page.route("**/api/places/autocomplete?**", (route) => {
     const params = new URL(route.request().url()).searchParams;
     token = params.get("session_token")!;
-    expect(params.get("latitude")).toBe(params.get("query") === "garden" ? "43.651" : "43.64");
+    expect(params.get("latitude")).toBe(params.get("query") === "garden" ? "42.9849" : "43.64");
     return route.fulfill({ json: { suggestions: [suggestion] } });
   });
   await page.route("**/api/places/garden?**", (route) => {
@@ -106,7 +106,7 @@ test("location is requested only on tap and recenters the map", async ({ page, c
   await context.setGeolocation({ latitude: 43.7, longitude: -79.42 });
   await mockGoogleMaps(page);
   await openDiscover(page);
-  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-center", JSON.stringify({ lat: 43.651, lng: -79.386 }));
+  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-center", JSON.stringify({ lat: 42.9849, lng: -81.2453 }));
   await page.getByRole("button", { name: "Center on my location" }).click();
   await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-center", JSON.stringify({ lat: 43.7, lng: -79.42 }));
   await expect(page.getByRole("button", { name: "Your location", exact: true })).toHaveCount(1);
@@ -183,7 +183,7 @@ test("leaving Discover cancels an unfinished place selection", async ({ page }) 
   await page.getByRole("button", { name: "Discover", exact: true }).click();
   await expect(page.getByRole("article", { name: "Selected place" })).toHaveCount(0);
   await expect(page.getByText("Opening place…")).toHaveCount(0);
-  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-center", JSON.stringify({ lat: 43.651, lng: -79.386 }));
+  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-center", JSON.stringify({ lat: 42.9849, lng: -81.2453 }));
 });
 
 test("Google authorization failures show a useful error", async ({ page }) => {

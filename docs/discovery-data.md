@@ -8,7 +8,7 @@ ranking and its positive-log requirements are a separate API and remain unchange
 
 ## Browsing
 
-Discover starts in Toronto and requests the visible geographic rectangle after the Google map becomes
+Discover starts in London, Ontario and requests the visible geographic rectangle after the Google map becomes
 idle. Initial load, search navigation, panning, zooming, and device-location recentering all use the same
 path. A 250 ms debounce avoids issuing requests continuously while moving the camera. Date-line
 viewports are split into two ordinary rectangles. Requests are cancelled on newer map movement and
@@ -105,6 +105,8 @@ variables. Run both servers using the README commands. Database tables are never
 startup, and development fixtures are never inserted automatically. An empty database stays empty
 until users log Experiences. Friend highlighting uses existing `follows` records; a friend-management
 interface is outside this change.
+For opt-in local fixtures, `npm run db:seed` inserts London Places and labeled mock reviews. A separate
+guarded reset command clears application rows; see [local-demo-data.md](local-demo-data.md).
 
 Run frontend lint, TypeScript/production build, and the browser suite. Browser tests mock the external
 Google SDK and backend HTTP contracts, exercising pagination, cancellation, date-line bounds,

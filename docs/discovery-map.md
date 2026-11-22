@@ -1,7 +1,7 @@
 # Discovery map
 
 Discover is a live Google map with custom markers and place search. The tab loads the SDK on first
-use and begins at Toronto (43.651, -79.386), zoom 13. Browsing pins come from app-reviewed Places
+use and begins at London, Ontario (42.9849, -81.2453), zoom 13. Browsing pins come from app-reviewed Places
 in PostgreSQL, with Serendipity ratings and friends' reviews. Dense pins cluster. There are no
 hard-coded demo pins or demo fallback on errors. Selecting a marker opens its app reviews; closing
 the preview keeps the marker available. See [discovery-data.md](discovery-data.md) for database

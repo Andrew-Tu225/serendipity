@@ -233,7 +233,7 @@ Discover fills the phone above navigation, with floating search, location contro
 Google supplies the basemap and global place/city search through FastAPI. App-reviewed Places come
 from PostgreSQL for the visible map area after initial load, panning, zooming, search, or geolocation.
 Every reviewed Place is eligible, including low ratings; recommendation ranking remains separate.
-Dense locations cluster rather than being dropped. Toronto is the initial camera position; location
+Dense locations cluster rather than being dropped. London, Ontario is the initial camera position; location
 permission is requested only on tap.
 
 Visitors can browse public ratings and reviews without signing in. Signed-in viewers also see the
@@ -247,6 +247,8 @@ then refreshes the map. Google IDs optionally link provider searches to app reco
 addresses, and coordinates remain transient search data. Fake discovery pins are removed. No fixtures
 are inserted automatically. Friend-management UI, saving/bookmark UI, uploads, and category filters
 are still future work. Image storage remains undecided. See [discovery-data.md](discovery-data.md).
+Local development can opt into 24 London Places and labeled mock reviews using the repeatable seed
+script; a guarded reset script clears local application rows. See [local-demo-data.md](local-demo-data.md).
 
 ## 8. Open Questions and Ideas to Explore
 

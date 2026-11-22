@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createGoogleMap, TORONTO, type MapHandle } from "@/lib/maps/google-map";
+import { createGoogleMap, LONDON, type MapHandle } from "@/lib/maps/google-map";
 import type { Coordinates, MapPlace } from "@/types/places";
 import { discoveryClient } from "@/lib/api-client/discovery";
 import { ApiError } from "@/lib/api-client/client";
@@ -72,7 +72,7 @@ export default function DiscoverMap({ active, revision, selected, onSelect, onRe
 
   useEffect(() => () => { resolveRequest.current?.abort(); }, [active]);
 
-  const getCenter = useCallback(() => mapRef.current?.center() ?? TORONTO, []);
+  const getCenter = useCallback(() => mapRef.current?.center() ?? LONDON, []);
   const selectPlace = useCallback((place: MapPlace) => {
     resolveRequest.current?.abort();
     onSelect(place);

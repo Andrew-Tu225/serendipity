@@ -127,6 +127,13 @@ The log and its taste-profile increment commit together or not at all. `add_scor
 
 ## Adding a feature
 
+Local maintenance commands in `backend/scripts/` validate a loopback PostgreSQL target and delegate
+to `DemoDataService` and `DemoDataRepository`. The service commits whole seed/reset operations;
+the repository owns inserts/deletes. Stable demo IDs make seeding repeatable without double-counting
+taste scores or overwriting existing rows. Reset deletes only mapped app rows, preserving the
+migrated schema and Alembic version, and requires the database name as explicit CLI confirmation.
+There are no maintenance HTTP endpoints. See [local-demo-data.md](local-demo-data.md).
+
 Create and switch to a feature branch from the latest appropriate base before editing files. Keep each distinct change on its own branch and pull request; continue review fixes on the existing pull request branch.
 
 1. Define its Pydantic API contracts and matching frontend types.

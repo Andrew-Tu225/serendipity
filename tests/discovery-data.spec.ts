@@ -154,7 +154,7 @@ test("new-place review uses a chosen map point and a user-authored name", async 
   let received = false;
   await page.route("**/api/discovery/experiences", (route) => {
     const payload = route.request().postDataJSON();
-    expect(payload.new_place).toEqual({ name: "My neighborhood restaurant", category: "restaurant", latitude: 43.651, longitude: -79.386 });
+    expect(payload.new_place).toEqual({ name: "My neighborhood restaurant", category: "restaurant", latitude: 42.9849, longitude: -81.2453 });
     expect(payload).not.toHaveProperty("place_id");
     received = true;
     return route.fulfill({ status: 201, json: { place: { ...appPlaces[0], id: "new-place", name: payload.new_place.name }, experiences: [], next_offset: null } });

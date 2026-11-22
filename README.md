@@ -111,7 +111,7 @@ Google's cloud style editor, publish it, and associate it with that Map ID. See
 to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production requires an explicit
 Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
 
-Search and details are available without login or a database. Demo friend activity is illustrative.
+Search and details are available without login or a database. Discover initially centers on London, Ontario.
 Run `npm install` for the marker clustering dependency and `cd backend && uv run alembic upgrade head`
 before using app-reviewed places. Migration 0003 links app Places to optional Google IDs; migration
 0002 supplies Places, Experiences, and follows. The map loads every app-reviewed Place in view from
@@ -120,6 +120,19 @@ users highlighted. Use Add to name a new Place and choose its map point, or Writ
 existing marker. An empty database has no pins until a review is submitted. No demo data is inserted
 automatically. Photos, saving UI, friend-management UI, and filters are deferred. See
 [the database discovery guide](docs/discovery-data.md).
+
+### Local mock reviews
+
+From the repository root, run `npm run db:seed` to insert 24 London places and 101 labeled mock
+reviews from six demo users. The seed is repeatable and preserves existing data. Use
+`npm run db:seed -- --viewer-id YOUR_USER_UUID` to follow three demo users from an existing account.
+
+`npm run db:clear -- --dry-run` shows app row counts. `npm run db:clear -- --confirm serendipity`
+deletes all app data, including users and sessions, from the configured local database while keeping
+its schema and migrations. Replace the confirmation name if your database has a different name.
+The clear command is provided for explicit use; seeding does not clear your data first. Both commands
+require the existing backend virtual environment and reject remote database hosts. See
+[the seed/reset guide](docs/local-demo-data.md) for details and backend `uv` equivalents.
 
 ### Application layers
 
@@ -162,6 +175,8 @@ Browser tests mock the auth API, Google Maps SDK, Places responses, and discover
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | Run ESLint |
+| `npm run db:seed` | Insert repeatable London mock reviews in local PostgreSQL |
+| `npm run db:clear -- --confirm serendipity` | Clear all local app rows, retaining schema |
 | `uv run pytest` (in `backend/`) | Run backend tests |
 | `uv run ruff check .` (in `backend/`) | Lint the backend |
 

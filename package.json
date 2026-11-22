@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:seed": "backend/.venv/bin/python backend/scripts/seed_london.py",
+    "db:clear": "backend/.venv/bin/python backend/scripts/clear_local_db.py",
     "test:browser": "playwright test"
   },
   "dependencies": {
