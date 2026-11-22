@@ -134,8 +134,9 @@ signed-out Profile shows sample connections. All profile endpoints require `Curr
 The character editor saves an account's appearance with `PUT /api/profile/character`, using the
 session's CSRF token and `VerifiedMutation`. `ProfileService` commits the validated appearance to
 `users.character` (Alembic `0005`). Profile and discovery responses carry the saved appearance.
-The client draws a circular face-and-shoulders portrait on profiles, connection rows, friend map
-markers, and review rows. Accounts with no saved appearance get a stable default based on their ID.
+The client draws a circular face-and-shoulders portrait on profiles, connection rows, and review
+rows. Accounts with no saved appearance get a stable default based on their ID. Map markers use
+compact initials for followed users.
 The signed-out preview keeps its character edits for the current page session.
 
 ## Taste Buddies and inbox
@@ -275,3 +276,13 @@ activity, and character customization are removed. The unrelated Buddy prototype
 The Figma preview source (`src/app/App.tsx`, `main.tsx`, and `vite.config.ts`) remains separate from
 the Next.js app entry. Its image imports accept both Vite URL strings and Next.js image metadata
 so the shared repository compiles under Next.js as well as the Figma preview tooling.
+
+The map marker markup and map-specific CSS are restored from `e199a8a` after the Figma merge
+overwrote them. Compact circular pins, decluttered place captions, relationship colours, and
+marker-layer updates stay aligned with the shared map adapter. Search, nearby loading, and stable
+clustering keep their existing implementations; profile, Buddy, and onboarding changes remain in
+place. Recommendation mapping supplies the followed author's ID to the merged friend type.
+
+When checking a map restoration locally, verify the served stylesheet as well as source files:
+the development CSS cache can retain the earlier marker rules while JavaScript has updated.
+The compiled stylesheet must include `.discovery-pin-caption` and the `data-layer` colour rules.

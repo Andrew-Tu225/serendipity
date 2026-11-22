@@ -1,10 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { appPlaces, mockDiscovery, signedIn } from "./helpers/discovery";
+import { appPlaces, mockDiscovery, recommendation, signedIn } from "./helpers/discovery";
 import { mockGoogleMaps } from "./helpers/google-maps";
 import type { MapBounds } from "../src/types/discovery";
+import { bufferBounds } from "../src/lib/maps/bounds";
 
 const initial = { west: -81.3453, east: -81.1453, south: 42.8849, north: 43.0849 };
-const east = { ...initial, west: initial.west + .12, east: initial.east + .12 };
+const shifted = { ...initial, west: initial.west + .06, east: initial.east + .06 };
 const marker = (page: Page) => page.getByRole("button", { name: "View St. Lawrence Market", exact: true });
 async function bounds(page: Page, value: MapBounds) {
   await page.evaluate((value) => (window as unknown as { __boundsTestMap: (bounds: MapBounds) => void }).__boundsTestMap(value), value);
@@ -15,149 +16,166 @@ async function open(page: Page) {
 }
 test.beforeEach(async ({ page }) => { await mockGoogleMaps(page); await mockDiscovery(page); });
 
-test("pagination adds pins without replacing earlier markers or caching an unfinished area", async ({ page }) => {
-  let release!: () => void;
-  const blocked = new Promise<void>((resolve) => { release = resolve; });
-  let calls = 0;
-  await page.route("**/api/discovery/places?**", async (route) => {
-    calls++;
-    const cursor = new URL(route.request().url()).searchParams.get("cursor");
-    if (cursor) await blocked;
-    return route.fulfill({ json: { places: cursor ? appPlaces.slice(1) : [appPlaces[0]], next_cursor: cursor ? null : appPlaces[0].id } });
+async function ranked(page: Page, handler: (bbox: string) => Promise<unknown> | unknown) {
+  await page.route("**/api/recommendations?**", async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    if (params.get("limit") === "12") return route.fulfill({ json: { items: [] } });
+    return route.fulfill({ json: await handler(params.get("bbox")!) });
   });
-  await open(page);
-  await expect(marker(page)).toBeVisible();
-  const identity = await marker(page).getAttribute("data-marker-id");
-  await expect.poll(() => calls).toBe(2);
-  await bounds(page, { ...initial, west: initial.west + .02, east: initial.east + .02 });
-  await page.waitForTimeout(350);
-  expect(calls).toBe(2);
-  release();
-  await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
-  await expect(page.getByText("Loading app-reviewed places…")).toHaveCount(0);
-  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
-  await bounds(page, initial);
-  await page.waitForTimeout(350);
-  expect(calls).toBe(2);
-});
+}
 
-test("panning fetches only exposed strips, keeps overlapping markers, and reuses return trips", async ({ page }) => {
-  const requests: MapBounds[] = [];
-  let release!: () => void;
-  const blocked = new Promise<void>((resolve) => { release = resolve; });
-  const added = { ...appPlaces[3], id: "new-east-place", name: "New eastern place", longitude: -81.04, latitude: 42.9849 };
-  await page.route("**/api/discovery/places?**", async (route) => {
-    const [west, south, east, north] = new URL(route.request().url()).searchParams.get("bbox")!.split(",").map(Number);
-    requests.push({ west, south, east, north });
-    if (requests.length > 1) await blocked;
-    return route.fulfill({ json: { places: requests.length === 1 ? [appPlaces[0]] : [added], next_cursor: null } });
-  });
+test("small pans, focus, and tab return reuse buffered rankings; leaving coverage requests a new area", async ({ page }) => {
+  const requests: string[] = [];
+  await ranked(page, (bbox) => { requests.push(bbox); return { items: [recommendation(appPlaces[0])] }; });
   await open(page);
   await expect(marker(page)).toBeVisible();
   const identity = await marker(page).getAttribute("data-marker-id");
-  await expect(page.getByText("Loading app-reviewed places…")).toHaveCount(0);
-  await bounds(page, { ...initial, west: initial.west + .02, east: initial.east + .02 });
-  await page.waitForTimeout(350);
+  const small = { ...initial, west: initial.west + .02, east: initial.east + .02 };
+  await bounds(page, small);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.waitForTimeout(650);
   expect(requests).toHaveLength(1);
-  await bounds(page, east);
+  const [firstArea] = bufferBounds([initial]);
+  requests[0].split(",").map(Number).forEach((value, i) => expect(value).toBeCloseTo([firstArea.west, firstArea.south, firstArea.east, firstArea.north][i], 7));
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await page.waitForTimeout(650);
+  expect(requests).toHaveLength(1);
+  await bounds(page, shifted);
   await expect.poll(() => requests.length).toBe(2);
-  expect(requests[1].west).toBeCloseTo(requests[0].east, 8);
-  expect(requests[1].east).toBeGreaterThan(requests[0].east);
-  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
-  await expect(page.getByText("Loading app-reviewed places…")).toHaveCount(0);
-  await page.screenshot({ path: "test-results/discovery-background-pan.png" });
-  release();
-  await expect(page.getByRole("button", { name: "View New eastern place" })).toBeVisible();
+  const [nextArea] = bufferBounds([shifted]);
+  requests[1].split(",").map(Number).forEach((value, i) => expect(value).toBeCloseTo([nextArea.west, nextArea.south, nextArea.east, nextArea.north][i], 7));
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
   await bounds(page, initial);
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(650);
   expect(requests).toHaveLength(2);
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
 });
 
-test("expired ratings update quietly in the same marker and click handlers see the new data", async ({ page }) => {
-  await page.clock.install();
-  let calls = 0;
-  await page.route("**/api/discovery/places?**", (route) => {
-    calls++;
-    const place = calls === 1 ? appPlaces[0] : { ...appPlaces[0], rating_summary: { average: 2.5, count: 24 } };
-    return route.fulfill({ json: { places: [place], next_cursor: null } });
-  });
-  await open(page);
-  await expect(marker(page)).toBeVisible();
-  const identity = await marker(page).getAttribute("data-marker-id");
-  await expect(page.getByText("Loading app-reviewed places…")).toHaveCount(0);
-  await page.clock.fastForward(61_000);
-  await expect.poll(() => calls).toBe(2);
-  await expect(marker(page)).toContainText("2.5");
-  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
-  await expect(page.getByText("Loading app-reviewed places…")).toHaveCount(0);
-  await marker(page).click();
-  await expect(page.getByRole("article")).toContainText("2.5/5 · 24 reviews");
-});
-
-test("switching viewers clears friend labels and refetches without replacing the marker", async ({ page }) => {
-  let guest = false;
-  let calls = 0;
-  await page.route("**/api/auth/me", (route) => guest
-    ? route.fulfill({ status: 401, json: { detail: "Sign in to continue" } })
-    : route.fulfill({ json: signedIn }));
-  await page.route("**/api/discovery/places?**", (route) => {
-    calls++;
-    return route.fulfill({ json: { places: [guest ? { ...appPlaces[0], friend_count: 0, friends: [] } : appPlaces[0]], next_cursor: null } });
-  });
-  await open(page);
-  await expect(marker(page)).toBeVisible();
-  await expect(marker(page)).toContainText("Elena");
-  const identity = await marker(page).getAttribute("data-marker-id");
-  await marker(page).click();
-  guest = true;
-  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await expect.poll(() => calls).toBe(2);
-  await expect(marker(page)).not.toContainText("Elena");
-  await expect(page.getByRole("article")).not.toContainText("Elena recommends this");
-  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
-});
-
-test("background failure preserves pins and has no loading banner", async ({ page }) => {
-  let calls = 0;
-  await page.route("**/api/discovery/places?**", (route) => ++calls === 1
-    ? route.fulfill({ json: { places: [appPlaces[0]], next_cursor: null } })
-    : route.fulfill({ status: 503, json: { detail: "Database is unavailable" } }));
-  await open(page);
-  await expect(marker(page)).toBeVisible();
-  const identity = await marker(page).getAttribute("data-marker-id");
-  await expect(page.getByText("Loading app-reviewed places…")).toHaveCount(0);
-  await bounds(page, east);
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("Database is unavailable");
-  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
-  await expect(page.getByText("Loading app-reviewed places…")).toHaveCount(0);
-});
-
-test("a late response from the previous viewer cannot restore old friend data", async ({ page }) => {
-  await page.clock.install();
-  let account = "first-viewer";
+test("a small pan preserves an applicable in-flight ranking", async ({ page }) => {
   let calls = 0;
   let release!: () => void;
   const blocked = new Promise<void>((resolve) => { release = resolve; });
-  await page.route("**/api/auth/me", (route) => route.fulfill({ json: { ...signedIn, user: { ...signedIn.user, id: account } } }));
-  await page.route("**/api/discovery/places?**", async (route) => {
-    const number = ++calls;
-    const place = account === "first-viewer" ? appPlaces[0] : { ...appPlaces[0], friends: [], friend_count: 0 };
-    if (number === 2) await blocked;
-    return route.fulfill({ json: { places: [place], next_cursor: null } });
+  await ranked(page, async () => {
+    calls++;
+    await blocked;
+    return { items: [recommendation(appPlaces[0])] };
+  });
+  await open(page);
+  await expect.poll(() => calls).toBe(1);
+  await bounds(page, { ...initial, west: initial.west + .02, east: initial.east + .02 });
+  await page.waitForTimeout(650);
+  expect(calls).toBe(1);
+  release();
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
+  expect(calls).toBe(1);
+});
+
+test("an obsolete delayed ranking cannot overwrite the new browsing area", async ({ page }) => {
+  let calls = 0;
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  await ranked(page, async () => {
+    if (++calls === 1) { await blocked; return { items: [recommendation(appPlaces[0])] }; }
+    return { items: [recommendation(appPlaces[1])] };
+  });
+  await open(page);
+  await expect.poll(() => calls).toBe(1);
+  await bounds(page, shifted);
+  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
+  release();
+  await page.waitForTimeout(650);
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
+});
+
+test("a place leaving recommendations returns to the white review layer without replacing its marker", async ({ page }) => {
+  let calls = 0;
+  await ranked(page, () => ({ items: [recommendation(appPlaces[calls++ === 0 ? 0 : 1])] }));
+  await open(page);
+  await expect(marker(page)).toBeVisible();
+  const identity = await marker(page).getAttribute("data-marker-id");
+  await marker(page).focus();
+  await marker(page).press("Enter");
+  await expect(page.getByRole("article", { name: "Selected place" })).toBeVisible();
+  await bounds(page, shifted);
+  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true })).toBeVisible();
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
+  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
+  await expect(page.getByRole("article", { name: "Selected place" })).toBeVisible();
+});
+
+test("expired recommendation evidence updates quietly without replacing its marker", async ({ page }) => {
+  await page.clock.install();
+  let calls = 0;
+  await ranked(page, () => {
+    const item = recommendation(appPlaces[0]);
+    if (++calls > 1) { item.kind = "similar_taste"; item.logs[0].relation = "similar_taste"; item.logs[0].rating = 5; item.logs[0].review = "Fresh recommendation evidence"; }
+    return { items: [item] };
   });
   await open(page);
   await expect(marker(page)).toBeVisible();
   const identity = await marker(page).getAttribute("data-marker-id");
+  await page.clock.fastForward(61_000);
+  await expect.poll(() => calls).toBe(2);
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "recommendation");
+  await expect(marker(page)).toHaveAttribute("data-priority", "20");
+  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
+  await expect(page.getByText("Loading recommendations…")).toHaveCount(0);
+  await marker(page).click();
+  await expect(page.getByRole("article")).toContainText("Fresh recommendation evidence");
+});
+
+test("session expiration removes recommendation pins and returns to login", async ({ page }) => {
+  let expired = false;
+  await page.route("**/api/auth/me", (route) => expired
+    ? route.fulfill({ status: 401, json: { detail: "Sign in to continue" } })
+    : route.fulfill({ json: signedIn }));
+  await open(page);
+  await expect(marker(page)).toBeVisible();
+  expired = true;
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(marker(page)).toHaveCount(0);
+});
+
+test("background recommendation failure preserves previous API pins without a loading banner", async ({ page }) => {
+  let fail = false;
+  await page.route("**/api/recommendations?**", (route) => {
+    if (new URL(route.request().url()).searchParams.get("limit") === "12") return route.fulfill({ json: { items: [] } });
+    return fail ? route.fulfill({ status: 503, json: { detail: "Recommendations are unavailable" } })
+      : route.fulfill({ json: { items: [recommendation(appPlaces[0])] } });
+  });
+  await open(page);
+  await expect(marker(page)).toBeVisible();
+  const identity = await marker(page).getAttribute("data-marker-id");
+  fail = true;
+  await bounds(page, shifted);
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Recommendations are unavailable");
+  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
+  await expect(page.getByText("Loading recommendations…")).toHaveCount(0);
+});
+
+test("a late response from another account cannot restore old recommendations", async ({ page }) => {
+  await page.clock.install();
+  let account = "first-viewer", calls = 0;
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/auth/me", (route) => route.fulfill({ json: { ...signedIn, user: { ...signedIn.user, id: account } } }));
+  await ranked(page, async () => {
+    const item = recommendation(appPlaces[account === "first-viewer" ? 0 : 1]);
+    if (++calls === 2) await blocked;
+    return { items: [item] };
+  });
+  await open(page);
+  await expect(marker(page)).toBeVisible();
   await page.clock.fastForward(61_000);
   await expect.poll(() => calls).toBe(2);
   account = "second-viewer";
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await expect.poll(() => calls).toBe(3);
-  await expect(marker(page)).not.toContainText("Elena");
+  await expect(page.getByRole("heading", { name: "What feels fun?" })).toBeVisible();
+  await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true })).toBeVisible();
   release();
   await page.waitForTimeout(350);
-  await expect(marker(page)).not.toContainText("Elena");
-  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
 });
