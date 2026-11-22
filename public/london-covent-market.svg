@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-label="Illustrated Covent Garden Market in London, Ontario">
+  <defs>
+    <linearGradient id="marketSky" x2="0" y2="1"><stop stop-color="#d4d0de"/><stop offset=".58" stop-color="#f0c7a6"/><stop offset="1" stop-color="#d98e70"/></linearGradient>
+    <linearGradient id="marketGlass" x2="0" y2="1"><stop stop-color="#abc0bd"/><stop offset="1" stop-color="#607e81"/></linearGradient>
+    <linearGradient id="marketBrick" x2="0" y2="1"><stop stop-color="#bd7564"/><stop offset="1" stop-color="#754d52"/></linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#marketSky)"/>
+  <circle cx="988" cy="150" r="65" fill="#f8d7a8" opacity=".8"/>
+  <path d="M0 385 160 335l130 37 152-92 154 63 142-54 157 62 146-92 159 92v207H0z" fill="#948d9b" opacity=".46"/>
+  <path d="M0 480h1200v220H0z" fill="#887b7c"/><path d="M0 556c219-37 377 30 608-8s394-36 592 6v146H0z" fill="#c7a18b"/>
+  <path d="M136 401h928v185H136z" fill="url(#marketBrick)"/>
+  <path d="M100 398h1000v38H100z" fill="#e1cbb5"/>
+  <path d="M380 400V213h440v187z" fill="#984f4d"/>
+  <path d="M352 220 600 105l248 115z" fill="#70505b"/>
+  <path d="M420 215h360v-78l-180-79-180 79z" fill="#bc6f5d"/>
+  <path d="M458 192h284v-43l-142-62-142 62z" fill="#d68a69"/>
+  <circle cx="600" cy="158" r="35" fill="#f7e5c8" stroke="#704d50" stroke-width="9"/>
+  <path d="M600 133v26l16 11" fill="none" stroke="#704d50" stroke-width="5" stroke-linecap="round"/>
+  <path d="M183 456h224v130H183zm610 0h226v130H793z" fill="url(#marketGlass)" stroke="#ead6bd" stroke-width="9"/>
+  <path d="M238 456v130m56-130v130m55-130v130M851 456v130m56-130v130m56-130v130" stroke="#d8c5b5" stroke-width="6"/>
+  <path d="M433 437h334v149H433z" fill="#764b4f"/><path d="M477 483q0-69 64-69t64 69v103H477zm142 0q0-69 64-69t64 69v103H619z" fill="#443f50"/>
+  <path d="M0 641c175-52 334-16 496 11s333-29 704-8v56H0z" fill="#6c666d"/>
+  <g fill="#f5eadb"><path d="M70 530h110v8H70zm340 0h65v8h-65zm652 0h92v8h-92z"/></g>
+</svg>
