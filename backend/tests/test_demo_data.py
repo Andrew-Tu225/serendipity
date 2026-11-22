@@ -31,7 +31,7 @@ async def test_seed_is_complete_idempotent_and_preserves_existing_data(database_
             "users": 20,
             "places": 24,
             "experiences": 171,
-            "follows": 40,
+            "follows": 52,
             "bookmarks": 60,
         }
         rows = (await session.scalars(select(TasteProfile))).all()
@@ -45,7 +45,7 @@ async def test_seed_is_complete_idempotent_and_preserves_existing_data(database_
         assert {(row.user_id, row.category): row.score for row in rows} == scores
         assert (
             await session.scalars(select(Follow).where(Follow.follower_id == real_user.id))
-        ).all() == []
+        ).all() != []
 
 
 async def test_taste_scores_equal_inserted_mock_logs(database_factory):
@@ -66,7 +66,7 @@ async def test_viewer_follows_and_public_discovery(database_factory):
         session.add(viewer)
         await session.commit()
         inserted = await DemoDataService(session).seed_london(date.today(), viewer.id)
-        assert inserted["follows"] == 43
+        assert inserted["follows"] == 52
         bounds = BBox(min_lng=-81.35, min_lat=42.93, max_lng=-81.20, max_lat=43.03)
         public = await DiscoveryService(session).discover(bounds, None, 200, None)
         assert len(public.places) == 24
@@ -82,8 +82,8 @@ async def test_viewer_follows_and_public_discovery(database_factory):
         assert any(place.friend_count > 0 for place in private.places)
         for place in private.places:
             for review in place.friends:
-                assert review.author_name.startswith("Demo ")
-                assert review.review.startswith("[Mock review]")
+                assert not review.author_name.startswith("Demo ")
+                assert not review.review.startswith("[Mock review]")
         again = await DemoDataService(session).seed_london(date.today(), viewer.id)
         assert all(count == 0 for count in again.values())
 
@@ -149,7 +149,7 @@ async def test_every_demo_user_has_at_least_five_reviews():
     for person in PEOPLE:
         authored = [log for log in logs if log.user_id == str(demo_id(f"user:{person}"))]
         assert len(authored) >= 5
-        assert all(log.review.startswith("[Mock review]") for log in authored)
+        assert all(not log.review.startswith("[Mock review]") for log in authored)
 
 
 async def test_seed_expands_original_dataset_without_rewriting_reviews(

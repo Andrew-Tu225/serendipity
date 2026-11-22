@@ -76,7 +76,11 @@ class AuthService:
             raise HTTPException(400, "Auth0 did not return a valid identity")
         if len(claims["sub"]) > 255:
             raise HTTPException(400, "Auth0 returned an invalid subject")
-        user = await self.users.upsert_from_auth0(claims)
+        user, created = await self.users.upsert_from_auth0_with_creation(claims)
+        if created and self.settings.local_sample_friends_enabled:
+            from app.services.sample_friends import SampleFriendsService
+
+            await SampleFriendsService(self.database).connect(user.id)
         raw_token = secrets.token_urlsafe(32)
         await self.sessions.add(
             AuthSession(

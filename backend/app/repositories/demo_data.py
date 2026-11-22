@@ -5,7 +5,7 @@ from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import Base
-from app.models import User
+from app.models import Experience, Place, User
 
 
 class DemoDataRepository:
@@ -27,6 +27,52 @@ class DemoDataRepository:
 
     async def user(self, user_id: UUID):
         return await self.session.get(User, user_id)
+
+    async def existing_users(self, ids):
+        return (await self.session.scalars(select(User.id).where(User.id.in_(ids)))).all()
+
+    async def non_fixture_users(self, fixture_ids):
+        return (
+            await self.session.scalars(select(User.id).where(User.id.not_in(fixture_ids)))
+        ).all()
+
+    async def refresh_labels(self, names, logs):
+        from sqlalchemy import update
+
+        for user_id, name in names:
+            await self.session.execute(
+                update(User)
+                .where(User.id == user_id, User.display_name == f"Demo {name}")
+                .values(display_name=name)
+            )
+        for log in logs:
+            await self.session.execute(
+                update(Experience)
+                .where(
+                    Experience.id == UUID(log.id),
+                    Experience.user_id == UUID(log.user_id),
+                    Experience.review == f"[Mock review] {log.review}",
+                )
+                .values(review=log.review)
+            )
+
+    async def link_place(self, place_id: UUID, google_id: str) -> bool:
+        from sqlalchemy import update
+
+        place = await self.session.get(Place, place_id)
+        if place is None or place.google_place_id not in {None, google_id}:
+            return False
+        conflict = await self.session.scalar(
+            select(Place.id).where(Place.google_place_id == google_id, Place.id != place_id)
+        )
+        if conflict is not None:
+            return False
+        await self.session.execute(
+            update(Place)
+            .where(Place.id == place_id, Place.google_place_id.is_(None))
+            .values(google_place_id=google_id)
+        )
+        return True
 
     async def counts(self) -> dict[str, int]:
         return {

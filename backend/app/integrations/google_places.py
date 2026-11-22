@@ -57,6 +57,19 @@ class GooglePlacesClient:
             body["locationBias"] = {"circle": {"center": center, "radius": 25000.0}}
         return await self.request("POST", "/v1/places:autocomplete", AUTOCOMPLETE_FIELDS, json=body)
 
+    async def find_fixture(self, name: str) -> list[dict]:
+        data = await self.request(
+            "POST",
+            "/v1/places:searchText",
+            "places.id,places.displayName,places.location",
+            json={
+                "textQuery": f"{name}, London, Ontario, Canada",
+                "languageCode": "en",
+                "pageSize": 5,
+            },
+        )
+        return data.get("places", [])
+
     async def details(self, place_id: str, session_token: str) -> dict:
         return await self.request(
             "GET",

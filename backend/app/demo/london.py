@@ -144,7 +144,7 @@ def experiences(today: date) -> list[domain.Experience]:
                     place_id=str(demo_id(f"place:{place.slug}")),
                     rating=rating,
                     verdict=verdict,
-                    review=f"[Mock review] {note}",
+                    review=note,
                     visited_on=today - timedelta(days=1 + (index + offset * 5) % 30),
                 )
             )
@@ -157,7 +157,7 @@ def experiences(today: date) -> list[domain.Experience]:
                     place_id=str(demo_id(f"place:{place.slug}")),
                     rating=3,
                     verdict=domain.Verdict.NEUTRAL,
-                    review="[Mock review] An earlier visit; I came back to try this place again.",
+                    review="An earlier visit; I came back to try this place again.",
                     visited_on=today - timedelta(days=60),
                 )
             )

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     session_lifetime_seconds: int = 8 * 60 * 60
     login_lifetime_seconds: int = 10 * 60
     backend_api_key_google: str = ""
+    local_sample_friends_enabled: bool = False
 
     @field_validator("auth0_domain")
     @classmethod
@@ -55,6 +56,19 @@ class Settings(BaseSettings):
                 raise ValueError("Non-local deployments require HTTPS and COOKIE_SECURE=true")
         if self.session_lifetime_seconds <= 0 or self.login_lifetime_seconds <= 0:
             raise ValueError("Session lifetimes must be positive")
+        if self.local_sample_friends_enabled:
+            from sqlalchemy.engine import make_url
+
+            url = make_url(self.database_url)
+            if (
+                urlsplit(self.app_base_url).hostname not in {"localhost", "127.0.0.1", "::1"}
+                or url.drivername != "postgresql+psycopg"
+                or url.host not in {"localhost", "127.0.0.1", "::1"}
+                or not url.database
+                or set(url.query)
+                & {"host", "hostaddr", "port", "service", "servicefile", "dbname", "database"}
+            ):
+                raise ValueError("Local sample friends require loopback app and PostgreSQL targets")
         return self
 
     @property

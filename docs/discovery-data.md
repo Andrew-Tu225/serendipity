@@ -162,7 +162,7 @@ until users author Places through Experiences or saved-place creation. Friend hi
 `follows` records, now manageable through the [social backend API](social-api.md); friend-management
 UI remains future work. Saving an unreviewed Place does not make it eligible for reviewed-place
 discovery until it has an Experience.
-For opt-in local fixtures, `npm run db:seed` inserts London Places and labeled mock reviews. A separate
+For opt-in local fixtures, `npm run db:seed` inserts London Places, fictional reviews with ordinary product copy, and six mutual sample friends for every local account. A separate
 guarded reset command clears application rows; see [local-demo-data.md](local-demo-data.md).
 
 Run frontend lint, TypeScript/production build, and the browser suite. Browser tests mock the external

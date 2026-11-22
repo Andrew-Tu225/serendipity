@@ -9,6 +9,7 @@ from app.models import Bookmark, Experience, Follow, Place, User
 from app.recommend.taste import log_value
 from app.repositories.demo_data import DemoDataRepository
 from app.repositories.experiences import TasteProfileRepository
+from app.services.sample_friends import SampleFriendsService
 
 
 class DemoDataService:
@@ -31,7 +32,7 @@ class DemoDataService:
                     {
                         "id": user_ids[index],
                         "auth0_sub": f"demo:london:{name.lower()}",
-                        "display_name": f"Demo {name}",
+                        "display_name": name,
                     }
                     for index, name in enumerate(PEOPLE)
                 ],
@@ -81,13 +82,11 @@ class DemoDataService:
                 for index, user_id in enumerate(user_ids)
                 for offset in (1, 2)
             ]
-            if viewer_id is not None:
-                follows.extend(
-                    {"follower_id": viewer_id, "followee_id": user_id}
-                    for user_id in user_ids[:3]
-                    if user_id != viewer_id
-                )
             added_follows = await self.repository.insert_missing(Follow, follows)
+            connected = 0
+            for account_id in await self.repository.non_fixture_users(user_ids):
+                connected += await SampleFriendsService(self.session).connect(account_id)
+            await self.repository.refresh_labels(zip(user_ids, PEOPLE, strict=True), logs)
             bookmarks = await self.repository.insert_missing(
                 Bookmark,
                 [
@@ -104,7 +103,7 @@ class DemoDataService:
                 "users": len(users),
                 "places": len(places),
                 "experiences": len(inserted_logs),
-                "follows": len(added_follows),
+                "follows": len(added_follows) + connected,
                 "bookmarks": len(bookmarks),
             }
         except Exception:

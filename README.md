@@ -147,9 +147,10 @@ and session/CSRF requirements, or inspect `/api/docs` on the backend.
 
 ### Local mock reviews
 
-From the repository root, run `npm run db:seed` to insert 20 demo users, 24 London places, and 171 labeled mock
-reviews. Every demo user has at least five reviews. The seed is repeatable and preserves existing data. Use
-`npm run db:seed -- --viewer-id YOUR_USER_UUID` to follow three demo users from an existing account.
+From the repository root, run `npm run db:seed` to insert 20 fictional users, 24 London places, and 171 naturally worded
+reviews. Every fixture user has at least five reviews. All existing local accounts receive six mutual
+connections; set `LOCAL_SAMPLE_FRIENDS_ENABLED=true` for new accounts at first sign-in. The seed is repeatable and preserves existing data. Use
+`npm run db:seed -- --link-google` to verify Google Place IDs for popup photos.
 
 `npm run db:clear -- --dry-run` shows app row counts. `npm run db:clear -- --confirm serendipity`
 deletes all app data, including users and sessions, from the configured local database while keeping

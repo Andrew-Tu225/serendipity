@@ -294,3 +294,14 @@ router/service/provider integration. The provider requests fresh `photos` metada
 the first resource through Place Photos with `skipHttpRedirect=true` and `maxWidthPx=800`.
 Only the resulting image URL and attribution reach the browser; responses use `no-store`.
 No database or image-storage provider is involved.
+
+### Local sample relationships
+
+The explicit local seed refreshes expected legacy labels and connects six fixture people
+mutually to every non-fixture account. `SampleFriendsService` delegates conflict-safe inserts
+to the fixture repository without committing. When `LOCAL_SAMPLE_FRIENDS_ENABLED=true`,
+authentication calls it only when the Auth0 upsert returns its proposed new UUID. The auth
+service commits relationships and session together, preserving later unfollows. Settings
+reject non-loopback app/database targets and libpq target overrides for this local mode.
+`FixturePlacesService` optionally verifies authored destinations using Google Text Search;
+it stores matching IDs only and commits separately from the fixture seed.

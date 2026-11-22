@@ -15,7 +15,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # no
 
 from app.config import get_settings  # noqa: E402
 from app.demo.london import PEOPLE, PLACES, experiences  # noqa: E402
+from app.integrations.google_places import GooglePlacesClient  # noqa: E402
 from app.services.demo_data import DemoDataService  # noqa: E402
+from app.services.fixture_places import FixturePlacesService  # noqa: E402
 from scripts.local_database import local_database_url, target_label  # noqa: E402
 
 
@@ -24,12 +26,17 @@ async def main():
     parser.add_argument(
         "--viewer-id",
         type=UUID,
-        help="Optionally follow three demo users from this existing account.",
+        help="Validate an existing account ID (all local accounts receive six mutual friends).",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Describe the fixtures without connecting or writing.",
+    )
+    parser.add_argument(
+        "--link-google",
+        action="store_true",
+        help="Verify London destinations with Google and store matching Place IDs only.",
     )
     args = parser.parse_args()
     try:
@@ -53,7 +60,12 @@ async def main():
     try:
         async with async_sessionmaker(engine, expire_on_commit=False)() as session:
             result = await DemoDataService(session).seed_london(date.today(), args.viewer_id)
-        print("Inserted: " + json.dumps(result, sort_keys=True))
+            print("Inserted: " + json.dumps(result, sort_keys=True))
+            if args.link_google:
+                linked = await FixturePlacesService(
+                    session, GooglePlacesClient(get_settings().backend_api_key_google)
+                ).link()
+                print("Place links: " + json.dumps(linked, sort_keys=True))
     except (SQLAlchemyError, ValueError) as error:
         message = (
             str(error)

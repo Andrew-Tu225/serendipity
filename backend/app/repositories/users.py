@@ -19,20 +19,26 @@ class UserRepository:
         user.character = character
 
     async def upsert_from_auth0(self, claims: dict[str, Any]) -> User:
+        user, _ = await self.upsert_from_auth0_with_creation(claims)
+        return user
+
+    async def upsert_from_auth0_with_creation(self, claims: dict[str, Any]) -> tuple[User, bool]:
         profile = {
             "email": claims.get("email"),
             "email_verified": claims.get("email_verified"),
             "display_name": claims.get("name") or claims.get("nickname"),
             "picture_url": claims.get("picture"),
         }
+        proposed_id = uuid4()
         statement = (
             insert(User)
-            .values(id=uuid4(), auth0_sub=claims["sub"], **profile)
+            .values(id=proposed_id, auth0_sub=claims["sub"], **profile)
             .on_conflict_do_update(
                 index_elements=[User.auth0_sub], set_={**profile, "updated_at": func.now()}
             )
             .returning(User)
         )
-        return (
+        user = (
             await self.session.scalars(statement.execution_options(populate_existing=True))
         ).one()
+        return user, user.id == proposed_id
