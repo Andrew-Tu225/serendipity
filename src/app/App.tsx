@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type ReactNode } from 'react'
+import { useRef, useState, type ChangeEvent, type PointerEvent, type ReactNode } from 'react'
 import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
 
@@ -18,6 +18,7 @@ type IconName =
   | 'pin'
   | 'globe'
   | 'lock'
+  | 'message'
 
 function Icon({ name, size = 22, filled = false }: { name: IconName; size?: number; filled?: boolean }) {
   const paths: Record<IconName, ReactNode> = {
@@ -36,6 +37,7 @@ function Icon({ name, size = 22, filled = false }: { name: IconName; size?: numb
     pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
     globe: <><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></>,
     lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
+    message: <><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M8 9h8M8 13h5"/></>,
   }
 
   return (
@@ -62,6 +64,7 @@ function App() {
   const [saved, setSaved] = useState(false)
   const [sheet, setSheet] = useState<'post' | 'soon' | null>(null)
   const [posted, setPosted] = useState(false)
+  const [inboxOpen, setInboxOpen] = useState(false)
   const [media, setMedia] = useState<{ url: string; type: string; name: string } | null>(null)
   const [postCategory, setPostCategory] = useState('Restaurants')
   const [sentiment, setSentiment] = useState('liked')
@@ -75,6 +78,7 @@ function App() {
       return
     }
     setSheet(null)
+    setInboxOpen(false)
     setActiveTab(tab)
   }
 
@@ -113,7 +117,9 @@ function App() {
             <p className="eyebrow">{pageEyebrow}</p>
             <h1>{pageTitle}</h1>
           </div>
-          <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>
+          <button className="round-button" onClick={() => activeTab === 'Buddy' && setInboxOpen(true)} aria-label={activeTab === 'Buddy' ? 'Open messages' : 'Notifications'}>
+            <Icon name={activeTab === 'Buddy' ? 'message' : 'bell'} size={20}/><span className="notification-dot"/>
+          </button>
         </header>
 
         <div className="app-content">
@@ -183,6 +189,8 @@ function App() {
           <NavButton label="Buddy" icon="users" active={activeTab === 'Buddy'} onClick={() => changeTab('Buddy')}/>
           <NavButton label="Profile" icon="user" active={activeTab === 'Profile'} onClick={() => changeTab('Profile')}/>
         </nav>
+
+        {inboxOpen && <BuddyInbox onClose={() => setInboxOpen(false)}/>}
 
         {sheet && (
           <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}>
@@ -264,9 +272,138 @@ function NavButton({ label, icon, active, onClick }: { label: string; icon: Icon
   return <button className={active ? 'nav-item active' : 'nav-item'} onClick={onClick}><Icon name={icon} size={22} filled={active}/><span>{label}</span></button>
 }
 
+const inboxThreads = [
+  { id: 1, name: 'Alex', preview: 'I’ve been wanting to try that jazz spot too.', time: '2m', unread: true, variant: 'one', messages: ['Hey Mia! Your saved spots are so good.', 'I’ve been wanting to try that jazz spot too.'] },
+  { id: 2, name: 'Elena', preview: 'The pottery class was absolutely worth it.', time: '1h', unread: true, variant: 'two', messages: ['Thanks for the recommendation!', 'The pottery class was absolutely worth it.'] },
+  { id: 3, name: 'Jordan', preview: 'Saturday works. Want to meet there at 7?', time: 'Tue', unread: false, variant: 'three', messages: ['Have you tried the new listening bar?', 'Saturday works. Want to meet there at 7?'] },
+  { id: 4, name: 'Nora', preview: 'Sending you my Tokyo list now!', time: 'Sun', unread: false, variant: 'one', messages: ['You’ll love the tiny ramen spot in Shimokitazawa.', 'Sending you my Tokyo list now!'] },
+]
+
+function BuddyInbox({ onClose }: { onClose: () => void }) {
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [unread, setUnread] = useState(() => new Set(inboxThreads.filter((thread) => thread.unread).map((thread) => thread.id)))
+  const [reply, setReply] = useState('')
+  const [sentReplies, setSentReplies] = useState<Record<number, string[]>>({})
+  const selected = inboxThreads.find((thread) => thread.id === selectedId)
+
+  const openThread = (id: number) => {
+    setSelectedId(id)
+    setUnread((current) => {
+      const next = new Set(current)
+      next.delete(id)
+      return next
+    })
+  }
+
+  const sendReply = () => {
+    if (!selectedId || !reply.trim()) return
+    setSentReplies((current) => ({ ...current, [selectedId]: [...(current[selectedId] ?? []), reply.trim()] }))
+    setReply('')
+  }
+
+  return (
+    <section className="buddy-inbox" role="dialog" aria-modal="true" aria-label="Taste Buddy inbox">
+      <header className="inbox-header">
+        <button onClick={selected ? () => setSelectedId(null) : onClose} aria-label={selected ? 'Back to inbox' : 'Close inbox'}><Icon name="arrow" size={20}/></button>
+        <div><p className="eyebrow">{selected ? 'CONVERSATION' : 'TASTE BUDDIES'}</p><h2>{selected?.name ?? 'Messages'}</h2></div>
+        {!selected && <button className="mark-read" onClick={() => setUnread(new Set())}>Read all</button>}
+      </header>
+
+      {selected ? (
+        <div className="conversation-view">
+          <div className="conversation-person">
+            <span><FriendAvatar variant={selected.variant}/></span>
+            <p><strong>{selected.name}</strong><small>Active now · {selected.id === 4 ? 'Tokyo' : 'Brooklyn'}</small></p>
+          </div>
+          <div className="message-history">
+            <div className="conversation-date">Today</div>
+            {selected.messages.map((text, index) => <div className="bubble incoming" key={text + index}>{text}</div>)}
+            <div className="bubble outgoing">That sounds perfect. I’m definitely interested!</div>
+            {(sentReplies[selected.id] ?? []).map((text, index) => <div className="bubble outgoing" key={text + index}>{text}</div>)}
+          </div>
+          <div className="reply-box">
+            <textarea value={reply} onChange={(event) => setReply(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendReply() } }} placeholder={`Message ${selected.name}...`} rows={1}/>
+            <button onClick={sendReply} disabled={!reply.trim()} aria-label="Send reply"><Icon name="arrow" size={18}/></button>
+          </div>
+        </div>
+      ) : (
+        <div className="thread-list">
+          <div className="inbox-summary"><span><Icon name="message" size={18}/></span><p><strong>{unread.size} unread messages</strong><small>From people who match your taste</small></p></div>
+          {inboxThreads.map((thread) => (
+            <button className={`thread-row ${unread.has(thread.id) ? 'unread' : ''}`} key={thread.id} onClick={() => openThread(thread.id)}>
+              <span className="thread-avatar"><FriendAvatar variant={thread.variant}/>{unread.has(thread.id) && <i/>}</span>
+              <span className="thread-copy"><strong>{thread.name}</strong><small>{thread.preview}</small></span>
+              <span className="thread-meta"><small>{thread.time}</small><Icon name="arrow" size={14}/></span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+const buddyProfiles = [
+  { name: 'Alex', age: 28, location: 'Brooklyn', distance: '2 mi away', match: 94, tags: ['Natural wine', 'Live jazz', 'Hidden gems'], saves: 12, shared: 'Clay & rosé and Sunday Jazz Club', image: rooftopImage, position: 'center' },
+  { name: 'Elena', age: 27, location: 'Greenpoint', distance: '1.4 mi away', match: 91, tags: ['Pottery', 'Rooftops', 'New menus'], saves: 9, shared: 'Mend Studio and Rooftop Supper', image: potteryImage, position: 'center' },
+  { name: 'Jordan', age: 30, location: 'Bushwick', distance: '3 mi away', match: 88, tags: ['Hiking', 'Small plates', 'Indie shows'], saves: 8, shared: 'Sunday Jazz Club and Ridge Trail', image: rooftopImage, position: 'left' },
+]
+
 function BuddyView() {
-  const [matched, setMatched] = useState(false)
   const [mode, setMode] = useState<'local' | 'worldwide'>('local')
+  const [profileIndex, setProfileIndex] = useState(0)
+  const [dragX, setDragX] = useState(0)
+  const [messageOpen, setMessageOpen] = useState(false)
+  const [message, setMessage] = useState('')
+  const [messageSent, setMessageSent] = useState(false)
+  const swipeStart = useRef<number | null>(null)
+  const profile = buddyProfiles[profileIndex]
+
+  const nextProfile = () => {
+    setProfileIndex((current) => (current + 1) % buddyProfiles.length)
+    setDragX(0)
+  }
+
+  const swipeLeft = () => {
+    setDragX(-420)
+    window.setTimeout(nextProfile, 190)
+  }
+
+  const swipeRight = () => {
+    setDragX(420)
+    window.setTimeout(() => {
+      setDragX(0)
+      setMessageOpen(true)
+    }, 190)
+  }
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    swipeStart.current = event.clientX
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (swipeStart.current === null) return
+    setDragX(Math.max(-150, Math.min(150, event.clientX - swipeStart.current)))
+  }
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (swipeStart.current === null) return
+    const distance = event.clientX - swipeStart.current
+    swipeStart.current = null
+    if (distance < -65) swipeLeft()
+    else if (distance > 65) swipeRight()
+    else setDragX(0)
+  }
+
+  const sendMessage = () => {
+    if (!message.trim()) return
+    setMessageOpen(false)
+    setMessage('')
+    setMessageSent(true)
+    nextProfile()
+    window.setTimeout(() => setMessageSent(false), 2600)
+  }
+
   return (
     <section className="buddy-view">
       <div className="buddy-modes" role="tablist" aria-label="Buddy location">
@@ -280,19 +417,47 @@ function BuddyView() {
             <div className="progress-copy"><span><Icon name="globe" size={16}/></span><p><strong>Worldwide is 70% unlocked</strong><small>Rate 3 more local experiences</small></p></div>
             <div className="progress-track"><i/></div>
           </div>
-          <div className="buddy-card">
-            <div className="buddy-photo"><img src={rooftopImage} alt="Alex, a suggested taste buddy"/><span>94% match</span></div>
+          <div
+            className="buddy-card swipe-card"
+            style={{ transform: `translateX(${dragX}px) rotate(${dragX / 24}deg)`, transition: swipeStart.current === null ? 'transform .2s ease' : 'none' }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={() => { swipeStart.current = null; setDragX(0) }}
+          >
+            <div className="swipe-stamp skip-stamp" style={{ opacity: Math.max(0, -dragX / 90) }}>SKIP</div>
+            <div className="swipe-stamp connect-stamp" style={{ opacity: Math.max(0, dragX / 90) }}>MESSAGE</div>
+            <div className="buddy-photo"><img src={profile.image} style={{ objectPosition: profile.position }} draggable={false} alt={`${profile.name}, a suggested taste buddy`}/><span>{profile.match}% match</span></div>
             <div className="buddy-info">
-              <div><h2>Alex, 28</h2><p>Brooklyn · 2 mi away</p></div>
+              <div><h2>{profile.name}, {profile.age}</h2><p>{profile.location} · {profile.distance}</p></div>
               <span className="verified"><Icon name="sparkle" size={15}/></span>
             </div>
-            <div className="taste-tags"><span>Natural wine</span><span>Live jazz</span><span>Hidden gems</span></div>
-            <p className="overlap"><strong>12 shared saves</strong> including Clay & rosé and Sunday Jazz Club.</p>
-            <button className={matched ? 'primary-button matched' : 'primary-button'} onClick={() => setMatched(!matched)}>
-              {matched ? 'Buddy request sent' : 'Say hey'} <Icon name={matched ? 'users' : 'arrow'} size={18}/>
-            </button>
+            <div className="taste-tags">{profile.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+            <p className="overlap"><strong>{profile.saves} shared saves</strong> including {profile.shared}.</p>
+          </div>
+          <div className="swipe-controls">
+            <button onClick={swipeLeft} aria-label={`Skip ${profile.name}`}><span className="left-arrow"><Icon name="arrow" size={22}/></span><small>Skip</small></button>
+            <p>Swipe or use the arrows</p>
+            <button className="connect" onClick={swipeRight} aria-label={`Message ${profile.name}`}><span><Icon name="arrow" size={22}/></span><small>Message</small></button>
           </div>
           <div className="buddy-note"><Icon name="heart" size={18}/><p><strong>Better together.</strong><br/>We only suggest people with real taste overlap.</p></div>
+          {messageSent && <div className="buddy-toast"><Icon name="users" size={15}/> Message sent</div>}
+          {messageOpen && (
+            <div className="message-backdrop" onMouseDown={(event) => event.currentTarget === event.target && setMessageOpen(false)}>
+              <section className="message-box" role="dialog" aria-modal="true" aria-label={`Message ${profile.name}`}>
+                <button className="message-close" onClick={() => setMessageOpen(false)} aria-label="Close"><Icon name="close" size={18}/></button>
+                <span className="message-avatar"><FriendAvatar variant={profileIndex === 0 ? 'one' : profileIndex === 1 ? 'two' : 'three'}/></span>
+                <p className="eyebrow">IT’S A TASTE MATCH</p>
+                <h2>Say hey to {profile.name}</h2>
+                <p>You both saved {profile.shared}. Start with something you already have in common.</p>
+                <div className="quick-messages">
+                  {['Want to check it out?', 'What should I try first?'].map((prompt) => <button key={prompt} onClick={() => setMessage(prompt)}>{prompt}</button>)}
+                </div>
+                <textarea value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage() } }} placeholder={`Message ${profile.name}...`} rows={3} autoFocus/>
+                <button className="primary-button" disabled={!message.trim()} onClick={sendMessage}>Send message <Icon name="arrow" size={17}/></button>
+              </section>
+            </div>
+          )}
         </>
       ) : (
         <WorldwideLock />

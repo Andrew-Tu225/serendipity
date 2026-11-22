@@ -128,6 +128,44 @@
 .add-button span { width: 54px; height: 54px; display: grid; place-items: center; color: white; background: #76548f; border: 5px solid #faf8fc; border-radius: 50%; box-shadow: 0 8px 19px rgba(86, 54, 109, .28); }
 .add-button small { font-size: 9px; font-weight: 600; }
 
+.buddy-inbox { position: fixed; z-index: 65; inset: 0; width: min(100%, 430px); height: 100dvh; margin: 0 auto; overflow: hidden; background: #faf8fc; animation: studio-in .25s ease-out; }
+.inbox-header { height: 84px; display: grid; grid-template-columns: 42px 1fr 62px; align-items: center; gap: 9px; padding: 12px 17px 8px; border-bottom: 1px solid #ece5ef; background: #faf8fc; }
+.inbox-header > button:first-child { width: 38px; height: 38px; display: grid; place-items: center; color: #65566e; border: 0; border-radius: 50%; background: #eee8f2; }
+.inbox-header > button:first-child svg { transform: rotate(180deg); }
+.inbox-header h2 { margin-top: 1px; font-family: 'DM Serif Display', serif; font-size: 23px; font-weight: 400; }
+.mark-read { color: #76578a; border: 0; background: none; font-size: 9px; font-weight: 700; }
+.thread-list { height: calc(100% - 84px); padding: 14px 17px 25px; overflow-y: auto; }
+.inbox-summary { display: flex; align-items: center; gap: 10px; padding: 12px; margin-bottom: 9px; border-radius: 15px; background: #eee7f3; }
+.inbox-summary > span { width: 34px; height: 34px; display: grid; place-items: center; color: #fff; border-radius: 50%; background: #76568b; }
+.inbox-summary p, .conversation-person p { display: flex; flex-direction: column; }
+.inbox-summary strong { color: #594762; font-size: 10px; }
+.inbox-summary small { color: #978a9b; font-size: 8px; }
+.thread-row { width: 100%; min-height: 76px; display: grid; grid-template-columns: 52px 1fr 38px; align-items: center; gap: 10px; padding: 7px 3px; border: 0; border-bottom: 1px solid #eee8f1; background: transparent; text-align: left; }
+.thread-avatar { position: relative; width: 49px; height: 60px; overflow: hidden; }
+.thread-avatar .friend-avatar { width: 39px; height: 60px; margin: auto; filter: none; }
+.thread-avatar i { position: absolute; right: 1px; top: 7px; width: 9px; height: 9px; border: 2px solid #faf8fc; border-radius: 50%; background: #7b5891; }
+.thread-copy { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
+.thread-copy strong { color: #4a3b52; font-size: 11px; }
+.thread-copy small { overflow: hidden; color: #958a99; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.thread-row.unread .thread-copy strong, .thread-row.unread .thread-copy small { color: #4e3d57; font-weight: 700; }
+.thread-meta { height: 44px; display: flex; flex-direction: column; align-items: end; justify-content: space-between; color: #a094a5; }
+.thread-meta small { font-size: 8px; }
+.conversation-view { position: relative; height: calc(100% - 84px); display: flex; flex-direction: column; }
+.conversation-person { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 8px; border-bottom: 1px solid #eee8f1; background: #fff; }
+.conversation-person > span { width: 31px; height: 39px; overflow: hidden; }
+.conversation-person .friend-avatar { width: 25px; height: 39px; filter: none; }
+.conversation-person strong { color: #4d3d55; font-size: 9px; }
+.conversation-person small { color: #9a8e9e; font-size: 7px; }
+.message-history { flex: 1; padding: 17px; overflow-y: auto; }
+.conversation-date { margin-bottom: 13px; color: #a397a8; font-size: 8px; text-align: center; }
+.bubble { width: fit-content; max-width: 78%; margin-bottom: 8px; padding: 10px 12px; font-size: 10px; line-height: 1.45; }
+.bubble.incoming { color: #514657; border-radius: 14px 14px 14px 4px; background: #eee9f1; }
+.bubble.outgoing { margin-left: auto; color: #fff; border-radius: 14px 14px 4px 14px; background: #77578d; }
+.reply-box { display: flex; align-items: end; gap: 8px; padding: 10px 14px 17px; border-top: 1px solid #e9e2ec; background: #fff; }
+.reply-box textarea { flex: 1; max-height: 80px; padding: 11px 12px; color: #473b4e; border: 1px solid #e2dae7; border-radius: 15px; background: #f8f5fa; font-family: inherit; font-size: 10px; resize: none; outline: none; }
+.reply-box > button { width: 39px; height: 39px; display: grid; place-items: center; color: #fff; border: 0; border-radius: 50%; background: #76558c; }
+.reply-box > button:disabled { color: #aaa0ad; background: #e5dfe8; }
+
 .sheet-backdrop { position: absolute; z-index: 40; inset: 0; display: flex; align-items: flex-end; background: rgba(31, 22, 38, .42); backdrop-filter: blur(3px); }
 .sheet { position: relative; width: 100%; max-height: 88%; padding: 30px 23px 34px; overflow-y: auto; background: #fff; border-radius: 28px 28px 0 0; box-shadow: 0 -18px 60px rgba(46, 29, 56, .18); animation: rise .28s ease-out; }
 @keyframes rise { from { transform: translateY(30px); opacity: 0; } }
@@ -200,6 +238,11 @@
 .progress-track, .unlock-track { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: #e2d9e7; }
 .progress-track i, .unlock-track i { display: block; width: 70%; height: 100%; background: #79578e; border-radius: inherit; }
 .buddy-card { margin-top: 11px; padding: 12px 12px 16px; border: 1px solid #e8e0ec; border-radius: 27px; background: white; box-shadow: 0 17px 42px rgba(58, 41, 68, .11); }
+.swipe-card { position: relative; touch-action: pan-y; user-select: none; cursor: grab; will-change: transform; }
+.swipe-card:active { cursor: grabbing; }
+.swipe-stamp { position: absolute; z-index: 4; top: 34px; padding: 6px 9px; border: 2px solid currentColor; border-radius: 7px; background: rgba(255,255,255,.88); font-size: 11px; font-weight: 800; letter-spacing: .12em; pointer-events: none; }
+.skip-stamp { right: 28px; color: #b85d69; transform: rotate(9deg); }
+.connect-stamp { left: 23px; color: #6c8e75; transform: rotate(-8deg); }
 .buddy-photo { position: relative; height: 250px; overflow: hidden; border-radius: 19px; }
 .buddy-photo img { width: 100%; height: 100%; object-fit: cover; }
 .buddy-photo > span { position: absolute; left: 12px; bottom: 12px; padding: 7px 10px; color: #654379; background: rgba(255, 255, 255, .91); border-radius: 99px; font-size: 10px; font-weight: 700; backdrop-filter: blur(8px); }
@@ -211,10 +254,30 @@
 .taste-tags span { padding: 6px 9px; color: #715b7e; background: #f1ebf5; border-radius: 99px; font-size: 9px; font-weight: 600; }
 .overlap { padding: 13px 4px 0; color: #887d8c; font-size: 10px; line-height: 1.5; }
 .overlap strong { color: #45384d; }
-.buddy-card .primary-button { margin-top: 14px; }
+.swipe-controls { display: grid; grid-template-columns: 62px 1fr 62px; align-items: center; margin: 10px 7px 0; }
+.swipe-controls > button { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #9b6b78; border: 0; background: none; font-size: 8px; font-weight: 700; }
+.swipe-controls > button > span { width: 43px; height: 43px; display: grid; place-items: center; border: 1px solid #e4d9e1; border-radius: 50%; background: #fff; box-shadow: 0 6px 15px rgba(63,45,72,.1); }
+.swipe-controls .left-arrow svg { transform: rotate(180deg); }
+.swipe-controls > button.connect { color: #6a8c75; }
+.swipe-controls > button.connect > span { border-color: #d5e2d8; }
+.swipe-controls > p { color: #aaa0ad; font-size: 7px; text-align: center; }
 .buddy-note { display: flex; gap: 11px; align-items: center; margin: 16px 10px 0; color: #715786; }
 .buddy-note p { color: #887b8e; font-size: 10px; line-height: 1.45; }
 .buddy-note strong { color: #4a3a54; }
+.message-backdrop { position: fixed; z-index: 70; inset: 0; width: min(100%, 430px); margin: 0 auto; display: flex; align-items: flex-end; background: rgba(36,25,43,.44); backdrop-filter: blur(4px); }
+.message-box { position: relative; width: 100%; padding: 29px 22px 31px; border-radius: 27px 27px 0 0; background: #fff; text-align: center; animation: rise .25s ease-out; }
+.message-close { position: absolute; right: 17px; top: 16px; width: 34px; height: 34px; display: grid; place-items: center; color: #746778; border: 0; border-radius: 50%; background: #f2edf4; }
+.message-avatar { width: 57px; height: 70px; margin: -4px auto 7px; display: block; overflow: hidden; }
+.message-avatar .friend-avatar { width: 46px; height: 70px; margin: auto; filter: none; }
+.message-box h2 { margin: 4px 0 6px; font-family: 'DM Serif Display', serif; font-size: 25px; font-weight: 400; }
+.message-box > p:not(.eyebrow) { max-width: 310px; margin: auto; color: #887d8d; font-size: 10px; line-height: 1.5; }
+.quick-messages { display: flex; justify-content: center; gap: 6px; margin: 14px 0 8px; }
+.quick-messages button { padding: 7px 9px; color: #725783; border: 1px solid #ded3e4; border-radius: 99px; background: #f7f3f9; font-size: 8px; font-weight: 600; }
+.message-box textarea { width: 100%; padding: 12px; color: #413548; border: 1px solid #e1d8e6; border-radius: 13px; background: #fbf9fc; font-family: inherit; font-size: 11px; resize: none; outline: none; text-align: left; }
+.message-box textarea:focus { border-color: #9a7bad; box-shadow: 0 0 0 3px #eee6f3; }
+.message-box .primary-button { margin-top: 9px; }
+.message-box .primary-button:disabled { cursor: not-allowed; color: #aca3b0; background: #ece8ee; box-shadow: none; }
+.buddy-toast { position: fixed; z-index: 65; left: 50%; bottom: 101px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 9px 13px; color: #fff; border-radius: 99px; background: #4e3d58; font-size: 9px; box-shadow: 0 8px 22px rgba(47,33,55,.22); }
 .worldwide-lock { padding-bottom: 5px; }
 .world-map-preview { position: relative; height: 190px; overflow: hidden; border: 1px solid #dfd5e5; border-radius: 22px; background: #e8e2ed; }
 .continent { position: absolute; display: block; background: #d1c6d8; opacity: .9; }
@@ -361,4 +424,6 @@
   .bottom-nav { bottom: 24px; border-radius: 0 0 32px 32px; }
   .sheet-backdrop { border-radius: 32px; overflow: hidden; }
   .character-studio { top: 24px; bottom: 24px; border-radius: 32px; box-shadow: 0 25px 80px rgba(63, 46, 76, .2); }
+  .message-backdrop { top: 24px; bottom: 24px; border-radius: 32px; overflow: hidden; }
+  .buddy-inbox { top: 24px; bottom: 24px; height: calc(100dvh - 48px); border-radius: 32px; box-shadow: 0 25px 80px rgba(63, 46, 76, .2); }
 }
