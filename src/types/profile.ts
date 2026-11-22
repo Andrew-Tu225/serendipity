@@ -24,3 +24,20 @@ export interface ProfileBookmarks {
   places: { id: string; name: string; latitude: number; longitude: number }[];
   next_offset: number | null;
 }
+
+export type ConnectionDirection = "followers" | "following";
+
+export interface ProfileConnection {
+  id: string;
+  display_name: string;
+}
+
+export interface ProfileConnections {
+  people: ProfileConnection[];
+  next_offset: number | null;
+}
+
+export interface ProfilePage<T> {
+  items: T[];
+  nextOffset: number | null;
+}

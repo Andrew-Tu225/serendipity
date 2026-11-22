@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useRef, useState, type ReactNode, type Ref } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
 import DiscoverMap from '@/components/map/discover-map'
@@ -12,10 +12,16 @@ import { FriendAvatar } from '@/components/map/friend-avatar'
 import { ProfileExperiencePanels } from '@/components/profile/profile-experiences'
 import { demoPlaceLists } from '@/components/profile/demo-place-lists'
 import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
+import { ProfileConnections } from '@/components/profile/profile-connections'
 import { useProfileExperiences } from '@/hooks/use-profile-experiences'
 import { Icon, type IconName } from '@/components/ui/icon'
+import type { ConnectionDirection } from '@/types/profile'
 
 const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
+
+type ProfileScreen = { kind: 'lists'; owner: ListOwner }
+  | { kind: ConnectionDirection; owner: { name: string; demo: boolean }; count: number }
+
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
   const [discovered, setDiscovered] = useState(false)
@@ -31,9 +37,14 @@ function App() {
   const [reviewBusy, setReviewBusy] = useState(false)
   const [reviewRevision, setReviewRevision] = useState(0)
   const [reviewedPlace, setReviewedPlace] = useState<MapPlace | null>(null)
-  const [listOwner, setListOwner] = useState<ListOwner | null>(null)
+  const [profileScreen, setProfileScreen] = useState<ProfileScreen | null>(null)
   const [demoLists, setDemoLists] = useState(demoPlaceLists)
-  const listsButton = useRef<HTMLButtonElement>(null)
+  const profileTrigger = useRef<HTMLButtonElement>(null)
+
+  function closeProfileScreen() {
+    setProfileScreen(null)
+    requestAnimationFrame(() => profileTrigger.current?.focus())
+  }
 
   const startReview = (place: MapPlace | null) => {
     setReviewTarget(place)
@@ -76,7 +87,7 @@ function App() {
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
       <div className={`app-shell${activeTab === 'Discover' ? ' is-discover' : ''}`}>
-        {activeTab !== 'Discover' && !listOwner && (
+        {activeTab !== 'Discover' && !profileScreen && (
           <>
             <div className="status-bar" aria-hidden="true">
               <span>9:41</span>
@@ -93,7 +104,7 @@ function App() {
           </>
         )}
 
-        <div className="app-content" hidden={listOwner !== null}>
+        <div className="app-content" hidden={profileScreen !== null}>
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
             {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision} reviewedPlace={reviewedPlace}
               selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
@@ -103,7 +114,10 @@ function App() {
           {activeTab === 'Buddy' ? (
             <BuddyView />
           ) : activeTab === 'Profile' ? (
-            <ProfileView demoListCount={demoLists.length} listsButton={listsButton} onOpenLists={setListOwner} />
+            <ProfileView demoListCount={demoLists.length} onOpenScreen={(screen, trigger) => {
+              profileTrigger.current = trigger
+              setProfileScreen(screen)
+            }} />
           ) : activeTab === 'Discover' ? null : (
             <>
               <section className="filters" aria-label="Experience categories">
@@ -158,7 +172,7 @@ function App() {
 
         {posted && <div className="review-saved" role="status">Your experience was shared <button onClick={() => setPosted(false)} aria-label="Dismiss confirmation">×</button></div>}
 
-        {!listOwner && <nav className="bottom-nav" aria-label="Primary navigation">
+        {!profileScreen && <nav className="bottom-nav" aria-label="Primary navigation">
           <NavButton label="Home" icon="home" active={activeTab === 'Home'} onClick={() => changeTab('Home')}/>
           <NavButton label="Discover" icon="pin" active={activeTab === 'Discover'} onClick={() => changeTab('Discover')}/>
           <button className="add-button" onClick={() => changeTab('Add')} aria-label="Add a post"><span><Icon name="plus" size={27}/></span><small>Add</small></button>
@@ -166,13 +180,14 @@ function App() {
           <NavButton label="Profile" icon="user" active={activeTab === 'Profile'} onClick={() => changeTab('Profile')}/>
         </nav>}
 
-        {listOwner && (
-          <ProfilePlaceLists owner={listOwner} demoLists={demoLists}
+        {profileScreen?.kind === 'lists' && (
+          <ProfilePlaceLists owner={profileScreen.owner} demoLists={demoLists}
             onAdd={(list) => setDemoLists((current) => [list, ...current])}
-            onClose={() => {
-              setListOwner(null)
-              requestAnimationFrame(() => listsButton.current?.focus())
-            }} />
+            onClose={closeProfileScreen} />
+        )}
+        {profileScreen && profileScreen.kind !== 'lists' && (
+          <ProfileConnections direction={profileScreen.kind} owner={profileScreen.owner}
+            count={profileScreen.count} onClose={closeProfileScreen} />
         )}
 
         {sheet && (
@@ -278,10 +293,9 @@ function WorldwideLock() {
   )
 }
 
-function ProfileView({ demoListCount, listsButton, onOpenLists }: {
+function ProfileView({ demoListCount, onOpenScreen }: {
   demoListCount: number
-  listsButton: Ref<HTMLButtonElement>
-  onOpenLists: (owner: ListOwner) => void
+  onOpenScreen: (screen: ProfileScreen, trigger: HTMLButtonElement) => void
 }) {
   const { profile, retry } = useProfileExperiences()
   const [customizing, setCustomizing] = useState(false)
@@ -320,9 +334,13 @@ function ProfileView({ demoListCount, listsButton, onOpenLists }: {
           </div>
           {identity.owner.demo && <p className="profile-bio">Always looking for tiny restaurants, tactile workshops, and plans worth crossing town for.</p>}
           <div className="profile-stats">
-            <div><strong>{identity.followers}</strong><span>Followers</span></div>
-            <div><strong>{identity.following}</strong><span>Following</span></div>
-            <button ref={listsButton} type="button" aria-label="Lists" onClick={() => onOpenLists(identity.owner)}>
+            <button type="button" aria-label="Followers" onClick={(event) => onOpenScreen({ kind: 'followers', owner: identity.owner, count: identity.followers }, event.currentTarget)}>
+              <strong>{identity.followers}</strong><span>Followers</span>
+            </button>
+            <button type="button" aria-label="Following" onClick={(event) => onOpenScreen({ kind: 'following', owner: identity.owner, count: identity.following }, event.currentTarget)}>
+              <strong>{identity.following}</strong><span>Following</span>
+            </button>
+            <button type="button" aria-label="Lists" onClick={(event) => onOpenScreen({ kind: 'lists', owner: identity.owner }, event.currentTarget)}>
               <strong>{identity.lists}</strong><span>Lists</span>
             </button>
           </div>

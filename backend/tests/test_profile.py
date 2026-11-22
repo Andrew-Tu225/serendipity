@@ -131,3 +131,58 @@ async def test_profile_bookmarks_include_only_the_viewers_places_and_locations(
         "places": [{"id": str(cafe), "name": "Tea House", "latitude": 43.2, "longitude": -81.3}],
         "next_offset": None,
     }
+
+
+async def test_profile_connections_keep_followers_and_following_separate(
+    client, identity_provider, database_factory
+):
+    path = "/api/profile/connections"
+    response = await client.get(f"{path}/followers")
+    assert response.status_code == 401
+    assert response.headers["cache-control"] == "no-store"
+    await authenticate(client, identity_provider)
+    viewer = UUID((await client.get("/api/auth/me")).json()["user"]["id"])
+    incoming, unnamed, outgoing, unrelated = (UUID(int=value) for value in range(60, 64))
+    async with database_factory() as database:
+        database.add_all(
+            [
+                User(
+                    id=incoming,
+                    auth0_sub="test|incoming",
+                    display_name="Elena",
+                    email="private@example.org",
+                ),
+                User(id=unnamed, auth0_sub="test|unnamed"),
+                User(id=outgoing, auth0_sub="test|outgoing", display_name="Alex"),
+                User(id=unrelated, auth0_sub="test|unrelated", display_name="Other"),
+            ]
+        )
+        await database.flush()
+        database.add_all(
+            [
+                Follow(follower_id=incoming, followee_id=viewer),
+                Follow(follower_id=unnamed, followee_id=viewer),
+                Follow(follower_id=viewer, followee_id=outgoing),
+                Follow(follower_id=unrelated, followee_id=incoming),
+            ]
+        )
+        await database.commit()
+
+    response = await client.get(f"{path}/followers", params={"limit": 1})
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json() == {
+        "people": [{"id": str(incoming), "display_name": "Elena"}],
+        "next_offset": 1,
+    }
+    next_page = await client.get(f"{path}/followers", params={"limit": 1, "offset": 1})
+    assert next_page.json() == {
+        "people": [{"id": str(unnamed), "display_name": "Serendipity user"}],
+        "next_offset": None,
+    }
+    following = await client.get(f"{path}/following")
+    assert following.json() == {
+        "people": [{"id": str(outgoing), "display_name": "Alex"}],
+        "next_offset": None,
+    }
+    assert (await client.get(f"{path}/unknown")).status_code == 422

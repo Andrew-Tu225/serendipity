@@ -112,3 +112,42 @@ test("creates a demo list with a place and reads signed-in bookmarks from the AP
     "href", "https://www.google.com/maps/search/?api=1&query=43.1%2C-81.2",
   );
 });
+
+test("opens both connection screens and focuses the matching profile stat when going back", async ({ page }) => {
+  await page.route("**/api/profile/experiences?**", (route) => route.fulfill({ json: {
+    display_name: "Mia", total: 0, follower_count: 2, following_count: 1, bookmark_count: 0,
+    favorites: [], recent: [], next_offset: null,
+  } }));
+  await page.route("**/api/profile/connections/**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/following")) {
+      return route.fulfill({ json: {
+        people: [{ id: "three", display_name: "Alex Bennett" }], next_offset: null,
+      } });
+    }
+    const first = url.searchParams.get("offset") === "0";
+    return route.fulfill({ json: {
+      people: first ? [{ id: "one", display_name: "Elena Rivera" }] : [{ id: "two", display_name: "James Reed" }],
+      next_offset: first ? 1 : null,
+    } });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  const followers = page.getByRole("button", { name: "Followers", exact: true });
+  await followers.click();
+  await expect(page.getByRole("heading", { name: "Followers", exact: true })).toBeFocused();
+  await expect(page.getByRole("list", { name: "People who follow you" })).toContainText("Elena Rivera");
+  await page.getByRole("button", { name: "Load more people" }).click();
+  await expect(page.getByRole("list", { name: "People who follow you" })).toContainText("James Reed");
+  await page.getByRole("button", { name: "Back to profile" }).click();
+  await expect(followers).toBeFocused();
+
+  const following = page.getByRole("button", { name: "Following", exact: true });
+  await following.click();
+  await expect(page.getByRole("heading", { name: "Following", exact: true })).toBeFocused();
+  const people = page.getByRole("list", { name: "People you follow" });
+  await expect(people).toContainText("Alex Bennett");
+  await expect(people.getByRole("listitem")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(following).toBeFocused();
+});

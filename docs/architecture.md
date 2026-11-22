@@ -99,7 +99,10 @@ includes 12 sample collections with named locations and supports creating a temp
 current page session. Signed-in users see their default Saved places collection. Its rows come from
 `GET /api/profile/bookmarks` through `profileClient`, `ProfileService`, and `ProfileRepository`.
 The API pages through the current user's Bookmarks, and each row shows the Place name, stored map
-coordinates, and a link to open those coordinates. Both profile endpoints require `CurrentUser`.
+coordinates, and a link to open those coordinates. The Followers and Following screens use
+`GET /api/profile/connections/{direction}` to page through the corresponding directed Follow rows.
+The response includes the user's connection IDs and display names. The signed-out Profile shows
+sample connections. All profile endpoints require `CurrentUser`.
 
 ## Authentication flow
 

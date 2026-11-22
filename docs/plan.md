@@ -115,9 +115,9 @@ Over time, a user's profile becomes a collection of their real-world experiences
 
 The profile shows the four highest-rated Experiences side by side and the four most recently rated
 Experiences in a vertical list. Users can open their rating history from the recent list.
-The profile header shows Followers, Following, and Lists. Opening Lists leads to collections, and
-opening a collection shows each Place by name and location. Signed-in users can browse their
-Bookmarks from the default Saved places collection.
+The profile header opens separate Followers, Following, and Lists screens. Opening a collection
+shows each Place by name and location. Signed-in users can browse their Bookmarks from the default
+Saved places collection.
 
 For example, someone who's passionate about hiking might have a collection of trails, viewpoints, and outdoor destinations they've visited.
 

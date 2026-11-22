@@ -1,4 +1,4 @@
-import type { ProfileBookmarks, ProfileExperiences } from "@/types/profile";
+import type { ConnectionDirection, ProfileBookmarks, ProfileConnections, ProfileExperiences } from "@/types/profile";
 import { apiRequest } from "./client";
 
 export const profileClient = {
@@ -6,7 +6,12 @@ export const profileClient = {
     const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
     return apiRequest<ProfileExperiences>(`/profile/experiences?${params}`, { signal });
   },
-  getBookmarks(offset: number, signal: AbortSignal): Promise<ProfileBookmarks> {
-    return apiRequest<ProfileBookmarks>(`/profile/bookmarks?offset=${offset}`, { signal });
+  async getBookmarks(offset: number, signal: AbortSignal) {
+    const { places, next_offset } = await apiRequest<ProfileBookmarks>(`/profile/bookmarks?offset=${offset}`, { signal });
+    return { items: places, nextOffset: next_offset };
+  },
+  async getConnections(direction: ConnectionDirection, offset: number, signal: AbortSignal) {
+    const { people, next_offset } = await apiRequest<ProfileConnections>(`/profile/connections/${direction}?offset=${offset}`, { signal });
+    return { items: people, nextOffset: next_offset };
   },
 };

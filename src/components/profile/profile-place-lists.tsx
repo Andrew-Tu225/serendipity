@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Icon } from "@/components/ui/icon";
+import { useProfilePages } from "@/hooks/use-profile-pages";
 import { profileClient } from "@/lib/api-client/profile";
-import type { ProfileBookmarks } from "@/types/profile";
 import type { DemoPlaceList, ListedPlace } from "./demo-place-lists";
+import { ProfileSubscreen } from "./profile-subscreen";
 
 export type ListOwner = { name: string } & ({ demo: true } | { demo: false; bookmarkCount: number });
 
@@ -15,18 +16,11 @@ export function ProfilePlaceLists({ owner, demoLists, onAdd, onClose }: {
   onClose: () => void;
 }) {
   const [screen, setScreen] = useState<Screen>({ kind: "lists" });
-  const heading = useRef<HTMLHeadingElement>(null);
-  const content = useRef<HTMLDivElement>(null);
   const rootScreen = screen.kind === "lists";
   const title = screen.kind === "detail" ? screen.list.name
     : screen.kind === "bookmarks" ? "Saved places" : screen.kind === "new" ? "New list" : "Lists";
   const count = screen.kind === "detail" ? screen.list.places.length
     : owner.demo ? demoLists.length : screen.kind === "bookmarks" ? owner.bookmarkCount : 1;
-
-  useEffect(() => {
-    content.current?.scrollTo(0, 0);
-    heading.current?.focus();
-  }, [screen.kind]);
 
   function goBack() {
     if (rootScreen) onClose();
@@ -34,23 +28,10 @@ export function ProfilePlaceLists({ owner, demoLists, onAdd, onClose }: {
   }
 
   return (
-    <section className="place-lists-screen" aria-labelledby="place-list-heading" onKeyDown={(event) => {
-      if (event.key === "Escape") goBack();
-    }}>
-      <header className="place-lists-header">
-        <button type="button" className="place-lists-back" aria-label={rootScreen ? "Back to profile" : "Back to lists"} onClick={goBack}>
-          <Icon name="arrow" size={19} />
-        </button>
-        <div>
-          <p className="eyebrow">{rootScreen ? owner.name : "Lists"}</p>
-          <h1 id="place-list-heading" ref={heading} tabIndex={-1}>{title}</h1>
-        </div>
-        {screen.kind !== "new" && (
-          <span className="place-lists-count" aria-label={rootScreen ? `${count} lists` : savedPlaceCount(count)}>{count}</span>
-        )}
-      </header>
-
-      <div className="place-lists-content" ref={content}>
+    <ProfileSubscreen key={screen.kind} title={title} subtitle={rootScreen ? owner.name : "Lists"}
+      count={screen.kind === "new" ? undefined : count}
+      countLabel={rootScreen ? `${count} lists` : savedPlaceCount(count)}
+      backLabel={rootScreen ? "Back to profile" : "Back to lists"} onBack={goBack}>
         {rootScreen && <>
           {owner.demo && (
             <div className="place-lists-toolbar">
@@ -76,8 +57,7 @@ export function ProfilePlaceLists({ owner, demoLists, onAdd, onClose }: {
           onAdd(list);
           setScreen({ kind: "detail", list });
         }} />}
-      </div>
-    </section>
+    </ProfileSubscreen>
   );
 }
 
@@ -120,28 +100,7 @@ function PlaceRows({ places }: { places: ListedPlace[] }) {
 }
 
 function BookmarkRows() {
-  const [places, setPlaces] = useState<ProfileBookmarks["places"]>([]);
-  const [offset, setOffset] = useState(0);
-  const [nextOffset, setNextOffset] = useState<number | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-
-  useEffect(() => {
-    const controller = new AbortController();
-    profileClient.getBookmarks(offset, controller.signal).then((page) => {
-      if (controller.signal.aborted) return;
-      setPlaces((current) => {
-        if (offset === 0) return page.places;
-        const seen = new Set(current.map((place) => place.id));
-        return [...current, ...page.places.filter((place) => !seen.has(place.id))];
-      });
-      setNextOffset(page.next_offset);
-      setStatus("ready");
-    }, () => {
-      if (!controller.signal.aborted) setStatus("error");
-    });
-    return () => controller.abort();
-  }, [offset, attempt]);
+  const { items: places, status, hasMore, loadMore, retry } = useProfilePages(profileClient.getBookmarks);
 
   return (
     <>
@@ -154,14 +113,8 @@ function BookmarkRows() {
         }))} />
       )}
       {status === "loading" && <p className="place-lists-message" role="status">Loading saved places…</p>}
-      {status === "error" && <p className="place-lists-message" role="alert">Couldn’t load saved places. <button type="button" className="profile-history-button" onClick={() => {
-        setStatus("loading");
-        setAttempt((current) => current + 1);
-      }}>Try again</button></p>}
-      {status === "ready" && nextOffset !== null && <button type="button" className="place-lists-action" onClick={() => {
-        setStatus("loading");
-        setOffset(nextOffset);
-      }}>Load more places</button>}
+      {status === "error" && <p className="place-lists-message" role="alert">Couldn’t load saved places. <button type="button" className="profile-history-button" onClick={retry}>Try again</button></p>}
+      {status === "ready" && hasMore && <button type="button" className="place-lists-action" onClick={loadMore}>Load more places</button>}
     </>
   );
 }

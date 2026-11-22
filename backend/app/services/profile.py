@@ -4,8 +4,11 @@ from app.models import Experience, Place, User
 from app.repositories.experiences import ExperienceRepository
 from app.repositories.profile import ProfileRepository
 from app.schemas.profile import (
+    ConnectionDirection,
     ProfileBookmark,
     ProfileBookmarks,
+    ProfileConnection,
+    ProfileConnections,
     ProfileExperience,
     ProfileExperiences,
 )
@@ -41,6 +44,23 @@ class ProfileService:
                 for place in places[:limit]
             ],
             next_offset=offset + limit if len(places) > limit else None,
+        )
+
+    async def connections_for(
+        self, user: User, direction: ConnectionDirection, offset: int, limit: int
+    ) -> ProfileConnections:
+        people = await self.profile.connections(
+            user.id, followers=direction == "followers", offset=offset, limit=limit + 1
+        )
+        return ProfileConnections(
+            people=[
+                ProfileConnection(
+                    id=person.id,
+                    display_name=(person.display_name or "").strip() or "Serendipity user",
+                )
+                for person in people[:limit]
+            ],
+            next_offset=offset + limit if len(people) > limit else None,
         )
 
 

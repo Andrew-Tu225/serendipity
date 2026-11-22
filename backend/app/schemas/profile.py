@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -35,4 +36,17 @@ class ProfileBookmark(BaseModel):
 
 class ProfileBookmarks(BaseModel):
     places: list[ProfileBookmark]
+    next_offset: int | None
+
+
+ConnectionDirection = Literal["followers", "following"]
+
+
+class ProfileConnection(BaseModel):
+    id: UUID
+    display_name: str
+
+
+class ProfileConnections(BaseModel):
+    people: list[ProfileConnection]
     next_offset: int | None
