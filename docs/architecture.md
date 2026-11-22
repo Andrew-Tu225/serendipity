@@ -101,8 +101,15 @@ current page session. Signed-in users see their default Saved places collection.
 The API pages through the current user's Bookmarks, and each row shows the Place name, stored map
 coordinates, and a link to open those coordinates. The Followers and Following screens use
 `GET /api/profile/connections/{direction}` to page through the corresponding directed Follow rows.
-The response includes the user's connection IDs and display names. The signed-out Profile shows
-sample connections. All profile endpoints require `CurrentUser`.
+The response includes each connection's ID, display name, and saved character appearance. The
+signed-out Profile shows sample connections. All profile endpoints require `CurrentUser`.
+
+The character editor saves an account's appearance with `PUT /api/profile/character`, using the
+session's CSRF token and `VerifiedMutation`. `ProfileService` commits the validated appearance to
+`users.character` (Alembic `0005`). Profile and discovery responses carry the saved appearance.
+The client draws a circular face-and-shoulders portrait on profiles, connection rows, friend map
+markers, and review rows. Accounts with no saved appearance get a stable default based on their ID.
+The signed-out preview keeps its character edits for the current page session.
 
 ## Authentication flow
 

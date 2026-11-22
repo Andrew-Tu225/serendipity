@@ -3,6 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Experience, Place, User
 from app.repositories.experiences import ExperienceRepository
 from app.repositories.profile import ProfileRepository
+from app.repositories.users import UserRepository
+from app.schemas.character import CharacterAppearance
 from app.schemas.profile import (
     ConnectionDirection,
     ProfileBookmark,
@@ -16,15 +18,26 @@ from app.schemas.profile import (
 
 class ProfileService:
     def __init__(self, database: AsyncSession):
+        self.database = database
         self.experiences = ExperienceRepository(database)
         self.profile = ProfileRepository(database)
+        self.users = UserRepository(database)
+
+    async def save_character(
+        self, user: User, appearance: CharacterAppearance
+    ) -> CharacterAppearance:
+        self.users.set_character(user, appearance.model_dump())
+        await self.database.commit()
+        return appearance
 
     async def experiences_for(self, user: User, offset: int, limit: int) -> ProfileExperiences:
         favorites = await self.experiences.list_by_author(user.id, limit=4, highest_rated=True)
         recent = await self.experiences.list_by_author(user.id, offset=offset, limit=limit + 1)
         followers, following, bookmarks = await self.profile.counts(user.id)
         return ProfileExperiences(
+            user_id=user.id,
             display_name=user.display_name,
+            character=user.character,
             total=await self.experiences.count_by_author(user.id),
             follower_count=followers,
             following_count=following,
@@ -57,6 +70,7 @@ class ProfileService:
                 ProfileConnection(
                     id=person.id,
                     display_name=(person.display_name or "").strip() or "Serendipity user",
+                    character=person.character,
                 )
                 for person in people[:limit]
             ],

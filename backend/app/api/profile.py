@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_database_session
-from app.dependencies import CurrentUser
+from app.dependencies import CurrentUser, VerifiedMutation
+from app.schemas.character import CharacterAppearance
 from app.schemas.profile import (
     ConnectionDirection,
     ProfileBookmarks,
@@ -14,6 +15,16 @@ from app.schemas.profile import (
 from app.services.profile import ProfileService
 
 router = APIRouter(prefix="/profile", tags=["profile"])
+
+
+@router.put("/character", response_model=CharacterAppearance)
+async def save_character(
+    appearance: CharacterAppearance,
+    user: CurrentUser,
+    verified: VerifiedMutation,
+    database: Annotated[AsyncSession, Depends(get_database_session)],
+):
+    return await ProfileService(database).save_character(user, appearance)
 
 
 @router.get("/experiences", response_model=ProfileExperiences)

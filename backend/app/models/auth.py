@@ -18,6 +18,9 @@ class User(Base):
     email_verified: Mapped[bool | None] = mapped_column(Boolean)
     display_name: Mapped[str | None] = mapped_column(Text)
     picture_url: Mapped[str | None] = mapped_column(Text)
+    character: Mapped[dict[str, str] | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

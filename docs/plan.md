@@ -118,6 +118,8 @@ Experiences in a vertical list. Users can open their rating history from the rec
 The profile header opens separate Followers, Following, and Lists screens. Opening a collection
 shows each Place by name and location. Signed-in users can browse their Bookmarks from the default
 Saved places collection.
+Each account has a customizable character. Its face and shoulders form the account's profile
+picture wherever people appear in Profile and Discover.
 
 For example, someone who's passionate about hiking might have a collection of trails, viewpoints, and outdoor destinations they've visited.
 

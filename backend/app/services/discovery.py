@@ -32,6 +32,7 @@ class DiscoveryService:
                     id=log.id,
                     author_id=author.id,
                     author_name=(author.display_name or "Anonymous").strip()[:60] or "Anonymous",
+                    author_character=author.character,
                     rating=log.rating,
                     verdict=log.verdict,
                     review=log.review,

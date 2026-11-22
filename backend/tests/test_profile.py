@@ -8,6 +8,16 @@ from tests.auth_helpers import authenticate
 
 pytestmark = pytest.mark.anyio
 PROFILE = "/api/profile/experiences"
+CHARACTER = {
+    "features": "feminine",
+    "hairStyle": "curly",
+    "hairColor": "#5a392c",
+    "skinTone": "#c38963",
+    "shirt": "#4e8379",
+    "pants": "#4d526b",
+    "shoes": "#eee8f2",
+    "hat": "none",
+}
 
 
 async def test_profile_requires_a_session_and_empty_profiles_are_valid(client, identity_provider):
@@ -16,10 +26,13 @@ async def test_profile_requires_a_session_and_empty_profiles_are_valid(client, i
     assert response.headers["cache-control"] == "no-store"
 
     await authenticate(client, identity_provider)
+    user_id = (await client.get("/api/auth/me")).json()["user"]["id"]
     response = await client.get(PROFILE)
     assert response.status_code == 200
     assert response.json() == {
+        "user_id": user_id,
         "display_name": "Alex Example",
+        "character": None,
         "total": 0,
         "follower_count": 0,
         "following_count": 0,
@@ -151,6 +164,7 @@ async def test_profile_connections_keep_followers_and_following_separate(
                     auth0_sub="test|incoming",
                     display_name="Elena",
                     email="private@example.org",
+                    character=CHARACTER,
                 ),
                 User(id=unnamed, auth0_sub="test|unnamed"),
                 User(id=outgoing, auth0_sub="test|outgoing", display_name="Alex"),
@@ -172,17 +186,52 @@ async def test_profile_connections_keep_followers_and_following_separate(
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
     assert response.json() == {
-        "people": [{"id": str(incoming), "display_name": "Elena"}],
+        "people": [{"id": str(incoming), "display_name": "Elena", "character": CHARACTER}],
         "next_offset": 1,
     }
     next_page = await client.get(f"{path}/followers", params={"limit": 1, "offset": 1})
     assert next_page.json() == {
-        "people": [{"id": str(unnamed), "display_name": "Serendipity user"}],
+        "people": [{"id": str(unnamed), "display_name": "Serendipity user", "character": None}],
         "next_offset": None,
     }
     following = await client.get(f"{path}/following")
     assert following.json() == {
-        "people": [{"id": str(outgoing), "display_name": "Alex"}],
+        "people": [{"id": str(outgoing), "display_name": "Alex", "character": None}],
         "next_offset": None,
     }
     assert (await client.get(f"{path}/unknown")).status_code == 422
+
+
+async def test_character_save_requires_csrf_and_appears_on_public_reviews(
+    client, identity_provider
+):
+    path = "/api/profile/character"
+    assert (await client.put(path, json=CHARACTER)).status_code == 401
+    await authenticate(client, identity_provider)
+    session = (await client.get("/api/auth/me")).json()
+    assert (await client.put(path, json=CHARACTER)).status_code == 403
+    headers = {"origin": "http://localhost:3000", "x-csrf-token": session["csrf_token"]}
+    assert (
+        await client.put(path, json={**CHARACTER, "shirt": "url(example)"}, headers=headers)
+    ).status_code == 422
+    assert (await client.get(PROFILE)).json()["character"] is None
+
+    saved = await client.put(path, json=CHARACTER, headers=headers)
+    assert saved.status_code == 200
+    assert saved.headers["cache-control"] == "no-store"
+    assert saved.json() == CHARACTER
+    assert (await client.get(PROFILE)).json()["character"] == CHARACTER
+
+    created = await client.post(
+        "/api/discovery/experiences",
+        json={
+            "new_place": {"name": "Tea House", "latitude": 43, "longitude": -81},
+            "rating": 4,
+            "visited_on": "2025-06-01",
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201
+    client.cookies.clear()
+    logged = await client.get(f"/api/discovery/places/{created.json()['place']['id']}")
+    assert logged.json()["experiences"][0]["author_character"] == CHARACTER

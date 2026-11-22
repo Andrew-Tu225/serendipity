@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.models.domain import Category, Verdict
+from app.schemas.character import CharacterAppearance
 
 
 class ProfileExperience(BaseModel):
@@ -17,7 +18,9 @@ class ProfileExperience(BaseModel):
 
 
 class ProfileExperiences(BaseModel):
+    user_id: UUID
     display_name: str | None
+    character: CharacterAppearance | None = None
     total: int
     follower_count: int
     following_count: int
@@ -45,6 +48,7 @@ ConnectionDirection = Literal["followers", "following"]
 class ProfileConnection(BaseModel):
     id: UUID
     display_name: str
+    character: CharacterAppearance | None = None
 
 
 class ProfileConnections(BaseModel):

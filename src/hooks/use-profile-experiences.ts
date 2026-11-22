@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api-client/client";
 import { profileClient } from "@/lib/api-client/profile";
 import type { ProfileExperiences } from "@/types/profile";
+import type { CharacterAppearance } from "@/types/character";
 
 export type ProfileState =
   | { status: "loading" | "demo" | "error" }
@@ -30,5 +31,9 @@ export function useProfileExperiences() {
     setAttempt((current) => current + 1);
   }
 
-  return { profile, retry };
+  function updateCharacter(character: CharacterAppearance) {
+    setProfile((current) => current.status === "ready" ? { ...current, data: { ...current.data, character } } : current);
+  }
+
+  return { profile, retry, updateCharacter };
 }

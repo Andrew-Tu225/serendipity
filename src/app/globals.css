@@ -215,6 +215,8 @@
 .buddy-card { margin-top: 11px; padding: 12px 12px 16px; border: 1px solid #e8e0ec; border-radius: 27px; background: white; box-shadow: 0 17px 42px rgba(58, 41, 68, .11); }
 .buddy-photo { position: relative; height: 250px; overflow: hidden; border-radius: 19px; }
 .buddy-photo img { width: 100%; height: 100%; object-fit: cover; }
+.buddy-portrait { position: absolute; inset: 0; display: grid; place-items: center; background: #2b183b30; }
+.buddy-portrait > span { border: 4px solid #f7eefb; box-shadow: 0 5px 20px #281b3a55; }
 .buddy-photo > span { position: absolute; left: 12px; bottom: 12px; padding: 7px 10px; color: #654379; background: rgba(255, 255, 255, .91); border-radius: 99px; font-size: 10px; font-weight: 700; backdrop-filter: blur(8px); }
 .buddy-info { display: flex; justify-content: space-between; align-items: center; padding: 15px 4px 10px; }
 .buddy-info h2 { font-size: 24px; }
@@ -237,7 +239,6 @@
 .world-dot { position: absolute; width: 7px; height: 7px; border: 2px solid #fff; border-radius: 50%; background: #806097; box-shadow: 0 2px 5px rgba(69, 48, 80, .2); }
 .dot-one { left: 28%; top: 42%; }.dot-two { left: 52%; top: 35%; }.dot-three { right: 20%; top: 40%; }
 .locked-avatar { position: absolute; filter: grayscale(.35); opacity: .65; }
-.locked-avatar .friend-avatar { width: 31px; height: 47px; }
 .avatar-paris { left: 44%; top: 40%; }.avatar-tokyo { right: 12%; top: 28%; }.avatar-mexico { left: 20%; top: 46%; }
 .map-lock { position: absolute; z-index: 4; left: 50%; top: 50%; width: 52px; height: 52px; display: grid; place-items: center; transform: translate(-50%, -50%); color: #fff; border: 5px solid rgba(255,255,255,.55); border-radius: 50%; background: #6d5878; box-shadow: 0 9px 24px rgba(59, 43, 68, .22); }
 .worldwide-copy { padding: 17px 8px 10px; text-align: center; }
@@ -256,28 +257,6 @@
 .unlock-benefits small { margin-top: 2px; color: #998c9e; font-size: 6px; line-height: 1.35; }
 .toast { position: fixed; z-index: 30; left: 50%; bottom: 99px; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; width: max-content; padding: 10px 14px; color: white; background: #3e3148; border-radius: 99px; font-size: 10px; box-shadow: 0 10px 25px rgba(37, 24, 45, .25); }
 
-.friend-avatar { width: 46px; height: 70px; flex: 0 0 auto; overflow: visible; filter: drop-shadow(0 4px 4px rgba(58, 41, 68, .2)); }
-.friend-avatar .avatar-bg { fill: #ddd0e5; }
-.friend-avatar .avatar-hair, .friend-avatar .hair-detail { fill: #654a3e; stroke: #654a3e; }
-.friend-avatar .avatar-skin { fill: #dca883; }
-.friend-avatar .avatar-shirt { fill: #805f98; }
-.friend-avatar .avatar-arm { stroke: #dca883; }
-.friend-avatar .avatar-pants { fill: #4c4256; }
-.friend-avatar .avatar-shoes { fill: #f7f3f8; }
-.friend-avatar.two .avatar-bg { fill: #cfe1dd; }
-.friend-avatar.two .avatar-hair, .friend-avatar.two .hair-detail { fill: #302b2d; stroke: #302b2d; }
-.friend-avatar.two .avatar-skin { fill: #9b654d; }
-.friend-avatar.two .avatar-shirt { fill: #4d7f78; }
-.friend-avatar.two .avatar-arm { stroke: #9b654d; }
-.friend-avatar.two .avatar-pants { fill: #323e45; }
-.friend-avatar.two .avatar-shoes { fill: #d9c08b; }
-.friend-avatar.three .avatar-bg { fill: #ead7c4; }
-.friend-avatar.three .avatar-hair, .friend-avatar.three .hair-detail { fill: #c18a55; stroke: #c18a55; }
-.friend-avatar.three .avatar-skin { fill: #edc29f; }
-.friend-avatar.three .avatar-shirt { fill: #a46672; }
-.friend-avatar.three .avatar-arm { stroke: #edc29f; }
-.friend-avatar.three .avatar-pants { fill: #53647c; }
-.friend-avatar.three .avatar-shoes { fill: #493f45; }
 
 /* Live discovery map. Keep preview cards clear of Google's bottom-edge attribution. */
 .app-shell.is-discover { --discovery-nav-height: max(87px, calc(64px + env(safe-area-inset-bottom, 0px))); }
@@ -314,7 +293,6 @@
 .discovery-pin { display: flex; flex-direction: column; align-items: center; width: max-content; max-width: 130px; color: #76548f; }
 .discovery-pin-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50% 50% 50% 8px; border: 3px solid white; background: white; box-shadow: 0 4px 12px #39284340; transform: rotate(-45deg); }
 .discovery-pin-icon svg { transform: rotate(45deg); }
-.discovery-pin .friend-avatar { width: 42px; height: 64px; filter: drop-shadow(0 3px 3px #39284333); }
 .discovery-pin-label { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 6px; margin-top: 3px; background: #fffffff2; border-radius: 6px; color: #55405f; font-size: 10px; font-weight: 700; box-shadow: 0 2px 5px #36263f14; }
 .discovery-pin-rating { margin-top: 2px; padding: 2px 5px; border-radius: 5px; color: #654577; background: #fffffff2; font-size: 9px; font-weight: 600; white-space: nowrap; }
 .discovery-pin.is-selected .discovery-pin-icon { color: white; background: #76548f; transform: rotate(-45deg) scale(1.12); }
@@ -361,9 +339,11 @@
 .profile-view { padding-bottom: 8px; }
 .profile-card { padding: 20px 12px 15px; text-align: center; border: 1px solid #e8e0ec; border-radius: 24px; background: #fff; box-shadow: 0 8px 24px rgba(59, 41, 69, .06); }
 .avatar { position: relative; width: 66px; height: 66px; margin: 0 auto 9px; display: grid; place-items: center; color: #fff; background: #82639a; border: 5px solid #eee5f4; border-radius: 50%; font-family: 'DM Serif Display', serif; font-size: 20px; }
-.avatar > span { position: absolute; right: -4px; bottom: -1px; width: 23px; height: 23px; display: grid; place-items: center; color: #fff; background: #4c3d56; border: 2px solid #fff; border-radius: 50%; }
+.character-edit-badge { position: absolute; right: -4px; bottom: -1px; width: 23px; height: 23px; display: grid; place-items: center; color: #fff; background: #4c3d56; border: 2px solid #fff; border-radius: 50%; }
 .character-avatar { padding: 0; overflow: visible; cursor: pointer; }
-.character-avatar .character-figure.compact { width: 56px; height: 68px; transform: translateY(4px); clip-path: circle(28px at 28px 29px); }
+.character-avatar:disabled { cursor: default; }
+.character-portrait { display: block; width: 100%; height: 100%; flex: none; overflow: hidden; border-radius: 50%; background: #d8c8e5; }
+.character-portrait svg { display: block; width: 100%; height: 100%; }
 .character-studio { position: fixed; z-index: 60; inset: 0; width: min(100%, 430px); margin: 0 auto; overflow-y: auto; overscroll-behavior: contain; background: #faf8fc; animation: studio-in .28s ease-out; }
 @keyframes studio-in { from { opacity: 0; transform: translateY(18px); } }
 .studio-header { position: sticky; z-index: 4; top: 0; height: 75px; display: grid; grid-template-columns: 42px 1fr 55px; align-items: center; gap: 9px; padding: 8px 17px; border-bottom: 1px solid #eee7f1; background: rgba(250, 248, 252, .96); backdrop-filter: blur(12px); }
@@ -375,6 +355,7 @@
 .character-preview .character-figure { width: 165px; height: 255px; }
 .character-preview p { margin: 3px 0 13px; color: #84778a; font-size: 9px; font-weight: 600; }
 .customizer-controls { padding: 15px 18px 35px; }
+.character-save-error { padding: 10px 18px 0; color: #8c3348; font-size: 12px; }
 .control-group { padding: 13px 0 15px; border-bottom: 1px solid #ece5ef; }
 .control-group > p { margin-bottom: 9px; color: #584760; font-size: 10px; font-weight: 700; }
 .option-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }

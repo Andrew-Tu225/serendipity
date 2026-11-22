@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useProfilePages } from "@/hooks/use-profile-pages";
 import { profileClient } from "@/lib/api-client/profile";
 import type { ConnectionDirection, ProfileConnection } from "@/types/profile";
+import { CharacterPortrait } from "./character-portrait";
 import { ProfileSubscreen } from "./profile-subscreen";
 
 const titles = { followers: "Followers", following: "Following" };
@@ -52,11 +53,9 @@ function LiveConnections({ direction }: { direction: ConnectionDirection }) {
 function PeopleRows({ direction, people }: { direction: ConnectionDirection; people: ProfileConnection[] }) {
   return (
     <ul className="place-lists-rows" aria-label={direction === "followers" ? "People who follow you" : "People you follow"}>
-      {people.map(({ id, display_name }) => (
+      {people.map(({ id, display_name, character }) => (
         <li key={id} className="place-list-card">
-          <span className="place-list-icon font-bold" aria-hidden="true">
-            {display_name.split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toUpperCase()}
-          </span>
+          <CharacterPortrait identity={id} appearance={character} size={45} />
           <span className="place-list-copy"><strong>{display_name}</strong></span>
         </li>
       ))}

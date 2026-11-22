@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { CharacterAppearance } from "../src/types/character";
 
 test("shows demo favorites in one row and expands the latest four ratings", async ({ page }) => {
   await page.setViewportSize({ width: 348, height: 820 });
@@ -38,7 +39,7 @@ test("uses the signed-in viewer's ratings and loads their older entries on deman
   await page.route("**/api/profile/experiences?**", (route) => {
     const offset = new URL(route.request().url()).searchParams.get("offset");
     return route.fulfill({ json: {
-      display_name: "Alex", total: 2, follower_count: 3, following_count: 5, bookmark_count: 1, favorites: [entry],
+      user_id: "alex", character: null, display_name: "Alex", total: 2, follower_count: 3, following_count: 5, bookmark_count: 1, favorites: [entry],
       recent: offset === "0" ? [entry] : [{ ...entry, id: "older", place_name: "Tea house" }],
       next_offset: offset === "0" ? 1 : null,
     } });
@@ -82,7 +83,7 @@ test("opens the lists screen and shows each saved place's name and location", as
 test("creates a demo list with a place and reads signed-in bookmarks from the API", async ({ page }) => {
   let signedIn = false;
   await page.route("**/api/profile/experiences?**", (route) => signedIn ? route.fulfill({ json: {
-    display_name: "Alex", total: 0, follower_count: 2, following_count: 3, bookmark_count: 1,
+    user_id: "alex", character: null, display_name: "Alex", total: 0, follower_count: 2, following_count: 3, bookmark_count: 1,
     favorites: [], recent: [], next_offset: null,
   } }) : route.fulfill({ status: 401 }));
   await page.route("**/api/profile/bookmarks?**", (route) => route.fulfill({ json: {
@@ -115,7 +116,7 @@ test("creates a demo list with a place and reads signed-in bookmarks from the AP
 
 test("opens both connection screens and focuses the matching profile stat when going back", async ({ page }) => {
   await page.route("**/api/profile/experiences?**", (route) => route.fulfill({ json: {
-    display_name: "Mia", total: 0, follower_count: 2, following_count: 1, bookmark_count: 0,
+    user_id: "mia", character: null, display_name: "Mia", total: 0, follower_count: 2, following_count: 1, bookmark_count: 0,
     favorites: [], recent: [], next_offset: null,
   } }));
   await page.route("**/api/profile/connections/**", (route) => {
@@ -150,4 +151,45 @@ test("opens both connection screens and focuses the matching profile stat when g
   await expect(people.getByRole("listitem")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await expect(following).toBeFocused();
+});
+
+test("crops the profile picture to a circle and saves the signed-in character", async ({ page }) => {
+  let character: CharacterAppearance | null = null;
+  await page.route("**/api/profile/experiences?**", (route) => route.fulfill({ json: {
+    user_id: "mia", character, display_name: "Mia", total: 0, follower_count: 0, following_count: 0,
+    bookmark_count: 0, favorites: [], recent: [], next_offset: null,
+  } }));
+  await page.route("**/api/auth/me", (route) => route.fulfill({ json: { csrf_token: "character-csrf", user: { id: "mia" } } }));
+  await page.route("**/api/profile/character", (route) => {
+    expect(route.request().method()).toBe("PUT");
+    expect(route.request().headers()["x-csrf-token"]).toBe("character-csrf");
+    character = route.request().postDataJSON();
+    return route.fulfill({ json: character });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+
+  const avatar = page.getByRole("button", { name: "Customize your character" });
+  const portrait = avatar.locator("span").first();
+  await expect(avatar).toBeEnabled();
+  await expect(portrait).toHaveCSS("overflow", "hidden");
+  await expect(portrait).toHaveCSS("border-radius", "50%");
+  const avatarWidth = (await avatar.boundingBox())!.width;
+  expect((await portrait.boundingBox())!.width).toBeGreaterThan(avatarWidth * 0.8);
+  const bounds = await portrait.locator("svg").evaluate((element) => {
+    const [, y, width, height] = element.getAttribute("viewBox")!.split(" ").map(Number);
+    return { width, height, bottom: y + height };
+  });
+  expect(bounds.width).toBe(bounds.height);
+  expect(bounds.bottom).toBeLessThan(185);
+
+  await avatar.click();
+  const studio = page.getByRole("dialog", { name: "Customize your character" });
+  await studio.getByRole("button", { name: "Choose color #4e8379" }).click();
+  await studio.getByRole("button", { name: "Done" }).click();
+  await expect(studio).toBeHidden();
+  await expect(portrait.locator('[fill="#4e8379"]').first()).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await expect(portrait.locator('[fill="#4e8379"]').first()).toBeVisible();
 });

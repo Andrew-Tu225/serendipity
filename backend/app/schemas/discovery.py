@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.models.domain import Category, Rating, Verdict
+from app.schemas.character import CharacterAppearance
 from app.schemas.places import PlaceId
 
 
@@ -46,6 +47,7 @@ class ExperienceOut(BaseModel):
     id: UUID
     author_id: UUID
     author_name: str
+    author_character: CharacterAppearance | None = None
     rating: float
     verdict: Verdict
     review: str | None

@@ -8,7 +8,8 @@ import DiscoverMap from '@/components/map/discover-map'
 import { ReviewComposer } from '@/components/experience/review-composer'
 import { mapPlace, type PlaceExperiences } from '@/types/discovery'
 import type { Coordinates, MapPlace } from '@/types/places'
-import { FriendAvatar } from '@/components/map/friend-avatar'
+import { CharacterFigure } from '@/components/profile/character-figure'
+import { CharacterPortrait } from '@/components/profile/character-portrait'
 import { ProfileExperiencePanels } from '@/components/profile/profile-experiences'
 import { demoPlaceLists } from '@/components/profile/demo-place-lists'
 import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
@@ -16,6 +17,9 @@ import { ProfileConnections } from '@/components/profile/profile-connections'
 import { useProfileExperiences } from '@/hooks/use-profile-experiences'
 import { Icon, type IconName } from '@/components/ui/icon'
 import type { ConnectionDirection } from '@/types/profile'
+import { defaultCharacter, hairColors, hairStyles, miaCharacter, shirtColors, skinTones, type CharacterAppearance } from '@/types/character'
+import { authClient } from '@/lib/api-client/auth'
+import { profileClient } from '@/lib/api-client/profile'
 
 const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
 
@@ -35,10 +39,11 @@ function App() {
   const [reviewPoint, setReviewPoint] = useState<Coordinates | null>(null)
   const [picking, setPicking] = useState(false)
   const [reviewBusy, setReviewBusy] = useState(false)
-  const [reviewRevision, setReviewRevision] = useState(0)
+  const [discoveryRevision, setDiscoveryRevision] = useState(0)
   const [reviewedPlace, setReviewedPlace] = useState<MapPlace | null>(null)
   const [profileScreen, setProfileScreen] = useState<ProfileScreen | null>(null)
   const [demoLists, setDemoLists] = useState(demoPlaceLists)
+  const [demoCharacter, setDemoCharacter] = useState(miaCharacter)
   const profileTrigger = useRef<HTMLButtonElement>(null)
 
   function closeProfileScreen() {
@@ -63,7 +68,7 @@ function App() {
   const reviewSaved = (result: PlaceExperiences) => {
     setSelectedPlace(mapPlace(result.place))
     setReviewedPlace(mapPlace(result.place))
-    setReviewRevision((value) => value + 1)
+    setDiscoveryRevision((value) => value + 1)
     setReviewBusy(false)
     setSheet(null)
     setPosted(true)
@@ -106,7 +111,7 @@ function App() {
 
         <div className="app-content" hidden={profileScreen !== null}>
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
-            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision} reviewedPlace={reviewedPlace}
+            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={discoveryRevision} reviewedPlace={reviewedPlace}
               selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
               picking={picking} onCancelPick={() => setPicking(false)}
               onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
@@ -114,7 +119,11 @@ function App() {
           {activeTab === 'Buddy' ? (
             <BuddyView />
           ) : activeTab === 'Profile' ? (
-            <ProfileView demoListCount={demoLists.length} onOpenScreen={(screen, trigger) => {
+            <ProfileView demoListCount={demoLists.length} demoCharacter={demoCharacter} onDemoCharacter={setDemoCharacter}
+              onCharacterSaved={() => {
+                setReviewedPlace(null)
+                setDiscoveryRevision((value) => value + 1)
+              }} onOpenScreen={(screen, trigger) => {
               profileTrigger.current = trigger
               setProfileScreen(screen)
             }} />
@@ -143,7 +152,7 @@ function App() {
               </section>
 
               <section className="social-row">
-                <div className="friends"><span>EL</span><span>JR</span><span>+4</span></div>
+                <div className="friends"><CharacterPortrait identity="Elena Rivera" size={26}/><CharacterPortrait identity="James Reed" size={26}/><span>+4</span></div>
                 <p><strong>Elena</strong> and 5 others want to go</p>
                 <button className={liked ? 'liked' : ''} onClick={() => setLiked(!liked)} aria-label={liked ? 'Unlike' : 'Like'}>
                   <Icon name="heart" size={21} filled={liked}/><span>{liked ? 129 : 128}</span>
@@ -243,7 +252,11 @@ function BuddyView() {
             <div className="progress-track"><i/></div>
           </div>
           <div className="buddy-card">
-            <div className="buddy-photo"><Image src={rooftopImage} sizes="430px" alt="Alex, a suggested taste buddy"/><span>94% match</span></div>
+            <div className="buddy-photo">
+              <Image src={rooftopImage} sizes="430px" alt=""/>
+              <div className="buddy-portrait"><CharacterPortrait identity="Alex Bennett" size={112}/></div>
+              <span>94% match</span>
+            </div>
             <div className="buddy-info">
               <div><h2>Alex, 28</h2><p>Brooklyn · 2 mi away</p></div>
               <span className="verified"><Icon name="sparkle" size={15}/></span>
@@ -269,9 +282,9 @@ function WorldwideLock() {
       <div className="world-map-preview" aria-hidden="true">
         <span className="continent americas"/><span className="continent europe"/><span className="continent asia"/>
         <i className="world-dot dot-one"/><i className="world-dot dot-two"/><i className="world-dot dot-three"/>
-        <div className="locked-avatar avatar-paris"><FriendAvatar variant="one"/></div>
-        <div className="locked-avatar avatar-tokyo"><FriendAvatar variant="two"/></div>
-        <div className="locked-avatar avatar-mexico"><FriendAvatar variant="three"/></div>
+        <div className="locked-avatar avatar-paris"><CharacterPortrait identity="Paris buddy" size={30}/></div>
+        <div className="locked-avatar avatar-tokyo"><CharacterPortrait identity="Tokyo buddy" size={30}/></div>
+        <div className="locked-avatar avatar-mexico"><CharacterPortrait identity="Mexico City buddy" size={30}/></div>
         <span className="map-lock"><Icon name="lock" size={23}/></span>
       </div>
       <div className="worldwide-copy">
@@ -293,21 +306,43 @@ function WorldwideLock() {
   )
 }
 
-function ProfileView({ demoListCount, onOpenScreen }: {
+function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacterSaved, onOpenScreen }: {
   demoListCount: number
+  demoCharacter: CharacterAppearance
+  onDemoCharacter: (character: CharacterAppearance) => void
+  onCharacterSaved: () => void
   onOpenScreen: (screen: ProfileScreen, trigger: HTMLButtonElement) => void
 }) {
-  const { profile, retry } = useProfileExperiences()
-  const [customizing, setCustomizing] = useState(false)
-  const [character, setCharacter] = useState<CharacterOptions>({
-    features: 'feminine',
-    hairStyle: 'wavy',
-    hairColor: '#5a392c',
-    shirt: '#8664a0',
-    pants: '#4d526b',
-    shoes: '#eee8f2',
-    hat: 'none',
-  })
+  const { profile, retry, updateCharacter } = useProfileExperiences()
+  const [draft, setDraft] = useState<CharacterAppearance | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const character = profile.status === 'ready'
+    ? profile.data.character ?? defaultCharacter(profile.data.user_id)
+    : demoCharacter
+
+  async function saveCharacter() {
+    if (!draft || saving) return
+    if (profile.status === 'demo') {
+      onDemoCharacter(draft)
+      setDraft(null)
+      return
+    }
+    if (profile.status !== 'ready') return
+    setSaving(true)
+    setSaveError('')
+    try {
+      const session = await authClient.getSession()
+      if (session.user.id !== profile.data.user_id) throw new Error('Your session changed. Open Profile again to edit your character.')
+      updateCharacter(await profileClient.saveCharacter(draft, session.csrf_token))
+      onCharacterSaved()
+      setDraft(null)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Couldn’t save your character. Try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
   const identity = profile.status === 'demo' ? {
     owner: { name: 'Mia Morgan', demo: true } as const,
     followers: 382,
@@ -323,9 +358,9 @@ function ProfileView({ demoListCount, onOpenScreen }: {
   return (
     <section className="profile-view">
       <div className="profile-card">
-        <button className="avatar character-avatar" onClick={() => setCustomizing(true)} aria-label="Customize your character">
-          <CharacterFigure options={character} compact/>
-          <span><Icon name="sparkle" size={13}/></span>
+        <button className="avatar character-avatar" disabled={!identity} onClick={() => { setSaveError(''); setDraft(character) }} aria-label="Customize your character">
+          <CharacterPortrait identity={identity?.owner.name ?? 'Mia Morgan'} appearance={character}/>
+          <span className="character-edit-badge"><Icon name="sparkle" size={13}/></span>
         </button>
         {identity && <>
           <div className="profile-name">
@@ -355,36 +390,35 @@ function ProfileView({ demoListCount, onOpenScreen }: {
           Couldn’t load your experiences. <button type="button" className="profile-history-button" onClick={retry}>Try again</button>
         </div>
       )}
-      {customizing && <CharacterCustomizer value={character} onChange={setCharacter} onClose={() => setCustomizing(false)}/>}
+      {draft && <CharacterCustomizer value={draft} onChange={setDraft} onClose={() => setDraft(null)}
+        onSave={saveCharacter} saving={saving} error={saveError}/>}
     </section>
   )
 }
 
-type CharacterOptions = {
-  features: 'feminine' | 'masculine'
-  hairStyle: 'short' | 'wavy' | 'curly' | 'bun'
-  hairColor: string
-  shirt: string
-  pants: string
-  shoes: string
-  hat: 'none' | 'cap' | 'beanie'
-}
-
-function CharacterCustomizer({ value, onChange, onClose }: { value: CharacterOptions; onChange: (value: CharacterOptions) => void; onClose: () => void }) {
-  const update = <K extends keyof CharacterOptions>(key: K, next: CharacterOptions[K]) => onChange({ ...value, [key]: next })
+function CharacterCustomizer({ value, onChange, onClose, onSave, saving, error }: {
+  value: CharacterAppearance
+  onChange: (value: CharacterAppearance) => void
+  onClose: () => void
+  onSave: () => void
+  saving: boolean
+  error: string
+}) {
+  const update = <K extends keyof CharacterAppearance>(key: K, next: CharacterAppearance[K]) => onChange({ ...value, [key]: next })
 
   return (
     <section className="character-studio" role="dialog" aria-modal="true" aria-label="Customize your character">
       <header className="studio-header">
-        <button onClick={onClose} aria-label="Back to profile"><Icon name="arrow" size={20}/></button>
+        <button onClick={onClose} disabled={saving} aria-label="Back to profile"><Icon name="arrow" size={20}/></button>
         <div><p className="eyebrow">YOUR LOOK</p><h2>Customize character</h2></div>
-        <button className="studio-done" onClick={onClose}>Done</button>
+        <button className="studio-done" onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Done'}</button>
       </header>
       <div className="character-preview">
         <CharacterFigure options={value}/>
-        <p>This is how friends see you on the map</p>
+        <p>Your profile picture shows your face and shoulders</p>
       </div>
-      <div className="customizer-controls">
+      {error && <p className="character-save-error" role="alert">{error}</p>}
+      <fieldset className="customizer-controls" disabled={saving}>
         <ControlGroup title="Features">
           <div className="option-pills">
             {(['feminine', 'masculine'] as const).map((option) => <button key={option} className={value.features === option ? 'selected' : ''} onClick={() => update('features', option)}>{option === 'feminine' ? 'Feminine' : 'Masculine'}</button>)}
@@ -392,14 +426,17 @@ function CharacterCustomizer({ value, onChange, onClose }: { value: CharacterOpt
         </ControlGroup>
         <ControlGroup title="Hair style">
           <div className="option-pills four">
-            {(['short', 'wavy', 'curly', 'bun'] as const).map((option) => <button key={option} className={value.hairStyle === option ? 'selected' : ''} onClick={() => update('hairStyle', option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
+            {hairStyles.map((option) => <button key={option} className={value.hairStyle === option ? 'selected' : ''} onClick={() => update('hairStyle', option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
           </div>
         </ControlGroup>
         <ControlGroup title="Hair color">
-          <ColorSwatches colors={['#211d20', '#5a392c', '#9a6038', '#e1b36d', '#a75b75', '#74558f']} value={value.hairColor} onChange={(color) => update('hairColor', color)}/>
+          <ColorSwatches colors={hairColors} value={value.hairColor} onChange={(color) => update('hairColor', color)}/>
+        </ControlGroup>
+        <ControlGroup title="Skin tone">
+          <ColorSwatches colors={skinTones} value={value.skinTone} onChange={(color) => update('skinTone', color)}/>
         </ControlGroup>
         <ControlGroup title="Shirt">
-          <ColorSwatches colors={['#8664a0', '#d5747f', '#4e8379', '#d79d4f', '#517099', '#332e38']} value={value.shirt} onChange={(color) => update('shirt', color)}/>
+          <ColorSwatches colors={shirtColors} value={value.shirt} onChange={(color) => update('shirt', color)}/>
         </ControlGroup>
         <ControlGroup title="Pants">
           <ColorSwatches colors={['#4d526b', '#2f3037', '#6e5547', '#8290a3', '#786078']} value={value.pants} onChange={(color) => update('pants', color)}/>
@@ -412,7 +449,7 @@ function CharacterCustomizer({ value, onChange, onClose }: { value: CharacterOpt
             {(['none', 'cap', 'beanie'] as const).map((option) => <button key={option} className={value.hat === option ? 'selected' : ''} onClick={() => update('hat', option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
           </div>
         </ControlGroup>
-      </div>
+      </fieldset>
     </section>
   )
 }
@@ -423,33 +460,6 @@ function ControlGroup({ title, children }: { title: string; children: ReactNode 
 
 function ColorSwatches({ colors, value, onChange }: { colors: string[]; value: string; onChange: (color: string) => void }) {
   return <div className="color-swatches">{colors.map((color) => <button key={color} className={value === color ? 'selected' : ''} style={{ backgroundColor: color }} onClick={() => onChange(color)} aria-label={`Choose color ${color}`}/>)}</div>
-}
-
-function CharacterFigure({ options, compact = false }: { options: CharacterOptions; compact?: boolean }) {
-  const feminine = options.features === 'feminine'
-  return (
-    <svg className={compact ? 'character-figure compact' : 'character-figure'} viewBox="0 0 180 320" aria-hidden="true">
-      <ellipse cx="90" cy="307" rx="48" ry="8" fill="rgba(55,42,63,.13)"/>
-      <path d="M61 185 55 279h31l5-94ZM92 185l3 94h31l-8-94Z" fill={options.pants}/>
-      <path d="M52 274h36v24H43c0-10 3-18 9-24ZM94 274h34c7 6 10 14 9 24H94Z" fill={options.shoes}/>
-      <path d={feminine ? 'M56 123c12-15 55-15 68 0l9 72H47Z' : 'M51 124c16-16 62-16 78 0l4 71H47Z'} fill={options.shirt}/>
-      <path d="m55 132-26 54M125 132l26 54" fill="none" stroke="#dca985" strokeWidth="18" strokeLinecap="round"/>
-      <circle cx="27" cy="190" r="10" fill="#dca985"/><circle cx="153" cy="190" r="10" fill="#dca985"/>
-      <rect x="80" y="101" width="20" height="29" rx="9" fill="#dca985"/>
-      {options.hairStyle === 'wavy' && <path d="M50 72C50 25 70 11 91 11s43 15 42 63c15 30 4 62-14 74l-8-47H67l-7 48c-23-15-24-48-10-77Z" fill={options.hairColor}/>}
-      {options.hairStyle === 'short' && <path d="M54 77C52 34 67 17 91 17c27 0 39 21 37 58l-15-20c-19 8-38 7-59 22Z" fill={options.hairColor}/>}
-      {options.hairStyle === 'curly' && <><circle cx="59" cy="53" r="23" fill={options.hairColor}/><circle cx="86" cy="35" r="25" fill={options.hairColor}/><circle cx="116" cy="48" r="24" fill={options.hairColor}/><circle cx="126" cy="78" r="23" fill={options.hairColor}/><circle cx="54" cy="84" r="22" fill={options.hairColor}/></>}
-      {options.hairStyle === 'bun' && <><circle cx="91" cy="23" r="24" fill={options.hairColor}/><path d="M53 76C52 34 69 20 91 20s39 16 38 56l-15-20c-19 7-38 6-61 20Z" fill={options.hairColor}/></>}
-      <path d={feminine ? 'M58 68c0-35 14-49 33-49s34 16 33 49v26c0 25-14 40-33 40S58 119 58 94Z' : 'M57 69c0-34 15-48 34-48s35 15 34 48v27c0 24-15 39-34 39S57 120 57 96Z'} fill="#dca985"/>
-      <path d="M57 70C57 37 71 19 91 19s35 18 35 50c-10-3-18-9-24-18-10 8-24 13-45 19Z" fill={options.hairColor}/>
-      <path d="M58 70c7-2 15-18 19-34 11 18 27 24 48 22" fill="none" stroke={options.hairColor} strokeWidth="14" strokeLinecap="round"/>
-      {feminine ? <><path d="m69 82 8-2M105 80l8 2" stroke="#3f303a" strokeWidth="3" strokeLinecap="round"/><path d="M72 86h8M102 86h8" stroke="#3f303a" strokeWidth="2.5" strokeLinecap="round"/></> : <><path d="M69 80h11M102 80h11" stroke="#3f303a" strokeWidth="4" strokeLinecap="round"/></>}
-      <circle cx="76" cy="87" r="3" fill="#3f303a"/><circle cx="107" cy="87" r="3" fill="#3f303a"/>
-      <path d="M81 111c7 6 14 6 21 0" fill="none" stroke="#9b565c" strokeWidth="3" strokeLinecap="round"/>
-      {options.hat === 'cap' && <><path d="M50 49c6-30 26-42 44-42 22 0 37 15 39 41Z" fill={options.shirt}/><path d="M91 46h57c-8 10-31 12-57 8Z" fill={options.shirt}/></>}
-      {options.hat === 'beanie' && <><path d="M53 54C53 18 70 2 91 2s38 17 38 52Z" fill={options.shirt}/><rect x="50" y="43" width="81" height="17" rx="8" fill={options.shirt}/></>}
-    </svg>
-  )
 }
 
 function ActivityCalendar() {

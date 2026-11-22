@@ -1,4 +1,5 @@
 import type { AppExperience, PlaceCategory } from "./discovery";
+import type { CharacterAppearance } from "./character";
 
 export interface ProfileExperience {
   id: string;
@@ -10,7 +11,9 @@ export interface ProfileExperience {
 }
 
 export interface ProfileExperiences {
+  user_id: string;
   display_name: string | null;
+  character: CharacterAppearance | null;
   total: number;
   follower_count: number;
   following_count: number;
@@ -30,6 +33,7 @@ export type ConnectionDirection = "followers" | "following";
 export interface ProfileConnection {
   id: string;
   display_name: string;
+  character?: CharacterAppearance | null;
 }
 
 export interface ProfileConnections {
