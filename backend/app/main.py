@@ -2,7 +2,17 @@ from fastapi import FastAPI, Request
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import JSONResponse
 
-from app.api import auth, buddies, discovery, health, places, profile, recommendations, social
+from app.api import (
+    auth,
+    buddies,
+    discovery,
+    health,
+    onboarding,
+    places,
+    profile,
+    recommendations,
+    social,
+)
 from app.config import get_settings
 
 settings = get_settings()
@@ -21,6 +31,7 @@ app.include_router(places.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")
 app.include_router(discovery.router, prefix="/api")
 app.include_router(social.router, prefix="/api")
+app.include_router(onboarding.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
 app.include_router(buddies.router, prefix="/api")
 

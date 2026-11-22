@@ -196,7 +196,7 @@ backend/app/api/recommendations.py        CurrentUser, bbox/limit validation, re
 
 The service converts the signed-in ORM `User` into the domain `User`, loads the viewer's data through `SqlRecommendationRepository`, and passes it to the pure `recommend()` function. `backend/app/recommend/` never touches the database. Rows become domain models through `backend/app/models/conversions.py`. Both routes send `Cache-Control: no-store`.
 
-The repository reads the `places`, `experiences`, `follows`, `bookmarks` and `taste_profiles` tables (migration `0002`). For one request it loads the places inside the bbox (at most `MAX_PLACES_IN_VIEW`), the latest Experience per `(user, place)` there, those logs' authors, the viewer's follows and bookmarks, and every taste profile row. Migration `0005` adds `user_interests`; the repository combines each stored category score with +1 for an explicitly selected interest before passing profiles to the pure recommender. Stored review scores remain unchanged. Both ranked results and Place log relations use these effective profiles.
+The repository reads the `places`, `experiences`, `follows`, `bookmarks` and `taste_profiles` tables (migration `0002`). For one request it loads the places inside the bbox (at most `MAX_PLACES_IN_VIEW`), the latest Experience per `(user, place)` there, those logs' authors, the viewer's follows and bookmarks, and every taste profile row. Migration `0009` adds `user_interests`; the repository combines each stored category score with +1 for an explicitly selected interest before passing profiles to the pure recommender. Stored review scores remain unchanged. Both ranked results and Place log relations use these effective profiles.
 
 ### Creating a log
 
