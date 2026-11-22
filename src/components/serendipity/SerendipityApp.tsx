@@ -340,6 +340,7 @@ function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacte
       name: profile.data.display_name || 'Your profile', demo: false,
       userId: profile.data.user_id, bookmarkCount: profile.data.bookmark_count,
       listCount: profile.data.list_count ?? 1,
+      listStorageAvailable: typeof profile.data.list_count === 'number',
     } as const,
     followers: profile.data.follower_count,
     following: profile.data.following_count,

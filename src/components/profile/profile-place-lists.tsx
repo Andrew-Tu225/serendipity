@@ -12,6 +12,7 @@ export type ListOwner = { name: string } & ({ demo: true } | {
   userId: string;
   bookmarkCount: number;
   listCount: number;
+  listStorageAvailable: boolean;
 });
 
 type Screen = { kind: "lists" | "new" | "bookmarks" }
@@ -53,19 +54,25 @@ export function ProfilePlaceLists({ owner, demoLists, onSaveDemo, onCreated, onC
       countLabel={rootScreen ? `${count} lists` : savedPlaceCount(count)}
       backLabel={rootScreen ? "Back to profile" : "Back to lists"} onBack={goBack}>
         {rootScreen && <>
-          <div className="place-lists-toolbar">
+          {(owner.demo || owner.listStorageAvailable) && <div className="place-lists-toolbar">
             <button type="button" className="place-lists-action" onClick={() => setScreen({ kind: "new" })}>
               <Icon name="plus" size={16} /> New list
             </button>
-          </div>
+          </div>}
           {owner.demo ? <ul className="place-lists-rows" aria-label="Place collections">
             {demoLists.map((list) => (
               <CollectionRow key={list.id} name={list.name} icon={list.icon} count={list.places.length}
                 onClick={() => setScreen({ kind: "detail", list })} />
             ))}
-          </ul> : <LiveCollections bookmarkCount={owner.bookmarkCount}
+          </ul> : owner.listStorageAvailable ? <LiveCollections bookmarkCount={owner.bookmarkCount}
             onBookmarks={() => setScreen({ kind: "bookmarks" })}
-            onSelect={(list) => setScreen({ kind: "live-detail", list })} />}
+            onSelect={(list) => setScreen({ kind: "live-detail", list })} /> : <>
+              <p className="place-lists-message">Custom lists need the database update.</p>
+              <ul className="place-lists-rows" aria-label="Place collections">
+                <CollectionRow name="Saved places" icon="bookmark" count={owner.bookmarkCount}
+                  onClick={() => setScreen({ kind: "bookmarks" })} />
+              </ul>
+            </>}
         </>}
         {screen.kind === "detail" && <>
           {!adding && <>

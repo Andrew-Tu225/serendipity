@@ -84,6 +84,27 @@ test("opens the lists screen and shows each saved place's name and location", as
   await expect(page.getByRole("heading", { name: "Top 4 experiences" })).toBeVisible();
 });
 
+test("opens Profile and Saved places with custom list storage unavailable", async ({ page }) => {
+  await page.route("**/api/auth/me", (route) => route.fulfill({ json: signedIn }));
+  await page.route("**/api/profile/experiences?**", (route) => route.fulfill({ json: {
+    user_id: signedIn.user.id, character: null, display_name: "Alex", total: 0,
+    follower_count: 2, following_count: 3, bookmark_count: 1, list_count: null,
+    favorites: [], recent: [], next_offset: null,
+  } }));
+  await page.route("**/api/profile/bookmarks?**", (route) => route.fulfill({ json: {
+    places: [{ id: "river", name: "River Trail", latitude: 43.1, longitude: -81.2 }], next_offset: null,
+  } }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Alex", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Top 4 experiences" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Followers", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Lists", exact: true }).click();
+  await expect(page.getByText("Custom lists need the database update.")).toBeVisible();
+  await page.getByRole("button", { name: /Saved places/ }).click();
+  await expect(page.getByText("River Trail")).toBeVisible();
+});
+
 test("creates a private list, adds experiences and reloads the saved collection", async ({ page }) => {
   let collection: ProfileListCreate | undefined;
   let entries: ProfileListEntry[] = [];

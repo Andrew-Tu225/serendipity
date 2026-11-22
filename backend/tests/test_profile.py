@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime
 from uuid import UUID
 
 import pytest
+from sqlalchemy import text
 
 from app.models import Bookmark, Experience, Follow, Place, User
 from tests.auth_helpers import authenticate
@@ -42,6 +43,38 @@ async def test_profile_requires_a_session_and_empty_profiles_are_valid(client, i
         "recent": [],
         "next_offset": None,
     }
+
+
+async def test_profile_and_bookmarks_load_before_custom_list_migration(
+    client, identity_provider, database_factory
+):
+    async with database_factory() as database:
+        await database.execute(text("DROP TABLE profile_list_entries"))
+        await database.execute(text("DROP TABLE profile_lists"))
+        await database.commit()
+
+    await authenticate(client, identity_provider)
+    response = await client.get(PROFILE)
+    assert response.status_code == 200
+    assert response.json()["list_count"] is None
+    assert response.json()["favorites"] == []
+    assert (await client.get("/api/profile/connections/followers")).status_code == 200
+    assert (await client.get("/api/profile/bookmarks")).json() == {
+        "places": [],
+        "next_offset": None,
+    }
+
+    lists = "/api/profile/lists"
+    response = await client.get(lists)
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Custom lists need the database update."
+    session = (await client.get("/api/auth/me")).json()
+    response = await client.post(
+        lists,
+        json={"id": str(UUID(int=999)), "name": "Weekend"},
+        headers={"origin": "http://localhost:3000", "x-csrf-token": session["csrf_token"]},
+    )
+    assert response.status_code == 503
 
 
 async def test_custom_lists_are_private_and_writes_can_be_retried(client, identity_provider):

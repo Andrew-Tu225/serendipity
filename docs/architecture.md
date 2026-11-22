@@ -139,6 +139,9 @@ create a collection or add an experience name and location. `ProfileService` che
 commits a new list and its optional first entry together. Client-generated IDs make retrying an
 unchanged write safe. `VerifiedMutation` protects both POST routes. Alembic revision `0010` adds
 the two tables, and the Profile response counts custom collections alongside Saved places.
+Before revision `0010` is applied, the Profile response uses a null list count. Ratings,
+connections, and Saved places still load. The custom-list endpoints return a database-update
+message until both tables are available.
 
 The character editor saves an account's appearance with `PUT /api/profile/character`, using the
 session's CSRF token and `VerifiedMutation`. `ProfileService` commits the validated appearance to

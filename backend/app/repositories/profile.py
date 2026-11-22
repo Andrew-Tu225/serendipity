@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, inspect, literal, select
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,12 +12,25 @@ class ProfileRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def counts(self, user_id: UUID) -> tuple[int, int, int, int]:
+    async def has_list_storage(self) -> bool:
+        connection = await self.session.connection()
+        return await connection.run_sync(
+            lambda conn: {ExperienceList.__tablename__, ExperienceListEntry.__tablename__}.issubset(
+                inspect(conn).get_table_names()
+            )
+        )
+
+    async def counts(self, user_id: UUID) -> tuple[int, int, int, int | None]:
+        list_count = (
+            select(func.count()).where(ExperienceList.user_id == user_id).scalar_subquery()
+            if await self.has_list_storage()
+            else literal(None)
+        )
         statement = select(
             select(func.count()).where(Follow.followee_id == user_id).scalar_subquery(),
             select(func.count()).where(Follow.follower_id == user_id).scalar_subquery(),
             select(func.count()).where(Bookmark.user_id == user_id).scalar_subquery(),
-            select(func.count()).where(ExperienceList.user_id == user_id).scalar_subquery(),
+            list_count,
         )
         followers, following, bookmarks, lists = (await self.session.execute(statement)).one()
         return followers, following, bookmarks, lists

@@ -18,7 +18,7 @@ export interface ProfileExperiences {
   follower_count: number;
   following_count: number;
   bookmark_count: number;
-  list_count?: number;
+  list_count?: number | null;
   favorites: ProfileExperience[];
   recent: ProfileExperience[];
   next_offset: number | null;

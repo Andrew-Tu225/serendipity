@@ -25,7 +25,7 @@ class ProfileExperiences(BaseModel):
     follower_count: int
     following_count: int
     bookmark_count: int
-    list_count: int
+    list_count: int | None
     favorites: list[ProfileExperience]
     recent: list[ProfileExperience]
     next_offset: int | None

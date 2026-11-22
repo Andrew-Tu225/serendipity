@@ -50,7 +50,7 @@ class ProfileService:
             follower_count=followers,
             following_count=following,
             bookmark_count=bookmarks,
-            list_count=lists + 1,
+            list_count=lists + 1 if lists is not None else None,
             favorites=[profile_experience(experience, place) for experience, place in favorites],
             recent=[profile_experience(experience, place) for experience, place in recent[:limit]],
             next_offset=offset + limit if len(recent) > limit else None,
@@ -69,6 +69,7 @@ class ProfileService:
         )
 
     async def lists_for(self, user: User, offset: int, limit: int) -> ProfileLists:
+        await self._require_list_storage()
         rows = await self.profile.lists(user.id, offset, limit + 1)
         return ProfileLists(
             lists=[
@@ -79,6 +80,7 @@ class ProfileService:
         )
 
     async def create_list(self, user: User, data: ProfileListCreate) -> ProfileListSummary:
+        await self._require_list_storage()
         created = await self.profile.insert_list(user.id, data.id, data.name)
         collection = await self.profile.owned_list(user.id, data.id)
         if collection is None or collection.name != data.name:
@@ -93,6 +95,7 @@ class ProfileService:
     async def list_entries(
         self, user: User, list_id: UUID, offset: int, limit: int
     ) -> ProfileListEntries:
+        await self._require_list_storage()
         if await self.profile.owned_list(user.id, list_id) is None:
             raise HTTPException(404, "List unavailable")
         rows = await self.profile.entries(list_id, offset, limit + 1)
@@ -106,11 +109,16 @@ class ProfileService:
     async def add_list_entry(
         self, user: User, list_id: UUID, entry: ProfileListEntry
     ) -> ProfileListEntry:
+        await self._require_list_storage()
         if await self.profile.owned_list(user.id, list_id) is None:
             raise HTTPException(404, "List unavailable")
         result = await self._save_entry(list_id, entry)
         await self.database.commit()
         return result
+
+    async def _require_list_storage(self) -> None:
+        if not await self.profile.has_list_storage():
+            raise HTTPException(503, "Custom lists need the database update.")
 
     async def _save_entry(self, list_id: UUID, entry: ProfileListEntry) -> ProfileListEntry:
         row = await self.profile.insert_entry(list_id, entry.id, entry.name, entry.location)

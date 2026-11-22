@@ -137,7 +137,8 @@ form with an existing Place selected.
 
 Profile opens separate Followers, Following, and Lists screens. Signed-in users can create private
 lists and add experiences by name and location. Apply migrations through revision `0010` for
-account-backed lists.
+account-backed lists. Profile, its connection screens, and Saved places are also available on
+revision `0009`.
 
 Run `npm install` and `cd backend && uv run alembic upgrade head` for the existing setup. This map
 change adds no migration, dependency, or environment variable. No demo data is inserted automatically.
