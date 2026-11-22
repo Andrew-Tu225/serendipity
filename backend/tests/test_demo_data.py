@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import select, text
 
 from app.demo.london import PEOPLE, PLACES, demo_id, experiences
-from app.models import Follow, Place, TasteProfile, User
+from app.models import Experience, Follow, Place, TasteProfile, User
 from app.recommend.taste import log_value
 from app.repositories.demo_data import DemoDataRepository
 from app.repositories.experiences import TasteProfileRepository
@@ -28,11 +28,11 @@ async def test_seed_is_complete_idempotent_and_preserves_existing_data(database_
         await session.commit()
         first = await DemoDataService(session).seed_london(date.today())
         assert first == {
-            "users": 6,
+            "users": 20,
             "places": 24,
-            "experiences": 101,
-            "follows": 12,
-            "bookmarks": 18,
+            "experiences": 171,
+            "follows": 40,
+            "bookmarks": 60,
         }
         rows = (await session.scalars(select(TasteProfile))).all()
         scores = {(row.user_id, row.category): row.score for row in rows}
@@ -66,11 +66,17 @@ async def test_viewer_follows_and_public_discovery(database_factory):
         session.add(viewer)
         await session.commit()
         inserted = await DemoDataService(session).seed_london(date.today(), viewer.id)
-        assert inserted["follows"] == 15
+        assert inserted["follows"] == 43
         bounds = BBox(min_lng=-81.35, min_lat=42.93, max_lng=-81.20, max_lat=43.03)
         public = await DiscoveryService(session).discover(bounds, None, 200, None)
         assert len(public.places) == 24
-        assert all(place.rating_summary.count == 4 for place in public.places)
+        expected_reviewers = {}
+        for log in experiences(date.today()):
+            expected_reviewers.setdefault(log.place_id, set()).add(log.user_id)
+        assert all(
+            place.rating_summary.count == len(expected_reviewers[str(place.id)])
+            for place in public.places
+        )
         assert all(place.friend_count == 0 for place in public.places)
         private = await DiscoveryService(session).discover(bounds, None, 200, viewer)
         assert any(place.friend_count > 0 for place in private.places)
@@ -105,7 +111,7 @@ async def test_clear_removes_all_app_rows_and_retains_schema(postgres_factory):
         await DemoDataService(session).seed_london(date.today())
         version = await session.scalar(text("SELECT version_num FROM alembic_version"))
         counts = await DemoDataService(session).clear()
-        assert counts["places"] == 24 and counts["experiences"] == 101
+        assert counts["places"] == 24 and counts["experiences"] == 171
         assert all(count == 0 for count in (await DemoDataRepository(session).counts()).values())
         assert await session.scalar(text("SELECT version_num FROM alembic_version")) == version
         assert (await DemoDataService(session).seed_london(date.today()))["places"] == 24
@@ -133,7 +139,43 @@ async def test_maintenance_rejects_remote_or_overridden_targets(url):
 async def test_local_target_label_never_contains_credentials():
     url = local_database_url("postgresql+psycopg://username:secret@127.0.0.1:5433/serendipity")
     assert target_label(url) == "127.0.0.1:5433/serendipity"
-    assert len(PEOPLE) == 6
+    assert len(PEOPLE) >= 20
+
+
+async def test_every_demo_user_has_at_least_five_reviews():
+    logs = experiences(date.today())
+    assert len(logs) >= 100
+    assert len({log.id for log in logs}) == len(logs)
+    for person in PEOPLE:
+        authored = [log for log in logs if log.user_id == str(demo_id(f"user:{person}"))]
+        assert len(authored) >= 5
+        assert all(log.review.startswith("[Mock review]") for log in authored)
+
+
+async def test_seed_expands_original_dataset_without_rewriting_reviews(
+    database_factory, monkeypatch
+):
+    async with database_factory() as session:
+        with monkeypatch.context() as patch:
+            patch.setattr("app.demo.london.PEOPLE", PEOPLE[:6])
+            patch.setattr("app.services.demo_data.PEOPLE", PEOPLE[:6])
+            original = await DemoDataService(session).seed_london(date.today())
+        assert original["users"] == 6 and original["experiences"] == 101
+        previous = {
+            row.id: (row.user_id, row.place_id, row.rating, row.review, row.visited_on)
+            for row in (await session.scalars(select(Experience))).all()
+        }
+        expanded = await DemoDataService(session).seed_london(date.today())
+        assert expanded["users"] == 14 and expanded["experiences"] == 70
+        current = {
+            row.id: (row.user_id, row.place_id, row.rating, row.review, row.visited_on)
+            for row in (await session.scalars(select(Experience))).all()
+        }
+        assert {key: current[key] for key in previous} == previous
+        assert all(
+            count == 0
+            for count in (await DemoDataService(session).seed_london(date.today())).values()
+        )
 
 
 async def test_clear_cli_requires_confirmation_before_connecting(monkeypatch):

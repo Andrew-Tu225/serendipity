@@ -128,8 +128,8 @@ automatically. Photos, saving UI, friend-management UI, and filters are deferred
 
 ### Local mock reviews
 
-From the repository root, run `npm run db:seed` to insert 24 London places and 101 labeled mock
-reviews from six demo users. The seed is repeatable and preserves existing data. Use
+From the repository root, run `npm run db:seed` to insert 20 demo users, 24 London places, and 171 labeled mock
+reviews. Every demo user has at least five reviews. The seed is repeatable and preserves existing data. Use
 `npm run db:seed -- --viewer-id YOUR_USER_UUID` to follow three demo users from an existing account.
 
 `npm run db:clear -- --dry-run` shows app row counts. `npm run db:clear -- --confirm serendipity`

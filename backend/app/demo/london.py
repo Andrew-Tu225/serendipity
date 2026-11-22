@@ -57,7 +57,28 @@ PLACES = (
     ),
     DemoPlace("dundas-place", "Dundas Place", 42.9843, -81.2480, domain.Category.ATTRACTION),
 )
-PEOPLE = ("Elena", "James", "Alex", "Maya", "Noah", "Priya")
+PEOPLE = (
+    "Elena",
+    "James",
+    "Alex",
+    "Maya",
+    "Noah",
+    "Priya",
+    "Olivia",
+    "Liam",
+    "Sofia",
+    "Ethan",
+    "Amara",
+    "Lucas",
+    "Zoe",
+    "Owen",
+    "Aisha",
+    "Leo",
+    "Isabella",
+    "Arjun",
+    "Chloe",
+    "Mateo",
+)
 REVIEW_NOTES = {
     "food": (
         "A relaxed lunch stop; I'd leave time to explore the neighborhood afterward.",
@@ -96,8 +117,15 @@ def experiences(today: date) -> list[domain.Experience]:
             }
             else "culture"
         )
-        for offset in range(4):
-            person = (index + offset) % len(PEOPLE)
+        # Preserve the original six authors' IDs and visits on already-seeded databases.
+        reviewers = [((index + offset) % 6, offset) for offset in range(4)]
+        # Each additional user has five visits spread across London and place categories.
+        reviewers.extend(
+            (person, 4 + person)
+            for person in range(6, len(PEOPLE))
+            if index in {(person * 3 + visit * 5) % len(PLACES) for visit in range(5)}
+        )
+        for person, offset in reviewers:
             rating = (2, 2.5, 3, 3.5, 4, 4.5, 5)[(index * 3 + offset * 2) % 7]
             verdict = (
                 domain.Verdict.RECOMMEND
@@ -125,7 +153,7 @@ def experiences(today: date) -> list[domain.Experience]:
             logs.append(
                 domain.Experience(
                     id=str(demo_id(f"experience:{place.slug}:older")),
-                    user_id=str(demo_id(f"user:{PEOPLE[index % len(PEOPLE)]}")),
+                    user_id=str(demo_id(f"user:{PEOPLE[index % 6]}")),
                     place_id=str(demo_id(f"place:{place.slug}")),
                     rating=3,
                     verdict=domain.Verdict.NEUTRAL,

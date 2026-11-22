@@ -18,10 +18,14 @@ The command reads `DATABASE_URL` from the environment or `backend/.env`. It requ
 needed. Equivalent backend command: `uv run python -m scripts.seed_london`.
 
 It inserts 24 real London place names with approximate, independently authored demo pin positions,
-six users named **Demo Elena**, **Demo James**, **Demo Alex**, **Demo Maya**, **Demo Noah**, and
-**Demo Priya**, 101 Experiences, 12 directed follows, and 18 bookmarks. Every review starts with
+20 users named **Demo Elena**, **Demo James**, **Demo Alex**, **Demo Maya**, **Demo Noah**,
+**Demo Priya**, **Demo Olivia**, **Demo Liam**, **Demo Sofia**, **Demo Ethan**, **Demo Amara**,
+**Demo Lucas**, **Demo Zoe**, **Demo Owen**, **Demo Aisha**, **Demo Leo**, **Demo Isabella**,
+**Demo Arjun**, **Demo Chloe**, and **Demo Mateo**. A fresh seed creates 171 Experiences,
+40 directed follows, and 60 bookmarks. Every review starts with
 **[Mock review]**. Ratings/verdicts are fictional and do not describe real visitors' opinions. There
-are four reviewers per Place, positive/neutral/negative ratings, and five older repeat visits to
+are at least five reviews per user, four original reviewers per Place plus visits from the additional
+users, positive/neutral/negative ratings, and five older repeat visits to
 exercise latest-per-author summaries. The seed does not fetch Google content or populate provider IDs.
 
 The Places include Covent Garden Market, The Early Bird, Black Walnut Bakery Cafe, Thaifoon, The
@@ -42,6 +46,9 @@ Stable UUIDs and conflict-safe inserts make the command repeatable: an unchanged
 rows on its second run, preserves existing records, and does not double-count taste scores. The seed
 and taste updates commit together. Visit dates are relative to the first insertion date; re-running
 does not rewrite previous mock visits. It never seeds automatically during app startup.
+Existing six-user seeds upgrade additively: rerun the command to add 14 users and 70 reviews.
+The original 101 reviews retain their IDs, authors, ratings, text, and visit dates. Existing follows
+and bookmarks remain intact, so upgraded databases may have more follows than a fresh seed.
 
 To highlight demo users as friends for a real signed-in account, copy its internal UUID from the
 diagnostic `/success` page and explicitly run:
