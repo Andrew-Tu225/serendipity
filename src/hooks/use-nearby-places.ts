@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { placesClient } from "@/lib/api-client/places";
 import { bufferBounds, containsPoint } from "@/lib/maps/bounds";
 import type { MapHandle } from "@/lib/maps/google-map";
-import { nearbyCells, nearbyPlace } from "@/lib/maps/nearby-places";
+import { nearbyCells, nearbyPlace, prioritizeNearbyCells } from "@/lib/maps/nearby-places";
 import type { MapPlace } from "@/types/places";
 
 const FRESH_MS = 5 * 60_000;
+const MAX_CONCURRENT = 3;
 // Provider results are transient display state, never persisted or put in app-data cache.
 export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
   const cells = useRef(new Map<string, { places: MapPlace[]; fetched: number }>());
@@ -37,25 +38,34 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
       if (running || Date.now() < blockedUntil) return;
       running = true;
       controller = new AbortController();
+      const current = controller;
       try {
-        const wanted = nearbyCells(map!.bounds());
-        for (const cell of wanted) {
-          const cached = cells.current.get(cell.key);
-          if (cached && Date.now() - cached.fetched < FRESH_MS) continue;
-          // Stop obsolete work after the current request; existing pins stay mounted.
-          if (!nearbyCells(map!.bounds()).some((next) => next.key === cell.key)) continue;
-          const result = await placesClient.nearby(cell.center, cell.radius, controller.signal);
-          if (disposed || controller.signal.aborted) return;
-          cells.current.set(cell.key, { places: result.places.map(nearbyPlace), fetched: Date.now() });
-          error = "";
-          publish();
+        const wanted = prioritizeNearbyCells(nearbyCells(map!.bounds()), map!.center());
+        let nextCell = 0;
+        let failed = false;
+        error = "";
+        async function worker() {
+          while (!disposed && !current.signal.aborted && !failed && nextCell < wanted.length) {
+            const cell = wanted[nextCell++];
+            const cached = cells.current.get(cell.key);
+            if (cached && Date.now() - cached.fetched < FRESH_MS) continue;
+            // Skip queued areas that became obsolete while other searches were running.
+            if (!nearbyCells(map!.bounds()).some((next) => next.key === cell.key)) continue;
+            try {
+              const result = await placesClient.nearby(cell.center, cell.radius, current.signal);
+              if (disposed || current.signal.aborted) return;
+              cells.current.set(cell.key, { places: result.places.map(nearbyPlace), fetched: Date.now() });
+              publish();
+            } catch {
+              if (disposed || current.signal.aborted) return;
+              failed = true;
+              error = "Nearby places couldn’t load. Your app reviews are still available.";
+              blockedUntil = Date.now() + 60_000;
+              publish();
+            }
+          }
         }
-      } catch {
-        if (!disposed && !controller.signal.aborted) {
-          error = "Nearby places couldn’t load. Your app reviews are still available.";
-          blockedUntil = Date.now() + 60_000;
-          publish();
-        }
+        await Promise.all(Array.from({ length: MAX_CONCURRENT }, worker));
       } finally {
         running = false;
         if (!disposed) {

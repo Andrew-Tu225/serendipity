@@ -1,5 +1,5 @@
 import type { MapBounds } from "@/types/discovery";
-import type { MapPlace, PlaceDetails } from "@/types/places";
+import type { Coordinates, MapPlace, PlaceDetails } from "@/types/places";
 
 // Fixed zoom-13 cells avoid repeating a paid provider search after every small pan.
 // These are sampled search areas, never a claim of exhaustive provider coverage.
@@ -25,6 +25,14 @@ export function nearbyCells(bounds: MapBounds[]) {
     }
   }
   return [...cells.values()];
+}
+
+export function prioritizeNearbyCells(cells: ReturnType<typeof nearbyCells>, center: Coordinates) {
+  const distance = (point: Coordinates) => {
+    const longitude = ((point.longitude - center.longitude + 540) % 360 - 180) * Math.cos(center.latitude * Math.PI / 180);
+    return (point.latitude - center.latitude) ** 2 + longitude ** 2;
+  };
+  return [...cells].sort((a, b) => distance(a.center) - distance(b.center));
 }
 
 export function nearbyPlace(place: PlaceDetails): MapPlace {

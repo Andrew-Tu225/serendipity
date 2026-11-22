@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mockDiscovery, appPlaces } from "./helpers/discovery";
 import { mockGoogleMaps } from "./helpers/google-maps";
-import { nearbyCells } from "../src/lib/maps/nearby-places";
+import { nearbyCells, prioritizeNearbyCells } from "../src/lib/maps/nearby-places";
 
 const view = { west: -81.25, east: -81.24, south: 42.98, north: 42.99 };
 const nearby = {
@@ -108,4 +108,40 @@ test("database lookup failure never claims that a nearby place has no reviews", 
   await expect(page.getByRole("article")).toContainText("App reviews could not be checked");
   await expect(page.getByText("No Serendipity reviews yet.", { exact: false })).toHaveCount(0);
   await page.screenshot({ path: "test-results/nearby-custom-markers.png" });
+});
+
+test("nearby searches run three at a time, prioritize the center, and never duplicate cells", async ({ page }) => {
+  const area = { west: -81.29, east: -81.22, south: 42.96, north: 43.02 };
+  const wanted = prioritizeNearbyCells(nearbyCells([area]), { latitude: 42.9849, longitude: -81.2453 });
+  expect(wanted.length).toBeGreaterThan(3);
+  const calls: string[] = [];
+  const pointKey = (latitude: number, longitude: number) => `${latitude.toFixed(7)}:${longitude.toFixed(7)}`;
+  const release: (() => void)[] = [];
+  let unblocked = false;
+  let running = 0, peak = 0;
+  await page.route("**/api/places/nearby?**", async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    calls.push(pointKey(Number(params.get("latitude")), Number(params.get("longitude"))));
+    running++; peak = Math.max(peak, running);
+    if (!unblocked) await new Promise<void>((resolve) => release.push(resolve));
+    running--;
+    return route.fulfill({ json: { places: [nearby] } });
+  });
+  await open(page);
+  await move(page, area);
+  await expect.poll(() => calls.length).toBe(3);
+  expect(new Set(calls)).toEqual(new Set(wanted.slice(0, 3).map((cell) => pointKey(cell.center.latitude, cell.center.longitude))));
+  await page.waitForTimeout(650);
+  expect(calls).toHaveLength(3);
+  release[0]();
+  await expect.poll(() => calls.length).toBe(4);
+  await expect(page.getByRole("button", { name: "View Nearby cafe", exact: true })).toBeVisible();
+  unblocked = true;
+  release.forEach((resolve) => resolve());
+  await expect.poll(() => calls.length).toBe(wanted.length);
+  expect(peak).toBe(3);
+  expect(new Set(calls).size).toBe(wanted.length);
+  await move(page, area);
+  await page.waitForTimeout(650);
+  expect(calls).toHaveLength(wanted.length);
 });

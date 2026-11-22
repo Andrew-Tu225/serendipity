@@ -45,6 +45,11 @@ when empty. Each cell uses a circle enclosing it, so overlapping results are exp
 by Google Place ID. This is a sample of destinations, not an exhaustive listing of all Google places.
 Results merge incrementally; unchanged markers retain their SDK objects. App Places with matching
 Google IDs take precedence. Names or coordinate proximity never establish identity.
+Up to three nearby requests run concurrently, prioritizing cells closest to the map center. Each
+cell is requested once per batch, and small pans still reuse fresh results. Concurrency changes
+when existing calls run, not how many cells are searched. Results appear as individual requests
+finish; a failed search stops queued work while already-running successful requests can still add
+places. Obsolete queued areas are skipped, and hiding the map cancels the entire request group.
 
 Search cells are reused for five minutes in mounted-map memory (up to 48 cells / 960 provider rows).
 Expired results refresh without first clearing visible pins; stale results may remain for up to 15
