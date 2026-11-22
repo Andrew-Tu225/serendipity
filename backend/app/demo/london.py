@@ -57,6 +57,36 @@ PLACES = (
     ),
     DemoPlace("dundas-place", "Dundas Place", 42.9843, -81.2480, domain.Category.ATTRACTION),
 )
+# Verified against Google Places in London, Ontario on 2026-11-22.
+# Only provider IDs are retained; names and coordinates above remain independently authored.
+GOOGLE_PLACE_IDS = {
+    "covent-market": "ChIJ8a8sqh3yLogR5bUJ-zrfBrg",
+    "early-bird": "ChIJC-xu7R3yLogRH2DSz47hoCs",
+    "black-walnut": "ChIJY5XO_P_xLogRq4-BwO4tf0U",
+    "thaifoon": "ChIJfzQuex3yLogRQ9SacDyMw78",
+    "the-mule": "ChIJd17RiQLyLogRNwcEv2S3_5o",
+    "milos": "ChIJ4fiK2PfxLogRIkw5cbEEmnI",
+    "tanakaya": "ChIJfy6Jox3yLogRhmq5CwepsGw",
+    "market-cafe": "ChIJq3QuUUzzLogRZc9pE_HGUnc",
+    "hasbeans": "ChIJ8a8sqh3yLogR9rg99agLacY",
+    "tea-haus": "ChIJrfmvoR3yLogRJj1ZjiiMh1U",
+    "bear-frankies": "ChIJY6dimCvzLogRLotz28aGG0A",
+    "museum-london": "ChIJ2VM8q_fxLogR7e8TFGOD3dU",
+    "eldon-house": "ChIJkSdzY_fxLogRjrM4z_XM0bI",
+    "grand-theatre": "ChIJu0hP-ZiSLogROkiVe4cZvcg",
+    "central-library": "ChIJj-VslwTyLogRODLHEHYyyUw",
+    "victoria-park": "ChIJbY81yQPyLogRo7xgpYeNZW8",
+    "ivey-park": "ChIJw8LPnfbxLogRahgz1Gn_0B8",
+    "harris-park": "ChIJHd7SsvXxLogRyVwFaF50obU",
+    "gibbons-park": "ChIJpeXu6hzuLogRIdRAosWhEJg",
+    "springbank-park": "ChIJ8QlEtovwLogRK68YlKE6nCA",
+    "thames-park": "ChIJ8bxXy4rxLogROFU-eI2hVhc",
+    "forks-thames": "ChIJX-8q6DzxLogRtJa3rZ474yM",
+    "blackfriars-bridge": "ChIJ5xTOY_nxLogRcyDhtXIzrrQ",
+    "dundas-place": "ChIJJaKxjmvxLogROkVkO3G0F5I",
+}
+
+
 PEOPLE = (
     "Elena",
     "James",

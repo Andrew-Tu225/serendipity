@@ -198,3 +198,8 @@ Reviewer names and portraits, recommendation authors and the highlighted friend 
 the same public profile screens as the viewer’s followers/following lists. Returning preserves
 map selection and camera position; opening a profile’s reviewed Place centers the map there.
 Map browsing and photo requests pause while the profile subscreen is open.
+
+Photo lookup uses the Google ID from freshly loaded app Place details before the marker’s
+ID, so an older in-memory discovery marker cannot suppress a newly linked photo. Request
+and image failures show a retry action; only a missing link or a successful empty provider
+response says no photo is available. London fixture IDs are populated by normal local seeding.

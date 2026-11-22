@@ -20,6 +20,7 @@ function PhotoContent({ name, googleId, reviewPhoto, active }: { name: string; g
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [finished, setFinished] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const [requestFailed, setRequestFailed] = useState(false);
   const shared = safeUrl(reviewPhoto);
   const useGoogle = !shared || reviewFailed;
   useEffect(() => {
@@ -27,7 +28,9 @@ function PhotoContent({ name, googleId, reviewPhoto, active }: { name: string; g
     const controller = new AbortController();
     placesClient.photo(googleId, controller.signal).then(({ photo }) => {
       if (!controller.signal.aborted) setPhoto(photo);
-    }).catch(() => { /* Photos are optional; reviews remain available. */ }).finally(() => {
+    }).catch(() => {
+      if (!controller.signal.aborted) setRequestFailed(true);
+    }).finally(() => {
       if (!controller.signal.aborted) setFinished(true);
     });
     return () => controller.abort();
@@ -46,6 +49,12 @@ function PhotoContent({ name, googleId, reviewPhoto, active }: { name: string; g
       {safeUrl(photo.flag_content_uri) && <a href={safeUrl(photo.flag_content_uri)} target="_blank" rel="noopener noreferrer">Report photo</a>}
     </figcaption>
   </figure>;
+  if (requestFailed || imageFailed) return <div className="discovery-place-photo discovery-place-photo-empty">
+    <PlaceGlyph category="Place"/><span role="status">Couldn’t load photo</span>
+    <button type="button" className="profile-history-button" onClick={() => {
+      setRequestFailed(false); setImageFailed(false); setPhoto(null); setFinished(false);
+    }}>Retry photo</button>
+  </div>;
   const loading = Boolean(googleId && !finished);
   return <div className={`discovery-place-photo discovery-place-photo-empty${loading ? " discovery-photo-loading" : ""}`} role="img" aria-label={loading ? "Loading place photo" : `No photo available for ${name}`}>
     <PlaceGlyph category="Place"/><span>{loading ? "Loading photo…" : "No photo available yet"}</span>

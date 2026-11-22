@@ -2,7 +2,7 @@ from datetime import date
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.demo.london import PLACES, demo_id
 from app.integrations.google_places import GooglePlacesClient
@@ -47,6 +47,8 @@ async def test_links_only_unambiguous_nearby_exact_names(database_factory, monke
 
     async with database_factory() as session:
         await DemoDataService(session).seed_london(date.today())
+        await session.execute(update(Place).values(google_place_id=None))
+        await session.commit()
         result = await FixturePlacesService(
             session, GooglePlacesClient("key", httpx.MockTransport(handle))
         ).link()
@@ -65,6 +67,8 @@ async def test_link_conflicts_preserve_existing_place(database_factory, monkeypa
     monkeypatch.setattr("app.services.fixture_places.PLACES", (fixture,))
     async with database_factory() as session:
         await DemoDataService(session).seed_london(date.today())
+        await session.execute(update(Place).values(google_place_id=None))
+        await session.commit()
         existing = Place(name="Existing", lat=43, lng=-81, category="cafe", google_place_id="taken")
         session.add(existing)
         await session.commit()
@@ -92,3 +96,15 @@ async def test_link_conflicts_preserve_existing_place(database_factory, monkeypa
             await session.scalar(select(Place.id).where(Place.google_place_id == "taken"))
             == existing.id
         )
+
+
+async def test_verified_seed_links_do_not_repeat_provider_searches(database_factory):
+    def unexpected_request(request):
+        raise AssertionError("Already-linked fixtures must not trigger paid searches")
+
+    async with database_factory() as session:
+        await DemoDataService(session).seed_london(date.today())
+        result = await FixturePlacesService(
+            session, GooglePlacesClient("key", httpx.MockTransport(unexpected_request))
+        ).link()
+        assert result == {"linked": [p.slug for p in PLACES], "unresolved": [], "conflicts": []}

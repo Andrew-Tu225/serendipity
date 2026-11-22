@@ -268,7 +268,7 @@ function PlaceReviews({ placeId, ratingSummary, name, googleId, onPerson, active
   const summary = data?.place.rating_summary.count ? data.place.rating_summary : ratingSummary;
   return <div className="discovery-reviews">
     {!data && !error && <p role="status">Loading reviews…</p>}
-    <PlacePhoto name={name} googleId={googleId} reviewPhoto={photo} active={active && Boolean(data || error)} />
+    <PlacePhoto name={name} googleId={data?.place.google_place_id ?? googleId} reviewPhoto={photo} active={active && Boolean(data || error)} />
     {summary && <p className="discovery-rating-summary"><strong>★ {summary.average.toFixed(1)}/5</strong> · {summary.count} reviews</p>}
     <h3 className="discovery-friends-heading">Friends’ reviews</h3>
     {data?.experiences.map((review) => <div className="discovery-review flex items-start gap-2" key={review.id}>

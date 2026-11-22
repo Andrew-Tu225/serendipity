@@ -208,3 +208,29 @@ async def test_seeded_logs_store_the_values_summed_into_profiles(database_factor
     assert {(u, c): pytest.approx(total) for u, c, total in sums} == {
         (row.user_id, row.category): row.score for row in rows
     }
+
+
+async def test_seed_backfills_verified_google_ids_without_changing_place_fields(database_factory):
+    from sqlalchemy import update
+
+    from app.demo.london import GOOGLE_PLACE_IDS
+
+    async with database_factory() as session:
+        await DemoDataService(session).seed_london(date.today())
+        place_id = demo_id("place:covent-market")
+        await session.execute(
+            update(Place)
+            .where(Place.id == place_id)
+            .values(
+                name="My edited market name",
+                google_place_id=None,
+            )
+        )
+        await session.commit()
+        result = await DemoDataService(session).seed_london(date.today())
+        assert all(count == 0 for count in result.values())
+        place = await session.get(Place, place_id)
+        assert place.google_place_id == GOOGLE_PLACE_IDS["covent-market"]
+        assert place.name == "My edited market name"
+        linked = (await session.scalars(select(Place.google_place_id))).all()
+        assert len(linked) == len(PLACES) and all(linked)

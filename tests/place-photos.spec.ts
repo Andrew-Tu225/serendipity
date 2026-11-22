@@ -32,7 +32,8 @@ test("photo failures leave reviews usable", async ({ page }) => {
   await page.route("**/api/places/london-market/photo", route => route.fulfill({ status: 503, json: { detail: "Unavailable" } }));
   await page.goto("/"); await page.getByRole("button", { name: "Discover", exact: true }).click();
   await page.getByRole("button", { name: `View ${place.name}`, exact: true }).click();
-  await expect(page.getByRole("img", { name: `No photo available for ${place.name}` })).toBeVisible();
+  await expect(page.getByText("Couldn’t load photo")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry photo" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Write a review" })).toBeEnabled();
   await expect(page.getByText(place.friends[0].review!,  { exact: true }).first()).toBeVisible();
 });
@@ -82,10 +83,34 @@ test("a late photo response cannot replace the newly selected destination", asyn
   await page.goto("/"); await page.getByRole("button", { name: "Discover", exact: true }).click();
   await page.getByRole("button", { name: `View ${place.name}`, exact: true }).click();
   await expect.poll(() => oldRequested).toBe(true);
+  await page.getByRole("button", { name: "Close place preview", exact: true }).click();
   await page.getByRole("button", { name: `View ${next.name}`, exact: true }).click();
   const photo = page.getByRole("img", { name: `Photo of ${next.name}` });
   await expect(photo).toHaveAttribute("src", "https://lh3.googleusercontent.com/test-photo");
   await page.waitForTimeout(700);
   await expect(photo).toHaveAttribute("src", "https://lh3.googleusercontent.com/test-photo");
   await expect(page.getByRole("img", { name: `Photo of ${place.name}`, exact: true })).toHaveCount(0);
+});
+
+
+test("uses fresh place details when cached map markers have no Google ID", async ({ page }) => {
+  await page.route("**/api/discovery/places?**", route => route.fulfill({ json: { places: [{ ...place, google_place_id: null }], next_cursor: null } }));
+  await page.route("**/api/places/london-market/photo", route => route.fulfill({ json: { photo: { url: "https://lh3.googleusercontent.com/test-photo", authors: [] } } }));
+  await page.goto("/"); await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await page.getByRole("button", { name: `View ${place.name}`, exact: true }).click();
+  await expect(page.getByRole("img", { name: `Photo of ${place.name}` })).toBeVisible();
+});
+
+test("retries failed photo requests without treating them as missing photos", async ({ page }) => {
+  let fail = true;
+  await page.route("**/api/places/london-market/photo", route => fail
+    ? route.fulfill({ status: 503, json: { detail: "Unavailable" } })
+    : route.fulfill({ json: { photo: { url: "https://lh3.googleusercontent.com/test-photo", authors: [] } } }));
+  await page.goto("/"); await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await page.getByRole("button", { name: `View ${place.name}`, exact: true }).click();
+  await expect(page.getByText("No photo available yet")).toHaveCount(0);
+  await expect(page.getByText("Couldn’t load photo")).toBeVisible();
+  fail = false;
+  await page.getByRole("button", { name: "Retry photo" }).click();
+  await expect(page.getByRole("img", { name: `Photo of ${place.name}` })).toBeVisible();
 });

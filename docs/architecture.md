@@ -315,3 +315,8 @@ scroll position and focus targets survive nested navigation. SessionProvider’s
 viewer-keyed subtree clears this state on account changes. Opening a reviewed Place uses
 its app UUID and optional Google ID, focuses the map once, and fetches normal app reviews.
 Private profile bookmarks and editing remain on the authenticated owner endpoints.
+
+Normal local seeding now backfills the verified Google Place IDs bundled with the London
+fixtures, preserving authored fields and existing conflicting links. Optional provider matching
+skips linked Places. Map photo selection uses the fresh app detail ID ahead of cached marker
+data and exposes transient failures separately from a successful empty photo response.

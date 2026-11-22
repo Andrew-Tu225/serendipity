@@ -28,6 +28,9 @@ class DemoDataRepository:
     async def user(self, user_id: UUID):
         return await self.session.get(User, user_id)
 
+    async def place(self, place_id: UUID):
+        return await self.session.get(Place, place_id)
+
     async def existing_users(self, ids):
         return (await self.session.scalars(select(User.id).where(User.id.in_(ids)))).all()
 

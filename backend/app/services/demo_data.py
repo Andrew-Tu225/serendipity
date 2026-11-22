@@ -1,15 +1,18 @@
+import logging
 from collections import defaultdict
 from datetime import date
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.demo.london import PEOPLE, PLACES, demo_id, experiences
+from app.demo.london import GOOGLE_PLACE_IDS, PEOPLE, PLACES, demo_id, experiences
 from app.models import Bookmark, Experience, Follow, Place, User
 from app.recommend.taste import log_value
 from app.repositories.demo_data import DemoDataRepository
 from app.repositories.experiences import TasteProfileRepository
 from app.services.sample_friends import SampleFriendsService
+
+logger = logging.getLogger(__name__)
 
 
 class DemoDataService:
@@ -87,6 +90,12 @@ class DemoDataService:
             for account_id in await self.repository.non_fixture_users(user_ids):
                 connected += await SampleFriendsService(self.session).connect(account_id)
             await self.repository.refresh_labels(zip(user_ids, PEOPLE, strict=True), logs)
+            for place, place_id in zip(PLACES, place_ids, strict=True):
+                google_id = GOOGLE_PLACE_IDS.get(place.slug)
+                if google_id and not await self.repository.link_place(place_id, google_id):
+                    logger.warning(
+                        "Preserving conflicting Google Place ID for fixture %s", place.slug
+                    )
             bookmarks = await self.repository.insert_missing(
                 Bookmark,
                 [

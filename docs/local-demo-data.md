@@ -25,8 +25,14 @@ IDs, ratings, visit dates, bookmarks, follows and existing taste scores stay int
 
 ## Google place links and photos
 
-Run `npm run db:seed -- --link-google` with `BACKEND_API_KEY_GOOGLE` configured. It searches
-the 24 authored names in London, Ontario and accepts only one exact normalized-name match
+Normal seeding now backfills verified Google Place IDs for all 24 destinations, including
+name variants and large parks confirmed against Google Places on 2026-11-22. Only IDs are
+retained. Repeating the seed preserves authored names/coordinates and existing conflicting
+provider links; conflicts are logged rather than overwritten. No API call is needed to apply
+these known links to a fresh or previously seeded local database.
+
+Run `npm run db:seed -- --link-google` with `BACKEND_API_KEY_GOOGLE` configured. It skips already-linked destinations and searches
+remaining authored names in London, Ontario and accepts only one exact normalized-name match
 within 750 metres of the authored pin. Ambiguous, missing and conflicting matches are reported;
 they are never merged automatically. Only Google Place IDs are persisted. Searches are paid
 Places API calls; no Google names, coordinates, photos or photo URLs are retained.

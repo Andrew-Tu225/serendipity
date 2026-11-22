@@ -31,6 +31,13 @@ class FixturePlacesService:
         result: dict[str, list[str]] = {"linked": [], "unresolved": [], "conflicts": []}
         try:
             for place in PLACES:
+                existing = await self.repository.place(demo_id(f"place:{place.slug}"))
+                if existing is None:
+                    result["unresolved"].append(place.slug)
+                    continue
+                if existing.google_place_id:
+                    result["linked"].append(place.slug)
+                    continue
                 candidates = await self.provider.find_fixture(place.name)
                 matches = []
                 for candidate in candidates:
