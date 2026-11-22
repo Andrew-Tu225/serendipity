@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
+from app.models.domain import Category
 from app.schemas.character import CharacterAppearance
 
 
@@ -15,6 +16,7 @@ class BuddyPerson(BaseModel):
 
 class BuddySuggestion(BuddyPerson):
     match_percent: int | None
+    liked_categories: list[Category]
 
 
 class BuddyMessageWrite(BaseModel):

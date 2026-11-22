@@ -252,15 +252,8 @@ function BuddyView({ deck, onMessage }: { deck: ReturnType<typeof useBuddyDeck>;
       </div>
       {mode === 'local' ? (
         <>
-          <p className="buddy-intro">Find people with similar tastes and make a plan.</p>
-          {deck.status === 'demo' && (
-            <div className="local-progress">
-              <div className="progress-copy"><span><Icon name="globe" size={16}/></span><p><strong>Worldwide is 70% unlocked</strong><small>Rate 3 more local experiences</small></p></div>
-              <div className="progress-track"><i/></div>
-            </div>
-          )}
           {(deck.status === 'ready' || deck.status === 'demo') && (buddy ? (
-            <BuddyDeckCard key={buddy.id} buddy={buddy} busy={deck.skipping}
+            <BuddyDeckCard key={buddy.id} buddy={buddy} demo={deck.status === 'demo'} busy={deck.skipping}
               onSkip={() => void deck.skip(buddy.id)} onMessage={() => onMessage(buddy)} />
           ) : <div className="buddy-card buddy-empty"><p>You’re caught up on Taste Buddies.</p>
             {deck.status === 'ready' && <button className="place-lists-action" type="button" onClick={deck.reload}>Check for more</button>}

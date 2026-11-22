@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
 @import 'tailwindcss';
+@import '../components/buddy/buddy-deck.css';
 
 @layer base {
   :root {
@@ -228,23 +229,15 @@
 .buddy-modes button { height: 36px; display: flex; align-items: center; justify-content: center; gap: 6px; color: #8c7f92; border: 0; border-radius: 11px; background: transparent; font-size: 10px; font-weight: 700; }
 .buddy-modes button.active { color: #674b79; background: #fff; box-shadow: 0 4px 12px rgba(65, 45, 75, .08); }
 .buddy-modes button svg:last-child:not(:first-child) { margin-left: 1px; opacity: .7; }
-.buddy-intro { max-width: 340px; color: #807386; font-size: 11px; line-height: 1.5; }
-.local-progress { margin-top: 10px; padding: 10px 12px; border: 1px solid #e7deeb; border-radius: 15px; background: #f7f3f9; }
-.progress-copy { display: flex; align-items: center; gap: 8px; }
-.progress-copy > span { width: 28px; height: 28px; display: grid; place-items: center; color: #76568b; border-radius: 50%; background: #e9def0; }
-.progress-copy p { display: flex; flex-direction: column; }
-.progress-copy strong { color: #594462; font-size: 9px; }
-.progress-copy small { color: #9a8d9f; font-size: 8px; }
-.progress-track, .unlock-track { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: #e2d9e7; }
-.progress-track i, .unlock-track i { display: block; width: 70%; height: 100%; background: #79578e; border-radius: inherit; }
+.unlock-track { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: #e2d9e7; }
+.unlock-track i { display: block; width: 70%; height: 100%; background: #79578e; border-radius: inherit; }
 .buddy-card { margin-top: 11px; padding: 12px 12px 16px; border: 1px solid #e8e0ec; border-radius: 27px; background: white; box-shadow: 0 17px 42px rgba(58, 41, 68, .11); }
 .swipe-card { position: relative; touch-action: pan-y; user-select: none; cursor: grab; will-change: transform; }
 .swipe-card:active { cursor: grabbing; }
 .swipe-stamp { position: absolute; z-index: 4; top: 34px; padding: 6px 9px; border: 2px solid currentColor; border-radius: 7px; background: rgba(255,255,255,.88); font-size: 11px; font-weight: 800; letter-spacing: .12em; pointer-events: none; }
 .skip-stamp { right: 28px; color: #b85d69; transform: rotate(9deg); }
 .connect-stamp { left: 23px; color: #6c8e75; transform: rotate(-8deg); }
-.buddy-photo { position: relative; height: 250px; overflow: hidden; border-radius: 19px; }
-.buddy-photo img { width: 100%; height: 100%; object-fit: cover; }
+.buddy-photo { position: relative; overflow: hidden; border-radius: 19px; }
 .buddy-photo > span { position: absolute; left: 12px; bottom: 12px; padding: 7px 10px; color: #654379; background: rgba(255, 255, 255, .91); border-radius: 99px; font-size: 10px; font-weight: 700; backdrop-filter: blur(8px); }
 .buddy-info { display: flex; justify-content: space-between; align-items: center; padding: 15px 4px 10px; }
 .buddy-info h2 { font-size: 24px; }
@@ -261,9 +254,6 @@
 .swipe-controls > button.connect { color: #6a8c75; }
 .swipe-controls > button.connect > span { border-color: #d5e2d8; }
 .swipe-controls > p { color: #aaa0ad; font-size: 7px; text-align: center; }
-.buddy-note { display: flex; gap: 11px; align-items: center; margin: 16px 10px 0; color: #715786; }
-.buddy-note p { color: #887b8e; font-size: 10px; line-height: 1.45; }
-.buddy-note strong { color: #4a3a54; }
 .message-backdrop { position: fixed; z-index: 70; inset: 0; width: min(100%, 430px); margin: 0 auto; display: flex; align-items: flex-end; background: rgba(36,25,43,.44); backdrop-filter: blur(4px); }
 .message-box { position: relative; width: 100%; padding: 29px 22px 31px; border-radius: 27px 27px 0 0; background: #fff; text-align: center; animation: rise .25s ease-out; }
 .message-close { position: absolute; right: 17px; top: 16px; width: 34px; height: 34px; display: grid; place-items: center; color: #746778; border: 0; border-radius: 50%; background: #f2edf4; }

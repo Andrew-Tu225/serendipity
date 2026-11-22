@@ -1,4 +1,5 @@
 import type { CharacterAppearance } from "./character";
+import type { PlaceCategory } from "./discovery";
 
 export interface BuddyPerson {
   id: string;
@@ -10,6 +11,7 @@ export interface BuddySuggestion extends BuddyPerson {
   match_percent: number | null;
   location?: string;
   interests?: string[];
+  liked_categories?: PlaceCategory[];
   age?: number;
   sharedSaves?: { count: number; places: string };
 }

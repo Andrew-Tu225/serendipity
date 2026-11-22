@@ -1,6 +1,8 @@
 import { useRef, useState, type ChangeEvent, type PointerEvent, type ReactNode } from 'react'
 import potteryAsset from './assets/pottery-workshop.png'
 import rooftopAsset from './assets/rooftop-dinner.png'
+import ridgeAsset from '@/components/profile/assets/ridge-hike.webp'
+import { describeBuddyInterests } from '@/components/buddy/buddy-interests'
 
 // Vite serves imported images as URLs. Next.js type checks them as image metadata.
 function imageUrl(asset: string | { src: string }) {
@@ -353,7 +355,7 @@ function BuddyInbox({ onClose }: { onClose: () => void }) {
 const buddyProfiles = [
   { name: 'Alex', age: 28, location: 'Brooklyn', distance: '2 mi away', match: 94, tags: ['Natural wine', 'Live jazz', 'Hidden gems'], saves: 12, shared: 'Clay & rosé and Sunday Jazz Club', image: rooftopImage, position: 'center' },
   { name: 'Elena', age: 27, location: 'Greenpoint', distance: '1.4 mi away', match: 91, tags: ['Pottery', 'Rooftops', 'New menus'], saves: 9, shared: 'Mend Studio and Rooftop Supper', image: potteryImage, position: 'center' },
-  { name: 'Jordan', age: 30, location: 'Bushwick', distance: '3 mi away', match: 88, tags: ['Hiking', 'Small plates', 'Indie shows'], saves: 8, shared: 'Sunday Jazz Club and Ridge Trail', image: rooftopImage, position: 'left' },
+  { name: 'Jordan', age: 30, location: 'Bushwick', distance: '3 mi away', match: 88, tags: ['Hiking', 'Small plates', 'Indie shows'], saves: 8, shared: 'Sunday Jazz Club and Ridge Trail', image: imageUrl(ridgeAsset), position: 'center' },
 ]
 
 function BuddyView() {
@@ -423,35 +425,32 @@ function BuddyView() {
       </div>
       {mode === 'local' ? (
         <>
-          <p className="buddy-intro">People who save what you save, skip what you skip, and are actually down to go.</p>
-          <div className="local-progress">
-            <div className="progress-copy"><span><Icon name="globe" size={16}/></span><p><strong>Worldwide is 70% unlocked</strong><small>Rate 3 more local experiences</small></p></div>
-            <div className="progress-track"><i/></div>
-          </div>
-          <div
-            className="buddy-card swipe-card"
-            style={{ transform: `translateX(${dragX}px) rotate(${dragX / 24}deg)`, transition: isDragging ? 'none' : 'transform .2s ease' }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={() => { swipeStart.current = null; setIsDragging(false); setDragX(0) }}
-          >
-            <div className="swipe-stamp skip-stamp" style={{ opacity: Math.max(0, -dragX / 90) }}>SKIP</div>
-            <div className="swipe-stamp connect-stamp" style={{ opacity: Math.max(0, dragX / 90) }}>MESSAGE</div>
-            <div className="buddy-photo"><img src={profile.image} style={{ objectPosition: profile.position }} draggable={false} alt={`${profile.name}, a suggested taste buddy`}/><span>{profile.match}% match</span></div>
-            <div className="buddy-info">
-              <div><h2>{profile.name}, {profile.age}</h2><p>{profile.location} · {profile.distance}</p></div>
-              <span className="verified"><Icon name="sparkle" size={15}/></span>
+          <div className="buddy-deck">
+            <div
+              className="buddy-card swipe-card"
+              style={{ transform: `translateX(${dragX}px) rotate(${dragX / 24}deg)`, transition: isDragging ? 'none' : 'transform .2s ease' }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={() => { swipeStart.current = null; setIsDragging(false); setDragX(0) }}
+            >
+              <div className="swipe-stamp skip-stamp" style={{ opacity: Math.max(0, -dragX / 90) }}>SKIP</div>
+              <div className="swipe-stamp connect-stamp" style={{ opacity: Math.max(0, dragX / 90) }}>MESSAGE</div>
+              <div className="buddy-photo"><img src={profile.image} style={{ objectPosition: profile.position }} draggable={false} alt=""/><span>{profile.match}% match</span></div>
+              <div className="buddy-info">
+                <div><h2>{profile.name}, {profile.age}</h2><p>{profile.location} · {profile.distance}</p></div>
+                <span className="verified"><Icon name="sparkle" size={15}/></span>
+              </div>
+              <p className="buddy-description">{describeBuddyInterests(profile.tags)}</p>
+              <div className="taste-tags">{profile.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+              <p className="overlap"><strong>{profile.saves} shared saves</strong> including {profile.shared}.</p>
             </div>
-            <div className="taste-tags">{profile.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-            <p className="overlap"><strong>{profile.saves} shared saves</strong> including {profile.shared}.</p>
+            <div className="swipe-controls">
+              <button onClick={swipeLeft} aria-label={`Skip ${profile.name}`}><span className="left-arrow"><Icon name="arrow" size={22}/></span><small>Skip</small></button>
+              <p>Swipe or use the arrows</p>
+              <button className="connect" onClick={swipeRight} aria-label={`Message ${profile.name}`}><span><Icon name="arrow" size={22}/></span><small>Message</small></button>
+            </div>
           </div>
-          <div className="swipe-controls">
-            <button onClick={swipeLeft} aria-label={`Skip ${profile.name}`}><span className="left-arrow"><Icon name="arrow" size={22}/></span><small>Skip</small></button>
-            <p>Swipe or use the arrows</p>
-            <button className="connect" onClick={swipeRight} aria-label={`Message ${profile.name}`}><span><Icon name="arrow" size={22}/></span><small>Message</small></button>
-          </div>
-          <div className="buddy-note"><Icon name="heart" size={18}/><p><strong>Better together.</strong><br/>We only suggest people with real taste overlap.</p></div>
           {messageSent && <div className="buddy-toast"><Icon name="users" size={15}/> Message sent</div>}
           {messageOpen && (
             <div className="message-backdrop" onMouseDown={(event) => event.currentTarget === event.target && setMessageOpen(false)}>

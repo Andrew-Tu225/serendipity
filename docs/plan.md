@@ -130,7 +130,9 @@ Instead of repeatedly asking these friends for recommendations, users can explor
 Friends help vet places by sharing their genuine opinions, both positive and negative.
 
 In Taste Buddies, swipe left to pass on a suggestion and right to open a first-message sheet.
-The card centers the buddy’s character portrait, and the small arrows below it perform the same actions.
+One suggestion fills the available screen with a large image or character portrait, a short description,
+and interest tags. Signed-in descriptions use the buddy’s favorite categories from their public
+Experiences. The small arrows below the card perform the same actions as swiping.
 Send message opens the conversation. The Taste Buddies header opens Messages, with unread counts
 and a Read all action. An X closes Messages, and selecting a row opens that conversation.
 

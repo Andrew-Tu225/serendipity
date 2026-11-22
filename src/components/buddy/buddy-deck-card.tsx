@@ -1,20 +1,25 @@
 import Image from "next/image";
 import { useRef, useState, type PointerEvent } from "react";
 import { CharacterPortrait } from "@/components/profile/character-portrait";
-import rooftopImage from "@/components/serendipity/assets/rooftop-dinner.png";
 import { Icon } from "@/components/ui/icon";
 import type { BuddySuggestion } from "@/types/buddies";
+import { categoryLabels } from "@/types/profile";
+import { describeBuddyInterests } from "./buddy-interests";
+import { demoBuddyImages } from "./demo-buddies";
 
 const swipeThreshold = 65;
 
-export function BuddyDeckCard({ buddy, busy, onSkip, onMessage }: {
+export function BuddyDeckCard({ buddy, demo, busy, onSkip, onMessage }: {
   buddy: BuddySuggestion;
+  demo: boolean;
   busy: boolean;
   onSkip: () => void;
   onMessage: () => void;
 }) {
   const start = useRef<{ id: number; x: number; y: number } | null>(null);
   const [distance, setDistance] = useState(0);
+  const photo = demo ? demoBuddyImages[buddy.id] : undefined;
+  const interests = buddy.interests ?? (buddy.liked_categories ?? []).map((category) => categoryLabels[category]);
 
   function begin(event: PointerEvent<HTMLElement>) {
     if (busy || !event.isPrimary || event.button !== 0) return;
@@ -45,7 +50,7 @@ export function BuddyDeckCard({ buddy, busy, onSkip, onMessage }: {
   }
 
   return (
-    <>
+    <div className="buddy-deck">
       <article className="buddy-card buddy-swipe-card" aria-label={`${buddy.display_name}, taste buddy`} tabIndex={0}
         aria-keyshortcuts="ArrowLeft ArrowRight" style={{ transform: `translateX(${distance}px) rotate(${distance / 20}deg)` }}
         onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={reset} onLostPointerCapture={reset}
@@ -56,8 +61,11 @@ export function BuddyDeckCard({ buddy, busy, onSkip, onMessage }: {
           else onMessage();
         }}>
         <div className="buddy-photo buddy-swipe-photo">
-          {buddy.location && <Image src={rooftopImage} sizes="430px" alt="" draggable={false} />}
-          <div className="buddy-portrait"><CharacterPortrait identity={buddy.id} appearance={buddy.character} size={112} /></div>
+          {photo ? (
+            <Image src={photo} fill sizes="(max-width: 430px) 100vw, 430px" alt="" draggable={false} />
+          ) : (
+            <div className="buddy-portrait"><CharacterPortrait identity={buddy.id} appearance={buddy.character} /></div>
+          )}
           {buddy.match_percent !== null && <span>{buddy.match_percent}% match</span>}
           {Math.abs(distance) >= 24 && <strong className="buddy-swipe-label" data-direction={distance < 0 ? "skip" : "message"} aria-hidden="true">
             {distance < 0 ? "Skip" : "Message"}
@@ -65,8 +73,10 @@ export function BuddyDeckCard({ buddy, busy, onSkip, onMessage }: {
         </div>
         <div className="buddy-info">
           <div><h2>{buddy.age ? `${buddy.display_name.split(" ")[0]}, ${buddy.age}` : buddy.display_name}</h2>{buddy.location && <p>{buddy.location}</p>}</div>
+          {photo && <CharacterPortrait identity={buddy.id} appearance={buddy.character} size={32} />}
         </div>
-        {buddy.interests && <div className="taste-tags">{buddy.interests.map((interest) => <span key={interest}>{interest}</span>)}</div>}
+        <p className="buddy-description">{describeBuddyInterests(interests)}</p>
+        {interests.length > 0 && <div className="taste-tags">{interests.map((interest) => <span key={interest}>{interest}</span>)}</div>}
         {buddy.sharedSaves && <p className="buddy-shared-saves"><strong>{buddy.sharedSaves.count} shared saves</strong> including {buddy.sharedSaves.places}.</p>}
       </article>
       <div className="buddy-swipe-actions">
@@ -80,6 +90,6 @@ export function BuddyDeckCard({ buddy, busy, onSkip, onMessage }: {
           <small aria-hidden="true">Message</small>
         </button>
       </div>
-    </>
+    </div>
   );
 }

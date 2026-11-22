@@ -143,6 +143,9 @@ The signed-out preview keeps its character edits for the current page session.
 
 `buddyClient` calls the FastAPI `/api/buddies` router, `BuddyService`, and `BuddyRepository`.
 Suggestions rank up to 100 eligible recent accounts by the existing category taste similarity.
+Each suggestion returns up to three named Place categories with the highest positive taste scores,
+derived from public Experiences. The card builds a short description and interest tags from those
+categories. The local design preview uses sample interests and activity photos.
 Accounts with no overlapping taste scores can appear without a match percentage. A saved pass or
 an existing conversation removes the account from future suggestions. Swiping right opens the
 first-message sheet over the deck. Only Send writes a message, with a client-generated UUID to make retries

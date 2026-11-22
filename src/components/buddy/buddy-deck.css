@@ -1,0 +1,55 @@
+.app-shell:has(> .app-content:not([hidden]) > .buddy-view) {
+  display: flex;
+  flex-direction: column;
+
+  > .status-bar, > .topbar, > .bottom-nav { flex: none; }
+  > .topbar { height: 68px; }
+  > .bottom-nav {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    transform: none;
+  }
+  > .app-content {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    padding: 2px 10px 18px;
+    overflow-x: hidden;
+  }
+}
+
+.buddy-view, .buddy-deck, .buddy-deck > .buddy-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.buddy-view { min-height: 100%; }
+.buddy-view > .buddy-modes { flex: none; margin-bottom: 6px; }
+.buddy-deck, .buddy-deck > .buddy-card { flex: 1 0 auto; }
+.buddy-deck > .buddy-card { margin-top: 3px; }
+
+.buddy-deck .buddy-photo {
+  flex: 1 0 auto;
+  height: auto;
+  min-height: clamp(140px, 26dvh, 230px);
+}
+
+.buddy-deck .buddy-photo > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.buddy-deck .buddy-info { padding: 10px 4px 4px; gap: 8px; }
+.buddy-deck .buddy-info h2 { line-height: 1.16; overflow-wrap: anywhere; }
+.buddy-deck .buddy-info p { margin-top: 2px; }
+.buddy-description {
+  margin: 2px 4px 8px;
+  color: #5f5068;
+  font-size: 13px;
+  line-height: 1.45;
+}

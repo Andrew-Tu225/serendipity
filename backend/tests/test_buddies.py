@@ -36,7 +36,12 @@ async def test_buddy_suggestions_rank_taste_and_remember_skips(
             [
                 TasteProfile(user_id=alice, category="cafe", score=2),
                 TasteProfile(user_id=BOB, category="cafe", score=1),
-                TasteProfile(user_id=CASEY, category="park", score=1),
+                TasteProfile(user_id=CASEY, category="park", score=4),
+                TasteProfile(user_id=CASEY, category="trail", score=2),
+                TasteProfile(user_id=CASEY, category="museum", score=2),
+                TasteProfile(user_id=CASEY, category="bar", score=1),
+                TasteProfile(user_id=CASEY, category="other", score=5),
+                TasteProfile(user_id=CASEY, category="climbing", score=-3),
             ]
         )
         await database.commit()
@@ -46,6 +51,10 @@ async def test_buddy_suggestions_rank_taste_and_remember_skips(
     assert [(row["id"], row["match_percent"]) for row in response.json()] == [
         (str(BOB), 100),
         (str(CASEY), None),
+    ]
+    assert [row["liked_categories"] for row in response.json()] == [
+        ["cafe"],
+        ["park", "museum", "trail"],
     ]
     assert (await client.put(f"{API}/skips/{BOB}")).status_code == 403
     for _ in range(2):

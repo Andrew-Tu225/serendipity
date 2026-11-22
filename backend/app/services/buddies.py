@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import BuddyMessage, User
 from app.models.conversions import to_domain_profile
-from app.recommend.taste import taste_sim, vectors_from_rows
+from app.models.domain import Category
+from app.recommend.taste import Profile, taste_sim, vectors_from_rows
 from app.repositories.buddies import BuddyRepository
 from app.repositories.users import UserRepository
 from app.schemas.buddies import (
@@ -39,6 +40,7 @@ class BuddyService:
             BuddySuggestion(
                 **person_summary(person).model_dump(),
                 match_percent=round(score * 100) if score else None,
+                liked_categories=liked_categories(vectors.get(str(person.id), {})),
             )
             for person, score in ranked[:24]
         ]
@@ -98,6 +100,11 @@ class BuddyService:
     async def _require_buddy(self, user: User, buddy_id: UUID) -> None:
         if user.id == buddy_id or await self.users.get(buddy_id) is None:
             raise HTTPException(404, "Buddy unavailable")
+
+
+def liked_categories(profile: Profile) -> list[Category]:
+    ranked = sorted(profile.items(), key=lambda entry: (-entry[1], entry[0]))
+    return [category for category, score in ranked if score > 0 and category != Category.OTHER][:3]
 
 
 def person_summary(person: User) -> BuddyPerson:

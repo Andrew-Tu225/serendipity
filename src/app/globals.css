@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
 
 @import 'tailwindcss';
+@import '../components/buddy/buddy-deck.css';
 
 :root {
   --background: #ffffff;
@@ -202,21 +203,12 @@
 .buddy-modes button { height: 36px; display: flex; align-items: center; justify-content: center; gap: 6px; color: #8c7f92; border: 0; border-radius: 11px; background: transparent; font-size: 10px; font-weight: 700; }
 .buddy-modes button.active { color: #674b79; background: #fff; box-shadow: 0 4px 12px rgba(65, 45, 75, .08); }
 .buddy-modes button svg:last-child:not(:first-child) { margin-left: 1px; opacity: .7; }
-.buddy-intro { max-width: 340px; color: #807386; font-size: 11px; line-height: 1.5; }
-.local-progress { margin-top: 10px; padding: 10px 12px; border: 1px solid #e7deeb; border-radius: 15px; background: #f7f3f9; }
-.progress-copy { display: flex; align-items: center; gap: 8px; }
-.progress-copy > span { width: 28px; height: 28px; display: grid; place-items: center; color: #76568b; border-radius: 50%; background: #e9def0; }
-.progress-copy p { display: flex; flex-direction: column; }
-.progress-copy strong { color: #594462; font-size: 9px; }
-.progress-copy small { color: #9a8d9f; font-size: 8px; }
-.progress-track, .unlock-track { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: #e2d9e7; }
-.progress-track i, .unlock-track i { display: block; width: 70%; height: 100%; background: #79578e; border-radius: inherit; }
-.app-content:has(.buddy-view) { padding-inline: clamp(10px, 3vw, 16px); }
+.unlock-track { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: #e2d9e7; }
+.unlock-track i { display: block; width: 70%; height: 100%; background: #79578e; border-radius: inherit; }
 .buddy-card { margin-top: 11px; padding: 11px 11px 15px; border: 1px solid #e8e0ec; border-radius: 25px; background: white; box-shadow: 0 14px 32px rgba(58, 41, 68, .09); }
-.buddy-photo { position: relative; aspect-ratio: 1.35; max-height: max(150px, 24dvh); overflow: hidden; border-radius: 17px; }
-.buddy-photo img { width: 100%; height: 100%; object-fit: cover; }
-.buddy-portrait { position: absolute; inset: 0; display: grid; place-items: center; background: #2b183b30; }
-.buddy-portrait > span { border: 4px solid #f7eefb; box-shadow: 0 5px 20px #281b3a55; }
+.buddy-photo { position: relative; overflow: hidden; border-radius: 17px; }
+.buddy-portrait { position: absolute; inset: 0; display: grid; place-items: center; container-type: size; }
+.buddy-portrait > span { width: min(58cqw, 82cqh, 224px); height: auto; aspect-ratio: 1; border: 4px solid #f7eefb; box-shadow: 0 5px 20px #281b3a55; }
 .buddy-photo > span { position: absolute; left: 12px; bottom: 12px; padding: 7px 10px; color: #654379; background: rgba(255, 255, 255, .91); border-radius: 99px; font-size: 10px; font-weight: 700; backdrop-filter: blur(8px); }
 .buddy-info { display: flex; justify-content: space-between; align-items: center; padding: 15px 4px 10px; }
 .buddy-info h2 { font-size: 24px; }

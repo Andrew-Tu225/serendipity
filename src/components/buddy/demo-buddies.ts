@@ -1,4 +1,14 @@
 import type { BuddyMessage, BuddySuggestion } from "@/types/buddies";
+import ridgeImage from "@/components/profile/assets/ridge-hike.webp";
+import potteryImage from "@/components/serendipity/assets/pottery-workshop.png";
+import rooftopImage from "@/components/serendipity/assets/rooftop-dinner.png";
+import type { StaticImageData } from "next/image";
+
+export const demoBuddyImages: Partial<Record<string, StaticImageData>> = {
+  "Alex Bennett": rooftopImage,
+  "Elena Rivera": potteryImage,
+  "Jordan Ellis": ridgeImage,
+};
 
 export const demoBuddies: BuddySuggestion[] = [
   { id: "Alex Bennett", display_name: "Alex Bennett", character: null, match_percent: 94, age: 28, location: "Brooklyn · 2 mi away", interests: ["Natural wine", "Live jazz", "Hidden gems"], sharedSaves: { count: 12, places: "Clay & rosé and Sunday Jazz Club" } },
