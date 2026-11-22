@@ -6,7 +6,6 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Experience, User, domain
-from app.recommend.taste import log_value
 from app.repositories.experiences import ExperienceRepository, TasteProfileRepository
 from app.repositories.places import PlaceRepository
 
@@ -43,6 +42,7 @@ class ExperienceService:
             review=review,
             photo_urls=tuple(photo_urls),
             visited_on=visited_on,
+            value=domain.verdict_value(domain.Verdict(verdict), rating),
         )
         try:
             await self.experiences.add(
@@ -52,12 +52,13 @@ class ExperienceService:
                     place_id=place.id,
                     rating=log.rating,
                     verdict=log.verdict.value,
+                    value=log.value,
                     review=log.review,
                     photo_urls=list(log.photo_urls),
                     visited_on=log.visited_on,
                 )
             )
-            await self.profiles.add_score(user.id, place.category, log_value(log))
+            await self.profiles.add_score(user.id, place.category, log.value)
             await self.database.commit()
         except Exception:
             await self.database.rollback()

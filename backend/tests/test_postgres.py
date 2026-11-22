@@ -112,3 +112,47 @@ async def test_concurrent_taste_profile_increments_are_not_lost(postgres_factory
     async with postgres_factory() as session:
         row = await session.get(TasteProfile, (user_id, "cafe"))
         assert row.score == 10.0
+
+
+async def test_migration_0008_backfills_value_for_existing_experiences(postgres_factory):
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import text
+
+    def downgrade_insert_upgrade(connection):
+        config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+        config.attributes["connection"] = connection
+        command.downgrade(config, "0007")
+        user_id, place_id = uuid4(), uuid4()
+        connection.execute(
+            text("INSERT INTO users (id, auth0_sub) VALUES (:id, 'auth0|backfill')"),
+            {"id": user_id},
+        )
+        connection.execute(
+            text(
+                "INSERT INTO places (id, name, lat, lng, category) "
+                "VALUES (:id, 'Spot', 43.6, -79.4, 'park')"
+            ),
+            {"id": place_id},
+        )
+        for verdict, rating in (("recommend", 2.0), ("avoid", 5.0), ("neutral", 4.5)):
+            connection.execute(
+                text(
+                    "INSERT INTO experiences "
+                    "(id, user_id, place_id, rating, verdict, photo_urls, visited_on) "
+                    "VALUES (:id, :user, :place, :rating, :verdict, '[]', '2026-10-01')"
+                ),
+                {
+                    "id": uuid4(),
+                    "user": user_id,
+                    "place": place_id,
+                    "rating": rating,
+                    "verdict": verdict,
+                },
+            )
+        command.upgrade(config, "head")
+        return sorted(connection.execute(text("SELECT value FROM experiences")).scalars())
+
+    async with postgres_factory.kw["bind"].begin() as connection:
+        values = await connection.run_sync(downgrade_insert_upgrade)
+    assert values == [-1.0, 0.75, 1.0]

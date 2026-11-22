@@ -148,7 +148,20 @@ async def client(database_factory, settings, identity_provider):
 
 
 @pytest.fixture
-async def postgres_factory():
+def migrate_postgres():
+    from alembic import command
+    from alembic.config import Config
+
+    def migrate(connection, revision="head"):
+        config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+        config.attributes["connection"] = connection
+        command.upgrade(config, revision)
+
+    return migrate
+
+
+@pytest.fixture
+async def postgres_factory(request, migrate_postgres):
     """An isolated schema; never creates or deletes application tables."""
     from uuid import uuid4
 
@@ -163,16 +176,8 @@ async def postgres_factory():
         await connection.execute(text(f'CREATE SCHEMA "{schema}"'))
     engine = create_async_engine(url, connect_args={"options": f"-csearch_path={schema}"})
     try:
-        from alembic import command
-        from alembic.config import Config
-
-        def migrate(connection):
-            config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
-            config.attributes["connection"] = connection
-            command.upgrade(config, "head")
-
         async with engine.begin() as connection:
-            await connection.run_sync(migrate)
+            await connection.run_sync(migrate_postgres, getattr(request, "param", "head"))
         yield async_sessionmaker(engine, expire_on_commit=False)
     finally:
         await engine.dispose()

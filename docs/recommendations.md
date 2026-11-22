@@ -76,6 +76,7 @@ Ids are UUIDs, exposed to the recommender and the API as strings. Foreign keys c
 | `verdict` | enum | `recommend` \| `avoid` \| `neutral`, default `neutral` |
 | `review` | string \| null | ≤ 2000 chars |
 | `photo_urls` | list[string] | 0–10 |
+| `value` | float | −1 to 1; `value(e)` from 2.1, stored when the log is written |
 | `visited_on` | date | not in the future |
 
 A user may log the same Place more than once; the recommender uses only the latest Experience per `(user_id, place_id)`.
@@ -112,6 +113,8 @@ value(e) = +1                    if verdict = recommend
          = −1                    if verdict = avoid
          = (rating − 3) / 2      if verdict = neutral      # 5★ → +1, 3★ → 0, 1★ → −1
 ```
+
+The value is computed once, when the Experience is written, and stored in `experiences.value` (migration `0008` backfills older rows with this formula and preserves previously stored values). Place scores and "liked" read the stored value, so they always agree with the taste-profile increments made at write time, even if this formula changes later. `taste_profiles.score` equals `SUM(value)` over the user's Experiences per category, which can rebuild or check the stored profiles.
 
 A log is **liked** when `value(e) > 0`.
 

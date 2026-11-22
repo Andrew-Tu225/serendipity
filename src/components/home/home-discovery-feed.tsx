@@ -4,6 +4,7 @@ import Image, { type StaticImageData } from 'next/image'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import potteryImage from '@/components/serendipity/assets/pottery-workshop.png'
 import rooftopImage from '@/components/serendipity/assets/rooftop-dinner.png'
+import { CharacterPortrait } from '@/components/profile/character-portrait'
 
 const heroSlides = [
   {
@@ -30,7 +31,6 @@ type Category = 'Food' | 'Outdoors' | 'Creative'
 type FeedExperience = {
   id: string
   author: string
-  initials: string
   time: string
   place: string
   area: string
@@ -47,25 +47,25 @@ type FeedExperience = {
 
 const experiences: FeedExperience[] = [
   {
-    id: 'elena-market', author: 'Elena Rivera', initials: 'ER', time: '2h',
+    id: 'elena-market', author: 'Elena Rivera', time: '2h',
     place: 'Covent Garden Market', area: 'Downtown London', category: 'Food',
     rating: '4.8', verdict: 'good', review: 'Went for one thing, left with a whole afternoon of little discoveries.',
     image: '/london-covent-market.svg', imageAlt: 'Covent Garden Market clock tower', likes: 24, comments: 3,
   },
   {
-    id: 'james-park', author: 'James Wu', initials: 'JW', time: 'Yesterday',
+    id: 'james-park', author: 'James Wu', time: 'Yesterday',
     place: 'Victoria Park', area: 'Central London', category: 'Outdoors',
     rating: '4.5', verdict: 'good', review: 'The long way around is the best way around. Take a coffee and wander.',
     image: '/london-victoria-park.svg', imageAlt: 'A quiet path through Victoria Park', likes: 18, comments: 5,
   },
   {
-    id: 'maya-studio', author: 'Maya Patel', initials: 'MP', time: 'Yesterday',
+    id: 'maya-studio', author: 'Maya Patel', time: 'Yesterday',
     place: 'A pottery afternoon', area: 'Old East Village', category: 'Creative',
     rating: '3.0', verdict: 'okay', review: 'A bit messier than I expected, but honestly that was half the fun.',
     image: potteryImage, imageAlt: 'Friends making pottery together', likes: 11, comments: 2, mediaType: 'video',
   },
   {
-    id: 'alex-dinner', author: 'Alex Morgan', initials: 'AM', time: '2 days',
+    id: 'alex-dinner', author: 'Alex Morgan', time: '2 days',
     place: 'Dinner with a view', area: 'Downtown London', category: 'Food',
     rating: '2.0', verdict: 'bad', review: 'The view was lovely. The rest of the evening missed the mark for me.',
     image: rooftopImage, imageAlt: 'Friends sharing dinner on a rooftop at sunset', likes: 7, comments: 4,
@@ -170,10 +170,10 @@ export function HomeDiscoveryFeed() {
           <div><p className="eyebrow">FROM YOUR PEOPLE</p><h2 id="feed-heading">Fresh experiences</h2></div>
           <span className="feed-city">LONDON, ON</span>
         </div>
-        {visibleExperiences.length ? visibleExperiences.map((item, index) => (
+        {visibleExperiences.length ? visibleExperiences.map((item) => (
           <article className="experience-post" key={item.id}>
             <div className="post-topline">
-              <div className={`post-avatar avatar-tone-${index % 4}`} aria-hidden="true">{item.initials}</div>
+              <CharacterPortrait identity={item.author} size={39}/>
               <div className="post-author"><strong>{item.author}</strong><span>{item.time} · {item.category}</span></div>
               <div className={`experience-rating rating-${item.verdict}`} aria-label={`${item.verdict} rating: ${item.rating} out of 5`}><strong>{item.rating}</strong><span>/5</span></div>
             </div>

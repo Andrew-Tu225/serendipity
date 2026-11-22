@@ -12,6 +12,7 @@ from app.models.domain import (
     TasteProfile,
     User,
     Verdict,
+    verdict_value,
 )
 
 
@@ -121,3 +122,26 @@ def test_taste_profile_allows_negative_score():
 def test_taste_profile_rejects_unknown_category():
     with pytest.raises(ValidationError):
         TasteProfile(user_id="u_1", category="casino", score=1.0)
+
+
+def test_experience_value_defaults_to_none():
+    assert make_experience().value is None
+
+
+@pytest.mark.parametrize("value", [-1.5, 1.01])
+def test_experience_rejects_value_outside_minus_one_to_one(value):
+    with pytest.raises(ValidationError):
+        make_experience(value=value)
+
+
+@pytest.mark.parametrize(
+    ("verdict", "rating", "expected"),
+    [
+        (Verdict.RECOMMEND, 2.0, 1.0),
+        (Verdict.AVOID, 5.0, -1.0),
+        (Verdict.NEUTRAL, 4.0, 0.5),
+        (Verdict.NEUTRAL, 1.0, -1.0),
+    ],
+)
+def test_verdict_value_maps_verdict_and_rating_to_minus_one_to_one(verdict, rating, expected):
+    assert verdict_value(verdict, rating) == expected

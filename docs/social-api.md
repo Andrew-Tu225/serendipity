@@ -9,7 +9,8 @@ schemas are available at `/api/docs`; OpenAPI is at `/api/openapi.json`.
 Run `cd backend && uv run alembic upgrade head` before starting the backend. Migration `0004`
 adds `experience_likes`, `experience_bookmarks`, and `experience_comments`; it preserves existing
 Places, Experiences, follows, bookmarks, and sessions. No new dependencies or environment variables
-are required. Downgrading to `0003` deletes the three new tables and their interaction data.
+are required. Revision `0008` creates these tables for databases upgraded from the earlier
+Taste Buddies branch and preserves existing interactions. See the [migration notes](architecture.md#social-interactions).
 
 Public reads require no login. Optional authenticated viewers receive their own relationship
 flags. An expired or invalid session is treated as anonymous on those reads. `/feed` and all

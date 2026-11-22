@@ -2,10 +2,11 @@ import { useRef, useState, type ChangeEvent, type PointerEvent, type ReactNode }
 import potteryAsset from './assets/pottery-workshop.png'
 import rooftopAsset from './assets/rooftop-dinner.png'
 
-// Vite returns an asset URL; Next.js returns image metadata for the same import.
+// Vite serves imported images as URLs. Next.js type checks them as image metadata.
 function imageUrl(asset: string | { src: string }) {
   return typeof asset === 'string' ? asset : asset.src
 }
+
 const potteryImage = imageUrl(potteryAsset)
 const rooftopImage = imageUrl(rooftopAsset)
 
@@ -362,6 +363,7 @@ function BuddyView() {
   const [messageOpen, setMessageOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [messageSent, setMessageSent] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const swipeStart = useRef<number | null>(null)
   const profile = buddyProfiles[profileIndex]
 
@@ -385,6 +387,7 @@ function BuddyView() {
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     swipeStart.current = event.clientX
+    setIsDragging(true)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
@@ -397,6 +400,7 @@ function BuddyView() {
     if (swipeStart.current === null) return
     const distance = event.clientX - swipeStart.current
     swipeStart.current = null
+    setIsDragging(false)
     if (distance < -65) swipeLeft()
     else if (distance > 65) swipeRight()
     else setDragX(0)
@@ -426,11 +430,11 @@ function BuddyView() {
           </div>
           <div
             className="buddy-card swipe-card"
-            style={{ transform: `translateX(${dragX}px) rotate(${dragX / 24}deg)`, transition: swipeStart.current === null ? 'transform .2s ease' : 'none' }}
+            style={{ transform: `translateX(${dragX}px) rotate(${dragX / 24}deg)`, transition: isDragging ? 'none' : 'transform .2s ease' }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            onPointerCancel={() => { swipeStart.current = null; setDragX(0) }}
+            onPointerCancel={() => { swipeStart.current = null; setIsDragging(false); setDragX(0) }}
           >
             <div className="swipe-stamp skip-stamp" style={{ opacity: Math.max(0, -dragX / 90) }}>SKIP</div>
             <div className="swipe-stamp connect-stamp" style={{ opacity: Math.max(0, dragX / 90) }}>MESSAGE</div>

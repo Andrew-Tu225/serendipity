@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CharacterPortrait } from "@/components/profile/character-portrait";
 import { createGoogleMap, LONDON, type MapHandle } from "@/lib/maps/google-map";
 import type { Coordinates, MapPlace } from "@/types/places";
 import { discoveryClient } from "@/lib/api-client/discovery";
@@ -263,10 +264,13 @@ function PlaceReviews({ placeId, ratingSummary }: { placeId: string; ratingSumma
       </div>}
     {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
     <h3 className="discovery-friends-heading">Friends’ reviews</h3>
-    {data?.experiences.map((review) => <div className="discovery-review" key={review.id}>
-      <strong>{review.author_name}{review.is_self ? " · You" : review.is_friend ? " · Friend" : ""} · {review.rating}/5</strong>
-      <p>{review.review || (review.verdict === "recommend" ? "Recommends this place" : review.verdict === "avoid" ? "Would avoid this place" : "Visited this place")}</p>
-      <small>Visited {review.visited_on}</small>
+    {data?.experiences.map((review) => <div className="discovery-review flex items-start gap-2" key={review.id}>
+      <CharacterPortrait identity={review.author_id} appearance={review.author_character} size={28} />
+      <div>
+        <strong>{review.author_name}{review.is_self ? " · You" : review.is_friend ? " · Friend" : ""} · {review.rating}/5</strong>
+        <p>{review.review || (review.verdict === "recommend" ? "Recommends this place" : review.verdict === "avoid" ? "Would avoid this place" : "Visited this place")}</p>
+        <small>Visited {review.visited_on}</small>
+      </div>
     </div>)}
     {data?.next_offset !== null && data && <button disabled={loading} onClick={more}>{loading ? "Loading…" : "More reviews"}</button>}
     {error && <p role="alert">{error} <button onClick={() => { setError(""); if (data) void more(); else setAttempt((n) => n + 1); }}>Retry reviews</button></p>}

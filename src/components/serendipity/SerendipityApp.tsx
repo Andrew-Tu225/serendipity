@@ -1,58 +1,35 @@
 'use client'
 
-import Image from 'next/image'
-import { useState, type ReactNode } from 'react'
-import rooftopImage from './assets/rooftop-dinner.png'
+import { useRef, useState, type ReactNode } from 'react'
 import DiscoverMap from '@/components/map/discover-map'
 import { ReviewComposer } from '@/components/experience/review-composer'
 import { HomeDiscoveryFeed } from '@/components/home/home-discovery-feed'
 import { mapPlace, type PlaceExperiences } from '@/types/discovery'
 import type { Coordinates, MapPlace } from '@/types/places'
-import { ProfileView } from '@/components/profile/profile-view'
-import { FriendAvatar } from '@/components/map/friend-avatar'
+import { CharacterFigure } from '@/components/profile/character-figure'
+import { CharacterPortrait } from '@/components/profile/character-portrait'
+import { ProfileExperiencePanels } from '@/components/profile/profile-experiences'
+import { demoPlaceLists } from '@/components/profile/demo-place-lists'
+import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
+import { ProfileConnections } from '@/components/profile/profile-connections'
+import { BuddyDeckCard } from '@/components/buddy/buddy-deck-card'
+import { BuddyChat } from '@/components/buddy/buddy-messages'
+import { BuddyInbox } from '@/components/buddy/buddy-inbox'
+import { BuddyMatchSheet } from '@/components/buddy/buddy-match-sheet'
+import { demoBuddyMessages } from '@/components/buddy/demo-buddies'
+import { useBuddyDeck } from '@/hooks/use-buddy-deck'
+import { useProfileExperiences } from '@/hooks/use-profile-experiences'
+import { Icon, type IconName } from '@/components/ui/icon'
+import type { ConnectionDirection } from '@/types/profile'
+import { defaultCharacter, hairColors, hairStyles, miaCharacter, shirtColors, skinTones, type CharacterAppearance } from '@/types/character'
+import { authClient } from '@/lib/api-client/auth'
+import { profileClient } from '@/lib/api-client/profile'
+import type { BuddyMessage, BuddyPerson, BuddySuggestion } from '@/types/buddies'
 
-type IconName =
-  | 'home'
-  | 'compass'
-  | 'plus'
-  | 'users'
-  | 'user'
-  | 'bell'
-  | 'map'
-  | 'heart'
-  | 'bookmark'
-  | 'arrow'
-  | 'close'
-  | 'sparkle'
-  | 'pin'
-  | 'globe'
-  | 'lock'
-
-function Icon({ name, size = 22, filled = false }: { name: IconName; size?: number; filled?: boolean }) {
-  const paths: Record<IconName, ReactNode> = {
-    home: <><path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></>,
-    compass: <><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2Z"/></>,
-    plus: <><path d="M12 5v14M5 12h14"/></>,
-    users: <><path d="M16 19v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V19"/><circle cx="9.5" cy="7.5" r="3.5"/><path d="M17 4.6a3.5 3.5 0 0 1 0 6.8M20 19v-1.5a4 4 0 0 0-2.5-3.7"/></>,
-    user: <><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></>,
-    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
-    map: <><path d="m9 18-5 2V6l5-2 6 2 5-2v14l-5 2-6-2Z"/><path d="M9 4v14M15 6v14"/></>,
-    heart: <path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.4 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>,
-    bookmark: <path d="M6 4.8A1.8 1.8 0 0 1 7.8 3h8.4A1.8 1.8 0 0 1 18 4.8V21l-6-3.5L6 21V4.8Z"/>,
-    arrow: <><path d="M5 12h14M13 6l6 6-6 6"/></>,
-    close: <><path d="m6 6 12 12M18 6 6 18"/></>,
-    sparkle: <><path d="m12 3 1.2 4.1a5 5 0 0 0 3.4 3.4L21 12l-4.4 1.5a5 5 0 0 0-3.4 3.4L12 21l-1.2-4.1a5 5 0 0 0-3.4-3.4L3 12l4.4-1.5a5 5 0 0 0 3.4-3.4L12 3Z"/></>,
-    pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
-    globe: <><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></>,
-    lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
-  }
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {paths[name]}
-    </svg>
-  )
-}
+type ProfileScreen = { kind: 'lists'; owner: ListOwner }
+  | { kind: ConnectionDirection; owner: { name: string; demo: boolean }; count: number }
+type BuddyScreen = { kind: 'inbox' } | { kind: 'compose'; buddy: BuddySuggestion }
+  | { kind: 'chat'; buddy: BuddyPerson; initialMessage?: BuddyMessage }
 
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
@@ -64,8 +41,37 @@ function App() {
   const [reviewPoint, setReviewPoint] = useState<Coordinates | null>(null)
   const [picking, setPicking] = useState(false)
   const [reviewBusy, setReviewBusy] = useState(false)
-  const [reviewRevision, setReviewRevision] = useState(0)
+  const [discoveryRevision, setDiscoveryRevision] = useState(0)
   const [reviewedPlace, setReviewedPlace] = useState<MapPlace | null>(null)
+  const [profileScreen, setProfileScreen] = useState<ProfileScreen | null>(null)
+  const [demoLists, setDemoLists] = useState(demoPlaceLists)
+  const [demoCharacter, setDemoCharacter] = useState(miaCharacter)
+  const profileTrigger = useRef<HTMLButtonElement>(null)
+  const [buddyScreen, setBuddyScreen] = useState<BuddyScreen | null>(null)
+  const [sampleMessages, setSampleMessages] = useState(demoBuddyMessages)
+  const buddyDeck = useBuddyDeck(activeTab === 'Buddy')
+  const inboxTrigger = useRef<HTMLButtonElement>(null)
+  const subscreenOpen = profileScreen !== null || buddyScreen?.kind === 'inbox' || buddyScreen?.kind === 'chat'
+
+  function closeProfileScreen() {
+    setProfileScreen(null)
+    requestAnimationFrame(() => profileTrigger.current?.focus())
+  }
+
+  function closeBuddyScreen() {
+    setBuddyScreen(null)
+    requestAnimationFrame(() => inboxTrigger.current?.focus())
+  }
+
+  function addSampleMessage(buddyId: string, message: BuddyMessage) {
+    setSampleMessages((current) => ({ ...current, [buddyId]: [...(current[buddyId] ?? []), message] }))
+  }
+
+  function readSampleMessages(buddyId?: string) {
+    setSampleMessages((current) => Object.fromEntries(Object.entries(current).map(([id, messages]) => [
+      id, !buddyId || id === buddyId ? messages.map((message) => ({ ...message, unread: false })) : messages,
+    ])))
+  }
 
   const startReview = (place: MapPlace | null) => {
     setReviewTarget(place)
@@ -84,7 +90,7 @@ function App() {
   const reviewSaved = (result: PlaceExperiences) => {
     setSelectedPlace(mapPlace(result.place))
     setReviewedPlace(mapPlace(result.place))
-    setReviewRevision((value) => value + 1)
+    setDiscoveryRevision((value) => value + 1)
     setReviewBusy(false)
     setSheet(null)
     setPosted(true)
@@ -103,12 +109,12 @@ function App() {
   }
 
   const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : 'London, Ontario'
-  const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Taste profile' : activeTab === 'Discover' ? 'Discover' : 'Serendipity'
+  const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Profile' : activeTab === 'Discover' ? 'Discover' : 'Serendipity'
 
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
       <div className={`app-shell${activeTab === 'Discover' ? ' is-discover' : ''}`}>
-        {activeTab !== 'Discover' && (
+        {activeTab !== 'Discover' && !subscreenOpen && (
           <>
             <div className="status-bar" aria-hidden="true">
               <span>9:41</span>
@@ -120,22 +126,33 @@ function App() {
                 <p className="eyebrow">{pageEyebrow}</p>
                 <h1>{pageTitle}</h1>
               </div>
-              <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>
+              {activeTab === 'Buddy' ? (
+                <button ref={inboxTrigger} type="button" className="round-button" aria-label="Inbox" onClick={() => setBuddyScreen({ kind: 'inbox' })}>
+                  <Icon name="message" size={20}/>
+                </button>
+              ) : <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>}
             </header>
           </>
         )}
 
-        <div className="app-content">
+        <div className="app-content" hidden={subscreenOpen}>
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
-            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision} reviewedPlace={reviewedPlace}
+            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={discoveryRevision} reviewedPlace={reviewedPlace}
               selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
               picking={picking} onCancelPick={() => setPicking(false)}
               onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
           </div>
           {activeTab === 'Buddy' ? (
-            <BuddyView />
+            <BuddyView deck={buddyDeck} onMessage={(buddy) => setBuddyScreen({ kind: 'compose', buddy })} />
           ) : activeTab === 'Profile' ? (
-            <ProfileView />
+            <ProfileView demoListCount={demoLists.length} demoCharacter={demoCharacter} onDemoCharacter={setDemoCharacter}
+              onCharacterSaved={() => {
+                setReviewedPlace(null)
+                setDiscoveryRevision((value) => value + 1)
+              }} onOpenScreen={(screen, trigger) => {
+              profileTrigger.current = trigger
+              setProfileScreen(screen)
+            }} />
           ) : activeTab === 'Discover' ? null : (
             <HomeDiscoveryFeed />
           )}
@@ -143,13 +160,47 @@ function App() {
 
         {posted && <div className="review-saved" role="status">Your experience was shared <button onClick={() => setPosted(false)} aria-label="Dismiss confirmation">×</button></div>}
 
-        <nav className="bottom-nav" aria-label="Primary navigation">
+        {!subscreenOpen && <nav className="bottom-nav" aria-label="Primary navigation">
           <NavButton label="Home" icon="home" active={activeTab === 'Home'} onClick={() => changeTab('Home')}/>
           <NavButton label="Discover" icon="pin" active={activeTab === 'Discover'} onClick={() => changeTab('Discover')}/>
           <button className="add-button" onClick={() => changeTab('Add')} aria-label="Add a post"><span><Icon name="plus" size={27}/></span><small>Add</small></button>
           <NavButton label="Buddy" icon="users" active={activeTab === 'Buddy'} onClick={() => changeTab('Buddy')}/>
           <NavButton label="Profile" icon="user" active={activeTab === 'Profile'} onClick={() => changeTab('Profile')}/>
-        </nav>
+        </nav>}
+
+        {profileScreen?.kind === 'lists' && (
+          <ProfilePlaceLists owner={profileScreen.owner} demoLists={demoLists}
+            onAdd={(list) => setDemoLists((current) => [list, ...current])}
+            onClose={closeProfileScreen} />
+        )}
+        {profileScreen && profileScreen.kind !== 'lists' && (
+          <ProfileConnections direction={profileScreen.kind} owner={profileScreen.owner}
+            count={profileScreen.count} onClose={closeProfileScreen} />
+        )}
+        {buddyScreen?.kind === 'inbox' && (
+          <BuddyInbox demo={buddyDeck.status === 'demo'} demoMessages={sampleMessages} onClose={closeBuddyScreen}
+            onReadDemo={readSampleMessages} onOpen={(buddy) => setBuddyScreen({ kind: 'chat', buddy })} />
+        )}
+        {buddyScreen?.kind === 'compose' && (
+          <BuddyMatchSheet buddy={buddyScreen.buddy} demo={buddyDeck.status === 'demo'} onClose={() => setBuddyScreen(null)}
+            onSent={(message) => {
+              const buddy = buddyScreen.buddy
+              if (buddyDeck.status === 'demo') {
+                addSampleMessage(buddy.id, message)
+                readSampleMessages(buddy.id)
+              }
+              buddyDeck.remove(buddy.id)
+              setBuddyScreen({ kind: 'chat', buddy, initialMessage: message })
+            }} />
+        )}
+        {buddyScreen?.kind === 'chat' && (
+          <BuddyChat key={buddyScreen.buddy.id} buddy={buddyScreen.buddy} demo={buddyDeck.status === 'demo'}
+            initialMessage={buddyScreen.initialMessage}
+            demoMessages={sampleMessages[buddyScreen.buddy.id] ?? []}
+            onDemoMessage={(message) => addSampleMessage(buddyScreen.buddy.id, message)}
+            onSent={() => buddyDeck.remove(buddyScreen.buddy.id)}
+            onBack={() => setBuddyScreen({ kind: 'inbox' })} />
+        )}
 
         {sheet && (
           <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && !reviewBusy && setSheet(null)}>
@@ -187,35 +238,33 @@ function NavButton({ label, icon, active, onClick }: { label: string; icon: Icon
   return <button className={active ? 'nav-item active' : 'nav-item'} onClick={onClick}><Icon name={icon} size={22} filled={active}/><span>{label}</span></button>
 }
 
-function BuddyView() {
-  const [matched, setMatched] = useState(false)
+function BuddyView({ deck, onMessage }: { deck: ReturnType<typeof useBuddyDeck>; onMessage: (buddy: BuddySuggestion) => void }) {
   const [mode, setMode] = useState<'local' | 'worldwide'>('local')
+  const buddy = deck.cards[0]
   return (
     <section className="buddy-view">
       <div className="buddy-modes" role="tablist" aria-label="Buddy location">
-        <button className={mode === 'local' ? 'active' : ''} onClick={() => setMode('local')} role="tab" aria-selected={mode === 'local'}><Icon name="pin" size={15}/> Local</button>
+        <button className={mode === 'local' ? 'active' : ''} onClick={() => setMode('local')} role="tab" aria-selected={mode === 'local'}><Icon name="pin" size={15}/> {deck.status === 'demo' ? 'Local' : 'For you'}</button>
         <button className={mode === 'worldwide' ? 'active' : ''} onClick={() => setMode('worldwide')} role="tab" aria-selected={mode === 'worldwide'}><Icon name="globe" size={15}/> Worldwide <Icon name="lock" size={11}/></button>
       </div>
       {mode === 'local' ? (
         <>
-          <p className="buddy-intro">People who save what you save, skip what you skip, and are actually down to go.</p>
-          <div className="local-progress">
-            <div className="progress-copy"><span><Icon name="globe" size={16}/></span><p><strong>Worldwide is 70% unlocked</strong><small>Rate 3 more local experiences</small></p></div>
-            <div className="progress-track"><i/></div>
-          </div>
-          <div className="buddy-card">
-            <div className="buddy-photo"><Image src={rooftopImage} sizes="430px" alt="Alex, a suggested taste buddy"/><span>94% match</span></div>
-            <div className="buddy-info">
-              <div><h2>Alex, 28</h2><p>Brooklyn · 2 mi away</p></div>
-              <span className="verified"><Icon name="sparkle" size={15}/></span>
+          <p className="buddy-intro">Find people with similar tastes and make a plan.</p>
+          {deck.status === 'demo' && (
+            <div className="local-progress">
+              <div className="progress-copy"><span><Icon name="globe" size={16}/></span><p><strong>Worldwide is 70% unlocked</strong><small>Rate 3 more local experiences</small></p></div>
+              <div className="progress-track"><i/></div>
             </div>
-            <div className="taste-tags"><span>Natural wine</span><span>Live jazz</span><span>Hidden gems</span></div>
-            <p className="overlap"><strong>12 shared saves</strong> including Clay & rosé and Sunday Jazz Club.</p>
-            <button className={matched ? 'primary-button matched' : 'primary-button'} onClick={() => setMatched(!matched)}>
-              {matched ? 'Buddy request sent' : 'Say hey'} <Icon name={matched ? 'users' : 'arrow'} size={18}/>
-            </button>
-          </div>
-          <div className="buddy-note"><Icon name="heart" size={18}/><p><strong>Better together.</strong><br/>We only suggest people with real taste overlap.</p></div>
+          )}
+          {(deck.status === 'ready' || deck.status === 'demo') && (buddy ? (
+            <BuddyDeckCard key={buddy.id} buddy={buddy} busy={deck.skipping}
+              onSkip={() => void deck.skip(buddy.id)} onMessage={() => onMessage(buddy)} />
+          ) : <div className="buddy-card buddy-empty"><p>You’re caught up on Taste Buddies.</p>
+            {deck.status === 'ready' && <button className="place-lists-action" type="button" onClick={deck.reload}>Check for more</button>}
+          </div>)}
+          {deck.status === 'loading' && <p className="place-lists-message" role="status">Loading Taste Buddies…</p>}
+          {deck.status === 'error' && <p className="place-lists-message" role="alert">Couldn’t load Taste Buddies. <button className="profile-history-button" type="button" onClick={deck.reload}>Try again</button></p>}
+          {deck.skipError && <p className="place-lists-message" role="alert">{deck.skipError}</p>}
         </>
       ) : (
         <WorldwideLock />
@@ -230,9 +279,9 @@ function WorldwideLock() {
       <div className="world-map-preview" aria-hidden="true">
         <span className="continent americas"/><span className="continent europe"/><span className="continent asia"/>
         <i className="world-dot dot-one"/><i className="world-dot dot-two"/><i className="world-dot dot-three"/>
-        <div className="locked-avatar avatar-paris"><FriendAvatar variant="one"/></div>
-        <div className="locked-avatar avatar-tokyo"><FriendAvatar variant="two"/></div>
-        <div className="locked-avatar avatar-mexico"><FriendAvatar variant="three"/></div>
+        <div className="locked-avatar avatar-paris"><CharacterPortrait identity="Paris buddy" size={30}/></div>
+        <div className="locked-avatar avatar-tokyo"><CharacterPortrait identity="Tokyo buddy" size={30}/></div>
+        <div className="locked-avatar avatar-mexico"><CharacterPortrait identity="Mexico City buddy" size={30}/></div>
         <span className="map-lock"><Icon name="lock" size={23}/></span>
       </div>
       <div className="worldwide-copy">
@@ -254,5 +303,183 @@ function WorldwideLock() {
   )
 }
 
+function ProfileView({ demoListCount, demoCharacter, onDemoCharacter, onCharacterSaved, onOpenScreen }: {
+  demoListCount: number
+  demoCharacter: CharacterAppearance
+  onDemoCharacter: (character: CharacterAppearance) => void
+  onCharacterSaved: () => void
+  onOpenScreen: (screen: ProfileScreen, trigger: HTMLButtonElement) => void
+}) {
+  const { profile, retry, updateCharacter } = useProfileExperiences()
+  const [draft, setDraft] = useState<CharacterAppearance | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const character = profile.status === 'ready'
+    ? profile.data.character ?? defaultCharacter(profile.data.user_id)
+    : demoCharacter
+
+  async function saveCharacter() {
+    if (!draft || saving) return
+    if (profile.status === 'demo') {
+      onDemoCharacter(draft)
+      setDraft(null)
+      return
+    }
+    if (profile.status !== 'ready') return
+    setSaving(true)
+    setSaveError('')
+    try {
+      const session = await authClient.getSession()
+      if (session.user.id !== profile.data.user_id) throw new Error('Your session changed. Open Profile again to edit your character.')
+      updateCharacter(await profileClient.saveCharacter(draft, session.csrf_token))
+      onCharacterSaved()
+      setDraft(null)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Couldn’t save your character. Try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+  const identity = profile.status === 'demo' ? {
+    owner: { name: 'Mia Morgan', demo: true } as const,
+    followers: 382,
+    following: 214,
+    lists: demoListCount,
+  } : profile.status === 'ready' ? {
+    owner: { name: profile.data.display_name || 'Your profile', demo: false, bookmarkCount: profile.data.bookmark_count } as const,
+    followers: profile.data.follower_count,
+    following: profile.data.following_count,
+    lists: 1,
+  } : null
+
+  return (
+    <section className="profile-view">
+      <div className="profile-card">
+        <button className="avatar character-avatar" disabled={!identity} onClick={() => { setSaveError(''); setDraft(character) }} aria-label="Customize your character">
+          <CharacterPortrait identity={identity?.owner.name ?? 'Mia Morgan'} appearance={character}/>
+          <span className="character-edit-badge"><Icon name="sparkle" size={13}/></span>
+        </button>
+        {identity && <>
+          <div className="profile-name">
+            <h2>{identity.owner.name}</h2>
+            {identity.owner.demo && <p>@miatastes · Brooklyn, NY</p>}
+          </div>
+          {identity.owner.demo && <p className="profile-bio">Always looking for tiny restaurants, tactile workshops, and plans worth crossing town for.</p>}
+          <div className="profile-stats">
+            <button type="button" aria-label="Followers" onClick={(event) => onOpenScreen({ kind: 'followers', owner: identity.owner, count: identity.followers }, event.currentTarget)}>
+              <strong>{identity.followers}</strong><span>Followers</span>
+            </button>
+            <button type="button" aria-label="Following" onClick={(event) => onOpenScreen({ kind: 'following', owner: identity.owner, count: identity.following }, event.currentTarget)}>
+              <strong>{identity.following}</strong><span>Following</span>
+            </button>
+            <button type="button" aria-label="Lists" onClick={(event) => onOpenScreen({ kind: 'lists', owner: identity.owner }, event.currentTarget)}>
+              <strong>{identity.lists}</strong><span>Lists</span>
+            </button>
+          </div>
+        </>}
+      </div>
+
+      {profile.status === 'demo' && <><ProfileExperiencePanels /><ActivityCalendar /></>}
+      {profile.status === 'ready' && <ProfileExperiencePanels data={profile.data} />}
+      {profile.status === 'loading' && <p className="profile-experience-message" role="status">Loading your experiences…</p>}
+      {profile.status === 'error' && (
+        <div className="profile-experience-message" role="alert">
+          Couldn’t load your experiences. <button type="button" className="profile-history-button" onClick={retry}>Try again</button>
+        </div>
+      )}
+      {draft && <CharacterCustomizer value={draft} onChange={setDraft} onClose={() => setDraft(null)}
+        onSave={saveCharacter} saving={saving} error={saveError}/>}
+    </section>
+  )
+}
+
+function CharacterCustomizer({ value, onChange, onClose, onSave, saving, error }: {
+  value: CharacterAppearance
+  onChange: (value: CharacterAppearance) => void
+  onClose: () => void
+  onSave: () => void
+  saving: boolean
+  error: string
+}) {
+  const update = <K extends keyof CharacterAppearance>(key: K, next: CharacterAppearance[K]) => onChange({ ...value, [key]: next })
+
+  return (
+    <section className="character-studio" role="dialog" aria-modal="true" aria-label="Customize your character">
+      <header className="studio-header">
+        <button onClick={onClose} disabled={saving} aria-label="Back to profile"><Icon name="arrow" size={20}/></button>
+        <div><p className="eyebrow">YOUR LOOK</p><h2>Customize character</h2></div>
+        <button className="studio-done" onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Done'}</button>
+      </header>
+      <div className="character-preview">
+        <CharacterFigure options={value}/>
+        <p>Your profile picture shows your face and shoulders</p>
+      </div>
+      {error && <p className="character-save-error" role="alert">{error}</p>}
+      <fieldset className="customizer-controls" disabled={saving}>
+        <ControlGroup title="Features">
+          <div className="option-pills">
+            {(['feminine', 'masculine'] as const).map((option) => <button key={option} className={value.features === option ? 'selected' : ''} onClick={() => update('features', option)}>{option === 'feminine' ? 'Feminine' : 'Masculine'}</button>)}
+          </div>
+        </ControlGroup>
+        <ControlGroup title="Hair style">
+          <div className="option-pills four">
+            {hairStyles.map((option) => <button key={option} className={value.hairStyle === option ? 'selected' : ''} onClick={() => update('hairStyle', option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
+          </div>
+        </ControlGroup>
+        <ControlGroup title="Hair color">
+          <ColorSwatches colors={hairColors} value={value.hairColor} onChange={(color) => update('hairColor', color)}/>
+        </ControlGroup>
+        <ControlGroup title="Skin tone">
+          <ColorSwatches colors={skinTones} value={value.skinTone} onChange={(color) => update('skinTone', color)}/>
+        </ControlGroup>
+        <ControlGroup title="Shirt">
+          <ColorSwatches colors={shirtColors} value={value.shirt} onChange={(color) => update('shirt', color)}/>
+        </ControlGroup>
+        <ControlGroup title="Pants">
+          <ColorSwatches colors={['#4d526b', '#2f3037', '#6e5547', '#8290a3', '#786078']} value={value.pants} onChange={(color) => update('pants', color)}/>
+        </ControlGroup>
+        <ControlGroup title="Shoes">
+          <ColorSwatches colors={['#eee8f2', '#28252a', '#966a50', '#b66972', '#6e7184']} value={value.shoes} onChange={(color) => update('shoes', color)}/>
+        </ControlGroup>
+        <ControlGroup title="Hat">
+          <div className="option-pills">
+            {(['none', 'cap', 'beanie'] as const).map((option) => <button key={option} className={value.hat === option ? 'selected' : ''} onClick={() => update('hat', option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
+          </div>
+        </ControlGroup>
+      </fieldset>
+    </section>
+  )
+}
+
+function ControlGroup({ title, children }: { title: string; children: ReactNode }) {
+  return <div className="control-group"><p>{title}</p>{children}</div>
+}
+
+function ColorSwatches({ colors, value, onChange }: { colors: string[]; value: string; onChange: (color: string) => void }) {
+  return <div className="color-swatches">{colors.map((color) => <button key={color} className={value === color ? 'selected' : ''} style={{ backgroundColor: color }} onClick={() => onChange(color)} aria-label={`Choose color ${color}`}/>)}</div>
+}
+
+function ActivityCalendar() {
+  const outingDays = new Set([2, 6, 9, 14, 18, 21, 27])
+  const days = Array.from({ length: 35 }, (_, index) => index < 6 ? null : index - 5)
+
+  return (
+    <section className="calendar-card">
+      <div className="calendar-heading">
+        <div><p className="eyebrow">ACTIVITY</p><h3>June 2025</h3></div>
+        <div className="calendar-legend"><i/> Went out</div>
+      </div>
+      <div className="calendar-grid weekdays">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
+      </div>
+      <div className="calendar-grid calendar-days">
+        {days.map((day, index) => (
+          <span key={index} className={day && outingDays.has(day) ? 'outing-day' : ''}>{day}</span>
+        ))}
+      </div>
+      <p className="calendar-summary"><strong>7 nights out</strong> this month · your most social month yet</p>
+    </section>
+  )
+}
 
 export default App

@@ -1,3 +1,5 @@
+import type { CharacterAppearance } from "./character";
+
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -29,5 +31,5 @@ export interface MapPlace extends PlaceDetails {
   friend_count?: number;
   category?: "Food" | "Culture" | "Outdoors" | "Activity" | "Shop";
   rating_summary?: { average: number; count: number };
-  friend?: { name: string; note: string; review: string; variant: string };
+  friend?: { id: string; name: string; note: string; review: string; character?: CharacterAppearance | null };
 }
