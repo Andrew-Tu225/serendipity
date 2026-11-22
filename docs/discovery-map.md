@@ -86,8 +86,12 @@ use level-13 cells, zoom 15 uses level 14, zoom 16 uses level 15, and zoom 17+ u
 Toronto these are approximately 3.5 km, 1.8 km, 900 m, and 450 m across. Search keys include the level,
 so a coarse area's 20 results never claim that finer detail has been fetched. Up to nine visible
 cells are eligible; views exceeding that budget fall back to coarser levels, down to level 13.
-Larger views show app-reviewed Places and invite zooming in when empty. Each cell uses a circle
-enclosing it, so overlapping results are expected and deduplicated
+If a city view still exceeds nine cells, a bounded 3×3 sample of level-13 cells is spread across
+the viewport instead of skipping Google discovery entirely. Search keys remain geographic and
+zooming in still refines the sample. Sampling works from zoom 9 upward; world/continent-scale
+views show an explicit zoom-in hint. Crossing the date line keeps the nine-cell cap across both
+sides. This applies equally to seeded London and cities with no app reviews. Each cell uses a
+circle enclosing it, so overlapping results are expected and deduplicated
 by Google Place ID. This is a sample of destinations, not an exhaustive listing of all Google places.
 Results merge incrementally; unchanged markers retain their SDK objects. App Places with matching
 Google IDs take precedence. Names or coordinate proximity never establish identity.
@@ -105,7 +109,8 @@ places. Obsolete queued areas are skipped, and hiding the map cancels the entire
 Zoom refinement can add paid searches. Each mounted map is capped at 18 attempted nearby requests
 per rolling minute, including failed/aborted attempts. This budget survives tab changes and manual
 retry, and remaining searches resume automatically as slots reopen. Previously loaded pins stay
-available while waiting. The backend's separate 60/minute per-process limit still applies across
+available while waiting. Pending searches, budget waits, and zoom-limited views suppress the
+generic empty-area message; zoom-limited views explain how to discover nearby places. The backend's separate 60/minute per-process limit still applies across
 visitors; the client budget is not a shared/global billing cap.
 
 Search cells are reused for five minutes in mounted-map memory (up to 48 cells / 960 provider rows).

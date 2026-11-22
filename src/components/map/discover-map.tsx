@@ -175,7 +175,8 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
             {nearby.error && <p>{nearby.error} <button onClick={nearby.retry}>Retry nearby places</button></p>}
           </div>}
           {nearby.waiting && !nearby.error && !discovery.error && !recommendations.error && <div className="discovery-data-status" role="status">More nearby places will appear shortly.</div>}
-          {discovery.complete && recommendations.complete && !discovery.loading && !recommendations.loading && !discovery.error && !recommendations.error && !nearby.error && markerPlaces.size === 0 && <div className="discovery-data-status" role="status">No places in this area yet. Search for a place or zoom in. <button onClick={() => onReview(null)}>Review a place</button></div>}
+          {nearby.zoomIn && !nearby.error && !discovery.error && !recommendations.error && <div className="discovery-data-status" role="status">Zoom in to discover nearby places, or search for a destination.</div>}
+          {discovery.complete && recommendations.complete && !discovery.loading && !recommendations.loading && !discovery.error && !recommendations.error && !nearby.error && !nearby.loading && !nearby.waiting && !nearby.zoomIn && markerPlaces.size === 0 && <div className="discovery-data-status" role="status">No places in this area yet. Search for a place or zoom in. <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}
       {selected && !picking && <article className="discovery-preview" aria-label="Selected place">

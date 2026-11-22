@@ -36,7 +36,9 @@ test("recommendation responses highlight the original reviewed places without du
   await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
   expect(requests).toHaveLength(1);
   requests[0].split(",").map(Number).forEach((coordinate, i) => expect(coordinate).toBeCloseTo([-81.3953,42.8349,-81.0953,43.1349][i], 7));
-  expect(databaseLists).toBeGreaterThan(0); expect(nearbyLists).toBe(0); expect(details).toBe(0);
+  expect(databaseLists).toBeGreaterThan(0);
+  await expect.poll(() => nearbyLists).toBeGreaterThan(0);
+  expect(nearbyLists).toBeLessThanOrEqual(9); expect(details).toBe(0);
 });
 
 test("superseded viewport responses never overwrite the latest recommendations", async ({ page }) => {

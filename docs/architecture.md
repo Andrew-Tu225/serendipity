@@ -75,6 +75,9 @@ per search. `useNearbyPlaces` reuses bounded geographic search cells in temporar
 separately from the app's reviewed-place cache. Google IDs deduplicate results and let app Places
 take precedence. Nearby markers use our custom category glyphs, with no Google ratings or reviews.
 The map adapter exposes zoom so nearby search can refine geographic cells as users zoom in.
+City views that exceed the nine-cell coverage budget sample up to nine level-13 cells across the
+viewport, preserving provider discovery outside seeded areas. World-scale views show an explicit
+zoom-in hint. Pending nearby work and budget waits cannot produce a premature empty-area message.
 The UI schedules up to three center-prioritized searches concurrently, with a separate mounted-map
 budget of 18 attempts per rolling minute. These limits control provider work without changing the
 backend contracts, persistence, or shared process rate limits.

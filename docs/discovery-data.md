@@ -53,6 +53,9 @@ and when the window/tab regains focus. No loading banner appears after the first
 load. Existing pins remain visible during background requests and errors; retry is available. An
 empty-area message requires complete coverage of the visible viewport and zero Places inside it,
 so cached offscreen results do not hide an empty state or cause one during an unfinished fetch.
+The generic empty message also waits for nearby requests and budget pauses. City-sized views
+that exceed nine nearby cells sample nine coarse cells across the viewport; only broader views
+show a zoom-in hint. Provider discovery does not depend on London seed data.
 
 The API returns pages of 200 Places by default (maximum 500), ordered by internal UUID. Each page
 merges into the current Place cache immediately. A region becomes complete only after its final

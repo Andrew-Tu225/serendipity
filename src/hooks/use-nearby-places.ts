@@ -13,7 +13,7 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
   const version = useRef(0);
   const budget = useRef(new NearbyRequestBudget());
   const [attempt, setAttempt] = useState(0);
-  const [view, setView] = useState({ places: [] as MapPlace[], error: "", zoomIn: false, waiting: false });
+  const [view, setView] = useState({ places: [] as MapPlace[], error: "", zoomIn: false, waiting: false, loading: true });
   useEffect(() => {
     if (!map || !active) return;
     let disposed = false;
@@ -42,7 +42,7 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
         }
       }
       const waiting = wantedCells().some((cell) => !cells.current.has(cell.key)) && budget.current.retryAt(now) > now;
-      const snapshot = { error, zoomIn: !wantedCells().length, waiting };
+      const snapshot = { error, zoomIn: !wantedCells().length, waiting, loading: running && !error };
       const rows = [...places.values()].map(({ place }) => place);
       setView((previous) => {
         const previousPlaces = new Map(previous.places.map((place) => [place.place_id, place]));
@@ -65,6 +65,7 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
         let nextCell = 0;
         let failed = false;
         error = "";
+        publish();
         async function worker() {
           while (!disposed && !current.signal.aborted && !failed && nextCell < wanted.length) {
             const cell = wanted[nextCell++];
@@ -91,6 +92,7 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
       } finally {
         running = false;
         if (!disposed) {
+          publish();
           clearTimeout(expiry);
           const now = Date.now();
           const pending = wantedCells().some((cell) => !cells.current.has(cell.key) || now - cells.current.get(cell.key)!.fetched >= FRESH_MS);

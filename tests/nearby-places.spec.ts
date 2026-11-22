@@ -23,6 +23,25 @@ async function open(page: Page) {
 }
 test.beforeEach(async ({ page }) => { await mockGoogleMaps(page); await mockDiscovery(page); });
 
+test("moving from seeded London to a city with no app reviews still shows Google nearby places", async ({ page }) => {
+  const requests: number[] = [];
+  await page.route("**/api/places/nearby?**", (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    const latitude = Number(params.get("latitude")), longitude = Number(params.get("longitude"));
+    requests.push(longitude);
+    return route.fulfill({ json: { places: [{ ...nearby, place_id: `area-${latitude}-${longitude}`,
+      display_name: "Toronto destination", location: { latitude, longitude } }] } });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toBeVisible();
+  await page.evaluate(() => (window as unknown as { __panTestMap: (lat: number, lng: number) => void }).__panTestMap(43.6532, -79.3832));
+  await expect.poll(() => requests.some((longitude) => longitude > -80 && longitude < -79)).toBe(true);
+  await expect(page.getByRole("button", { name: "View Toronto destination", exact: true }).first()).toBeVisible();
+  await expect(page.locator('.discovery-pin[data-layer="review"], .discovery-pin[data-layer="friend"], .discovery-pin[data-layer="recommendation"]')).toHaveCount(0);
+  await expect(page.getByText("No places in this area yet.", { exact: false })).toHaveCount(0);
+});
+
 test("custom nearby pins have no fabricated rating, resolve on tap, and stay mounted during small pans", async ({ page }) => {
   let calls = 0;
   await page.route("**/api/places/nearby?**", (route) => { calls++; return route.fulfill({ json: { places: [nearby] } }); });
