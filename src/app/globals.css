@@ -675,6 +675,34 @@ a.place-list-arrow:hover { background: #f2eaf7; }
   .character-studio { top: 24px; bottom: 24px; border-radius: 32px; box-shadow: 0 25px 80px rgba(63, 46, 76, .2); }
 }
 
+/* Sign-in gate and first-login onboarding. */
+
+.session-content { display: contents; }
+.account-page { width: 100%; max-width: 470px; margin: auto; padding: 40px 24px; color: #292333; background: #faf8fc; border-radius: 24px; }
+.account-page h1 { font-family: 'DM Serif Display', serif; font-size: 36px; line-height: 1.15; margin: 16px 0; }
+.account-page p { line-height: 1.65; }
+.account-intro { font-size: 21px; margin-bottom: 12px; }
+.account-note { font-size: 12px; color: #766b7f; margin-top: 22px; }
+.onboarding-symbol { display: grid; place-items: center; width: 64px; height: 64px; background: #eee5f4; color: #73508b; border-radius: 22px; font-size: 38px; margin-top: 28px; }
+.onboarding-shell { display: flex; flex-direction: column; }
+.onboarding-shell .status-bar { flex-shrink: 0; }
+.onboarding-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.onboarding-page { max-width: none; margin: 0; padding: 24px 24px 20px; border-radius: 0; }
+.onboarding-page h1 { overflow-wrap: anywhere; }
+.onboarding-actions { flex-shrink: 0; padding: 12px 24px max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid #eee7f1; background: #faf8fc; }
+.onboarding-actions .primary-button { margin-top: 0; }
+.onboarding-actions .text-button { margin: 5px auto 0; }
+.onboarding-actions [role="alert"] { margin-bottom: 12px; font-size: 13px; }
+.onboarding-continue-hint { margin-bottom: 8px; color: #766b7f; font-size: 12px; text-align: center; }
+.interest-fieldset { margin-top: 28px; }
+.interest-fieldset legend { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.interest-grid { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }
+.interest-chip { border: 1px solid #ded3e6; border-radius: 99px; background: #fff; padding: 11px 16px; color: #624974; font-size: 13px; }
+.interest-chip[aria-pressed="true"] { background: #73508b; color: #fff; border-color: #73508b; }
+button:focus-visible, a:focus-visible { outline: 3px solid #a37bbc; outline-offset: 4px; }
+.text-button { display: block; margin: 20px auto; padding: 10px 12px; color: #73508b; text-decoration: underline; font-size: 13px; }
+[role="alert"] { color: #a03448; line-height: 1.5; }
+
 /* Keep original white review pins; reserve colour for recommendation highlights. */
 .discovery-pin[data-layer="place"] { --pin-color: #8a8793; --pin-ink: #625e6b; }
 .discovery-pin[data-layer="review"] { --pin-color: #fff; --pin-ink: #654577; --pin-foreground: #76548f; }
