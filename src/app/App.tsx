@@ -1,6 +1,13 @@
 import { useRef, useState, type ChangeEvent, type PointerEvent, type ReactNode } from 'react'
-import potteryImage from './assets/pottery-workshop.png'
-import rooftopImage from './assets/rooftop-dinner.png'
+import potteryAsset from './assets/pottery-workshop.png'
+import rooftopAsset from './assets/rooftop-dinner.png'
+
+// Vite returns an asset URL; Next.js returns image metadata for the same import.
+function imageUrl(asset: string | { src: string }) {
+  return typeof asset === 'string' ? asset : asset.src
+}
+const potteryImage = imageUrl(potteryAsset)
+const rooftopImage = imageUrl(rooftopAsset)
 
 type IconName =
   | 'home'

@@ -310,22 +310,24 @@
 .discovery-search-status { position: relative; margin: 7px 2px 0; padding: 7px 10px; border-radius: 10px; background: #fffffff5; color: #6e507f; font-size: 12px; box-shadow: 0 3px 12px #36263f14; }
 .discovery-search-status button { color: #5d3c73; border: 0; background: transparent; text-decoration: underline; }
 .discovery-canvas { position: relative; height: 100%; overflow: hidden; background: #eeeaf1; }
-.discovery-map { position: absolute; inset: 0; }
+.discovery-map { position: absolute; inset: 0; z-index: 0; }
 .discovery-map-message { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 28px; text-align: center; color: #6e507f; background: #f1edf5; font-size: 13px; }
 .discovery-map-message button { padding: 10px 20px; border: 0; border-radius: 99px; background: #76548f; color: #fff; }
 .discovery-locate { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid #e1d8e6; border-radius: 16px; color: #76548f; background: #fff; box-shadow: 0 3px 12px #36263f14; }
 .discovery-locate:disabled { opacity: .55; cursor: default; }
 .discovery-locate[aria-busy="true"] { color: #76548f; background: #eee5f4; cursor: wait; }
-.discovery-pin { display: flex; flex-direction: column; align-items: center; width: max-content; max-width: 130px; color: #76548f; }
-.discovery-pin-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50% 50% 50% 8px; border: 3px solid white; background: white; box-shadow: 0 4px 12px #39284340; transform: rotate(-45deg); }
-.discovery-pin-icon svg { transform: rotate(45deg); }
+.discovery-pin { position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: #76548f; }
+.discovery-pin-caption { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; width: max-content; max-width: 130px; padding-bottom: 3px; visibility: hidden; pointer-events: none; }
+.discovery-pin.has-label .discovery-pin-caption, .discovery-pin.is-selected .discovery-pin-caption { visibility: visible; }
+.discovery-pin-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid white; background: white; box-shadow: 0 3px 8px #39284330; }
+.discovery-pin-icon svg { width: 17px; height: 17px; }
 .discovery-pin .friend-avatar { width: 42px; height: 64px; filter: drop-shadow(0 3px 3px #39284333); }
 .discovery-pin-label { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 3px 6px; margin-top: 3px; background: #fffffff2; border-radius: 6px; color: #55405f; font-size: 10px; font-weight: 700; box-shadow: 0 2px 5px #36263f14; }
 .discovery-pin-rating { margin-top: 2px; padding: 2px 5px; border-radius: 5px; color: #654577; background: #fffffff2; font-size: 9px; font-weight: 600; white-space: nowrap; }
-.discovery-pin.is-selected .discovery-pin-icon { color: white; background: #76548f; transform: rotate(-45deg) scale(1.12); }
+.discovery-pin.is-selected .discovery-pin-icon { color: white; background: #76548f; transform: scale(1.12); }
 .discovery-pin.is-selected .discovery-pin-label { background: #76548f; color: white; }
 .discovery-pin.is-unreviewed { color: #897b95; }
-.discovery-pin.is-unreviewed .discovery-pin-icon { width: 30px; height: 30px; border-width: 2px; background: #f6f2f8; box-shadow: 0 2px 6px #39284326; }
+.discovery-pin.is-unreviewed .discovery-pin-icon { width: 24px; height: 24px; border-width: 2px; background: #f6f2f8; box-shadow: 0 2px 6px #39284326; }
 .discovery-pin.is-unreviewed .discovery-pin-icon svg { width: 16px; height: 16px; }
 .discovery-pin.is-unreviewed .discovery-pin-label { color: #786985; font-weight: 500; font-size: 9px; }
 .discovery-pin.is-unreviewed.is-selected .discovery-pin-icon { color: white; background: #76548f; }
@@ -352,7 +354,7 @@
 .discovery-view button:focus-visible, .discovery-preview a:focus-visible { outline: 2px solid #76548f; outline-offset: 2px; }
 .discovery-data-status { position: absolute; z-index: 3; top: calc(128px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; padding: 10px 12px; border-radius: 12px; color: #654577; background: #fff; font-size: 12px; box-shadow: 0 4px 18px #36263f14; }
 .discovery-data-status button { margin: 5px 8px 0 0; padding: 4px 0; color: #654577; border: 0; background: transparent; text-decoration: underline; }
-.discovery-friend-avatar { display: grid; place-items: center; width: 42px; height: 42px; border: 3px solid #fff; border-radius: 50%; color: #fff; background: #76548f; box-shadow: 0 4px 12px #39284340; font-size: 14px; font-weight: 700; }
+.discovery-friend-avatar { display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #76548f; box-shadow: 0 3px 8px #39284330; font-size: 11px; font-weight: 700; }
 .discovery-cluster { display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 8px; border: 3px solid white; border-radius: 50%; background: #76548f; color: white; box-shadow: 0 4px 15px #39284340; font-size: 15px; font-weight: 700; }
 .discovery-reviews { margin-top: 8px; }
 .discovery-review { padding: 8px 0; border-top: 1px solid #eee7f1; font-size: 11px; }
@@ -429,7 +431,7 @@
 .landmark-carousel { position: relative; height: 270px; overflow: hidden; isolation: isolate; background: #98878a; }
 .landmark-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 900ms ease; }
 .landmark-slide.is-active { opacity: 1; }
-.landmark-slide > img { object-fit: cover; transform: scale(1.03); transition: transform 7s ease; }
+.landmark-slide > img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.03); transition: transform 7s ease; }
 .landmark-slide.is-active > img { transform: scale(1); }
 .landmark-shade { position: absolute; inset: 20% 0 0; background: linear-gradient(180deg, transparent 0%, rgba(28, 23, 35, .1) 20%, rgba(25, 20, 32, .74) 100%); }
 .landmark-copy { position: absolute; z-index: 2; left: 22px; right: 58px; bottom: 31px; color: white; }
@@ -478,7 +480,7 @@
 .post-area { margin: 3px 0 0 21px; color: #9a909e; font-size: 9px; }
 .post-review { margin: 10px 1px 11px; color: #685e6e; font-size: 11px; line-height: 1.45; }
 .post-media { position: relative; aspect-ratio: 1.48; overflow: hidden; border-radius: 14px; background: #eee8f0; }
-.post-media > img { object-fit: cover; }
+.post-media > img { width: 100%; height: 100%; object-fit: cover; }
 .post-media-place { position: absolute; right: 8px; bottom: 8px; padding: 5px 8px; color: #fff; border: 1px solid #ffffff42; border-radius: 99px; background: #29233383; backdrop-filter: blur(8px); font-size: 8px; }
 .post-video { position: absolute; top: 9px; left: 9px; display: flex; align-items: center; gap: 4px; padding: 5px 7px; color: #fff; border: 1px solid #ffffff4a; border-radius: 99px; background: #29233377; font-size: 8px; backdrop-filter: blur(7px); }
 .post-actions { display: flex; align-items: center; gap: 17px; min-height: 43px; padding: 5px 2px 0; }
@@ -508,3 +510,43 @@
   .sheet-backdrop { border-radius: 32px; overflow: hidden; }
   .character-studio { top: 24px; bottom: 24px; border-radius: 32px; box-shadow: 0 25px 80px rgba(63, 46, 76, .2); }
 }
+
+.session-content { display: contents; }
+.account-page { width: 100%; max-width: 470px; margin: auto; padding: 40px 24px; color: #292333; background: #faf8fc; border-radius: 24px; }
+.account-page h1 { font-family: 'DM Serif Display', serif; font-size: 36px; line-height: 1.15; margin: 16px 0; }
+.account-page p { line-height: 1.65; }
+.account-intro { font-size: 21px; margin-bottom: 12px; }
+.account-note { font-size: 12px; color: #766b7f; margin-top: 22px; }
+.onboarding-symbol { display: grid; place-items: center; width: 64px; height: 64px; background: #eee5f4; color: #73508b; border-radius: 22px; font-size: 38px; margin-top: 28px; }
+.onboarding-shell { display: flex; flex-direction: column; }
+.onboarding-shell .status-bar { flex-shrink: 0; }
+.onboarding-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.onboarding-page { max-width: none; margin: 0; padding: 24px 24px 20px; border-radius: 0; }
+.onboarding-page h1 { overflow-wrap: anywhere; }
+.onboarding-actions { flex-shrink: 0; padding: 12px 24px max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid #eee7f1; background: #faf8fc; }
+.onboarding-actions .primary-button { margin-top: 0; }
+.onboarding-actions .text-button { margin: 5px auto 0; }
+.onboarding-actions [role="alert"] { margin-bottom: 12px; font-size: 13px; }
+.onboarding-continue-hint { margin-bottom: 8px; color: #766b7f; font-size: 12px; text-align: center; }
+.interest-fieldset { margin-top: 28px; }
+.interest-fieldset legend { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.interest-grid { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }
+.interest-chip, .interest-tag { border: 1px solid #ded3e6; border-radius: 99px; background: #fff; padding: 11px 16px; color: #624974; font-size: 13px; }
+.interest-chip[aria-pressed="true"] { background: #73508b; color: #fff; border-color: #73508b; }
+.interest-tag { background: #f4edf8; font-size: 12px; }
+button:disabled { cursor: default; opacity: .55; }
+button:focus-visible, a:focus-visible { outline: 3px solid #a37bbc; outline-offset: 4px; }
+.text-button { display: block; margin: 20px auto; padding: 10px 12px; color: #73508b; text-decoration: underline; font-size: 13px; }
+[role="alert"] { color: #a03448; line-height: 1.5; }
+.account-avatar { width: 84px; height: 84px; display: grid; place-items: center; border-radius: 50%; margin: 0 auto 15px; background: #e8dcf1; color: #73508b; font-size: 27px; font-weight: 600; overflow: hidden; }
+.account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+/* Keep original white review pins; reserve colour for recommendation highlights. */
+.discovery-pin[data-layer="place"] { --pin-color: #8a8793; --pin-ink: #625e6b; }
+.discovery-pin[data-layer="review"] { --pin-color: #fff; --pin-ink: #654577; --pin-foreground: #76548f; }
+.discovery-pin[data-layer="recommendation"] { --pin-color: #b76716; --pin-ink: #8b4b0d; }
+.discovery-pin[data-layer="friend"] { --pin-color: #76548f; --pin-ink: #654577; }
+.discovery-pin[data-layer] { color: var(--pin-ink); }
+.discovery-pin[data-layer] .discovery-pin-icon, .discovery-pin[data-layer] .discovery-friend-avatar { background: var(--pin-color); color: var(--pin-foreground, #fff); }
+.discovery-pin[data-layer] .discovery-pin-label, .discovery-pin[data-layer] .discovery-pin-rating { color: var(--pin-ink); }
+.discovery-pin[data-layer].is-selected .discovery-pin-icon, .discovery-pin[data-layer].is-selected .discovery-pin-label { background: var(--pin-color); color: var(--pin-foreground, #fff); }
+.discovery-pin[data-layer="review"].is-selected .discovery-pin-icon, .discovery-pin[data-layer="review"].is-selected .discovery-friend-avatar { box-shadow: 0 0 0 2px #76548f, 0 4px 12px #39284340; }

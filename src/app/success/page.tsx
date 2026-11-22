@@ -1,9 +1,3 @@
-import { SuccessPanel } from "@/components/auth/success-panel";
+import { redirect } from "next/navigation";
 
-export default function SuccessPage() {
-  return (
-    <div className="flex flex-1 bg-background text-foreground">
-      <SuccessPanel />
-    </div>
-  );
-}
+export default function SuccessPage() { redirect("/"); }

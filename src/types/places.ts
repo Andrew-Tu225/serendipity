@@ -25,6 +25,7 @@ export interface MapPlace extends PlaceDetails {
   app_id?: string;
   google_place_id?: string;
   app_category?: import("./discovery").PlaceCategory;
+  recommendation?: Pick<import("./recommendations").Recommendation, "kind" | "score" | "logs">;
   friend_count?: number;
   category?: "Food" | "Culture" | "Outdoors" | "Activity" | "Shop";
   rating_summary?: { average: number; count: number };

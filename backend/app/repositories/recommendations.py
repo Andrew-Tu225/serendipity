@@ -10,13 +10,12 @@ from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.models import Bookmark, Experience, Follow, Place, TasteProfile, User, domain
+from app.models import Bookmark, Experience, Follow, Place, TasteProfile, User, UserInterest, domain
 from app.models.conversions import (
     to_domain_bookmark,
     to_domain_experience,
     to_domain_follow,
     to_domain_place,
-    to_domain_profile,
     to_domain_user,
 )
 from app.recommend.config import MAX_PLACES_IN_VIEW
@@ -131,4 +130,12 @@ class SqlRecommendationRepository:
 
     async def _profiles(self) -> tuple[domain.TasteProfile, ...]:
         rows = await self.session.scalars(select(TasteProfile))
-        return tuple(to_domain_profile(row) for row in rows)
+        scores = {(str(row.user_id), row.category): row.score for row in rows}
+        interests = await self.session.scalars(select(UserInterest))
+        for interest in interests:
+            key = (str(interest.user_id), interest.category)
+            scores[key] = scores.get(key, 0.0) + 1.0
+        return tuple(
+            domain.TasteProfile(user_id=user_id, category=category, score=score)
+            for (user_id, category), score in sorted(scores.items())
+        )

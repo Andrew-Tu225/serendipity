@@ -157,3 +157,8 @@ Run `cd backend && uv run pytest` and `uv run ruff check . && uv run ruff format
 Set `TEST_DATABASE_URL` to a local PostgreSQL URL when running pytest to include migration parity,
 foreign-key/constraint, and concurrent social-write checks. PostgreSQL tests create and remove
 isolated schemas; they do not migrate or delete application tables in the public schema.
+
+
+## Signed-in profile and onboarding
+
+The frontend's Profile tab now uses `GET /api/me/profile`, a private summary of the current account's identity, interests, onboarding timestamp, Experience count, saved Place count, and following count. `PUT /api/me/onboarding` accepts 1–14 unique domain category interests with normal session/CSRF verification. These endpoints live in the onboarding domain and never accept a client-supplied owner ID. The existing public profile and social endpoints retain their contracts. See [architecture.md](architecture.md) and [recommendations.md](recommendations.md) for persistence and interest weighting.

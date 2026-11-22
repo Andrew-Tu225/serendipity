@@ -39,6 +39,9 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("serendipity:unauthorized"));
+    }
     let message = "The request could not be completed. Please try again.";
     try {
       const data: unknown = await response.json();

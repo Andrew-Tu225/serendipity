@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SessionProvider } from "@/components/auth/session-provider";
 
 export const metadata: Metadata = {
   title: "Serendipity",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="serendipity flex min-h-full flex-col">{children}</body>
+      <body className="serendipity flex min-h-full flex-col"><SessionProvider>{children}</SessionProvider></body>
     </html>
   );
 }

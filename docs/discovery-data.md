@@ -1,13 +1,42 @@
 # App-reviewed places on the map
 
-Google supplies the background map, location search, and temporary nearby destination markers.
-Reviewed browsing markers come from PostgreSQL,
-through `UI → discoveryClient → FastAPI router → DiscoveryService → DiscoveryRepository → PostgreSQL`.
-The discovery layer includes every reviewed Place within the visible area, across the existing category
-taxonomy. Neutral, low-rated, self-reviewed, and bookmarked Places remain eligible. Recommendation
-ranking and its positive-log requirements are a separate API and remain unchanged. Google nearby
-results use the same custom marker design with smaller neutral category icons and no invented ratings.
-They remain separate from the app-data cache/database; see [discovery-map.md](discovery-map.md).
+Discover combines the original map results with a recommendation overlay. Reviewed Places come from
+`/api/discovery/places`; temporary nearby destinations come from Google through FastAPI. The signed-in
+`/api/recommendations` response adds personalized and friend-recommended highlights independently.
+An empty or failed recommendation request leaves the base results available.
+
+## Marker colours and precedence
+
+| Colour | Meaning | Source |
+|---|---|---|
+| Neutral grey, smaller pin | Nearby place without an app review | Google Nearby Search |
+| White | Reviewed Place, including self-reviewed/bookmarked Places and followed-user reviews | Discovery API |
+| Amber | Personalized recommendation (`similar_taste` or `explore`) | Recommendations API |
+| Purple | Friends' recommendation (`friend`) | Recommendations API |
+
+No legend is shown. Selection preserves
+the marker's layer colour. A followed user's review alone stays white; purple requires the API's
+friend recommendation classification. App UUIDs deduplicate reviewed and recommended results;
+exact Google IDs suppress duplicate provider pins. Recommendation metadata overlays the app's
+existing aggregate rating/identity. Each Place has one marker, with friend recommendation first,
+then personalized recommendation, then base review, then an unreviewed provider result.
+
+All loaded Places share counted clusters, including grey nearby destinations. Selection temporarily
+leaves clustering while retaining its layer colour. The settled layout hides only overlapping
+captions, prioritizing selection, friend recommendations, personal recommendations, reviews, then
+nearby Places. Colour updates do not change cluster membership or reattach hidden members. Full names
+and evidence remain in previews and accessible marker names; all SDK markers use `REQUIRED`.
+The [map documentation](discovery-map.md#overlapping-nearby-pins) describes sizing and settling.
+
+Ranked results request up to 30 Places per buffered bbox (25% beyond each visible edge) after a
+500 ms idle debounce when the viewport leaves fresh coverage. Date-line views use two ordinary
+bboxes and deduplicate IDs. Up to eight full-area snapshots stay fresh for one minute. Small pans,
+focus, and tab return reuse the active fresh snapshot and applicable pending request. Expiry quietly
+refreshes the same ranking area. Successful reviews invalidate rankings; viewer changes clear them.
+Full successful responses replace recommendation membership, while existing results survive pending
+or failed requests and base review coverage remains independent. A Place leaving recommendations
+returns to its white review marker rather than vanishing. Supporting logs and relations remain in
+the selected preview; aggregate ratings are used when available, otherwise supporting ratings are labelled.
 
 ## Browsing
 
@@ -23,6 +52,11 @@ and when the window/tab regains focus. No loading banner appears after the first
 load. Existing pins remain visible during background requests and errors; retry is available. An
 empty-area message requires complete coverage of the visible viewport and zero Places inside it,
 so cached offscreen results do not hide an empty state or cause one during an unfinished fetch.
+The generic empty message also waits for completion of scheduled nearby work and budget pauses;
+recommendation ranking never blocks ordinary browsing. Nearby loading uses stable geographic roots
+across zooms, fills all visible root areas progressively, then refines only capped responses. One
+queue owns concurrency, per-cell failure backoff, cache freshness and the rolling request budget.
+World-sized views show a zoom-in hint. Provider discovery does not depend on London seed data.
 
 The API returns pages of 200 Places by default (maximum 500), ordered by internal UUID. Each page
 merges into the current Place cache immediately. A region becomes complete only after its final
@@ -37,8 +71,8 @@ labels update their React portal contents. Click handlers read the latest Place.
 are recreated only when identity, coordinates, or map change; title changes update in place. App and
 selected markers share one keyed list, so a selected pin stays alive when it moves between the
 visible results and selection fallback. The existing clusterer receives incremental membership
-changes batched into an animation frame. Selection updates are idempotent. Google destination
-markers join the clusterer; the device location dot remains separate. Selected markers are pinned
+changes for all Places batched into an animation frame. Selection updates are idempotent.
+Caption allocation never removes destination icons; the device location dot remains separate. Selected markers are pinned
 outside clusters. App Places override Google markers with the same linked provider ID.
 
 The cache targets 32 completed regions and 5,000 Place records, evicting least-recently-used offscreen
@@ -48,30 +82,12 @@ their coverage so returning later cannot incorrectly treat missing data as compl
 the buffered area are released; the selected marker remains pinned. Cache state lasts only for the
 mounted map, including navigation between app tabs, and is reset by page reload.
 
-Session identity is checked on entering Discover, window/tab return, and freshness revalidation.
-An account change/expiry clears friend-specific fields and coverage while retaining public ratings
-and coordinates, then reloads the current area for the new viewer. Identity-check failures keep only
-public cached marker data and offer retry; they are not treated as signed-out success. Selected
-review panels reload when viewer identity changes. No cache is shared between browser sessions or
-persisted to localStorage, and all existing HTTP no-store headers remain in place.
-
-After a successful review submission, its returned Place merges immediately and invalidates the
-coverage containing that point. Other cached areas remain available; background revalidation then
-reconciles that area's data. The selected marker and open preview are preserved while its rating
-updates. No backend API, schema, provider cache, or dependency changes are needed for this behavior.
-
-One user's latest Experience per Place contributes to the rating average and reviewer count, using
-`visited_on`, then `created_at`, then UUID as descending tie breakers, consistently with recommendations.
-The average can have more precision than the individual 0.5-step ratings; the UI displays one decimal.
-Friend counts and snippets include the latest Experience from users the viewer follows, even when
-their verdict is neutral or avoid. Signed-out and expired-session visitors see public ratings and
-reviews without friend/self labels. Only session-authentication 401s become anonymous; database
-failures remain errors. Every discovery response, including errors, is `Cache-Control: no-store`.
-
-Selecting an app marker fetches its public reviews in pages of 20. Reviews show author name, rating,
-verdict or written text, and visit date; signed-in viewers also see Friend/You labels. Blank areas show
-an empty state with a review action. Database failures offer retry and never insert demo pins. During
-a refresh, previously loaded pins within the buffered area remain visible while updates arrive.
+The shared `SessionProvider` owns identity verification on app entry and window/tab return. Map
+hooks consume that verified session; they no longer make a duplicate `/auth/me` call on map entry,
+focus, or coverage expiry. The app gate remounts on account changes and removes the map on expiry;
+session-service failures show its retry screen. Map caches remain scoped to that viewer and mount,
+with personalized coverage invalidated when identity changes. No cache is shared between browser
+sessions or persisted to localStorage, and all HTTP no-store headers remain in place.
 
 ## Writing an Experience
 
@@ -81,9 +97,10 @@ category, date visited, one overall rating, optional review, and recommend/neutr
 The new Place name is user-authored and its coordinates come from the user's chosen map point.
 The form requires sign-in before submission. Its fields survive save errors; it disables duplicate
 clicks and closing during a pending save. Success is shown only after the API confirms the write,
-then the selected card and viewport ratings refresh. A new reviewed Place therefore appears on the
-next query and remains available after reload. No photo/video storage provider is introduced.
-After Auth0 sign-in, the diagnostic success page includes an Explore places link back to the app.
+then the selected card and viewport ratings refresh. A new reviewed Place therefore appears in the base review layer and remains available after reload.
+The ranking is also invalidated: the API excludes the viewer’s logged/bookmarked Places from
+recommendations, so these remain white rather than being forced into a recommendation highlight. No photo/video storage provider is introduced.
+After Auth0 sign-in, incomplete accounts choose category interests at `/onboarding`; completed accounts reach Home. Home retains its original prototype UI for separate frontend work; it does not load a replacement recommendation feed.
 
 `CurrentUser` supplies the author. `VerifiedMutation` enforces CSRF and origin checking. Pydantic
 rejects unknown fields such as a forged owner, invalid ratings, future visits, blank/long names,
@@ -150,7 +167,8 @@ guarded reset command clears application rows; see [local-demo-data.md](local-de
 
 Run frontend lint, TypeScript/production build, and the browser suite. Browser tests mock the external
 Google SDK and backend HTTP contracts, exercising pagination, cancellation, date-line bounds,
-clustering, search identity, public browsing, and successful/failed review submission. Backend tests
+clustering, layer colours and precedence, partial recommendation failures, search identity, login gating,
+and successful/failed review submission. Backend tests
 exercise real repositories and services with SQLite; set `TEST_DATABASE_URL` to run isolated PostgreSQL
 migration and concurrent-insert tests. Provider billing, Cloud Console styling, and live OAuth still
 require their separately configured smoke tests.

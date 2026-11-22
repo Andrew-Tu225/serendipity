@@ -52,7 +52,10 @@ const sdk = String.raw`
     }
     getCenter() { return new LatLng(this.position); }
     getBounds() { const p=this.position; return { toJSON: () => this.bounds ?? { south:p.lat-.1,west:p.lng-.1,north:p.lat+.1,east:p.lng+.1 } }; }
-    getProjection() { return {}; }
+    getProjection() { return { fromLatLngToPoint(position) {
+      const sine = Math.max(-.9999, Math.min(.9999, Math.sin(position.lat() * Math.PI / 180)));
+      return { x: 256 * (.5 + position.lng() / 360), y: 256 * (.5 - Math.log((1 + sine) / (1 - sine)) / (4 * Math.PI)) };
+    } }; }
     getZoom() { return Number(this.host.dataset.zoom); }
     addListener(name, callback) { return listen(this, name, callback); }
     setCenter(position) {
@@ -71,7 +74,9 @@ const sdk = String.raw`
   }
   class TestMarker {
     constructor(options) {
+      this.attachments = 0; this.detachments = 0;
       this.position = options.position;
+      this.content = options.content;
       this.slot = markers.size;
       this.node = document.createElement('button');
       this.node.type = 'button';
@@ -79,12 +84,19 @@ const sdk = String.raw`
       this.node.setAttribute('aria-label', options.title);
       this.node.dataset.position = JSON.stringify(options.position);
       this.node.style.cssText = 'position:absolute;border:0;background:transparent;left:40%;top:35%';
+      this.collisionBehavior = options.collisionBehavior;
+      this.zIndex = options.zIndex ?? 0;
       if (options.content) this.node.append(options.content);
       markers.add(this);
       this.map = options.map;
     }
+    set collisionBehavior(value) { this.node.dataset.collisionBehavior = String(value); }
+    set zIndex(value) { this.node.dataset.priority = String(value); this.node.style.zIndex = String(value); }
     set title(value) { this.node.setAttribute('aria-label', value); }
+    get map() { return this.currentMap ?? null; }
     set map(map) {
+      this.currentMap = map;
+      if (map) this.attachments++; else this.detachments++;
       if (!map) { this.node.remove(); return; }
       map.host.append(this.node);
       const i = this.slot % 6;
@@ -92,14 +104,17 @@ const sdk = String.raw`
       this.node.style.top = (20 + Math.floor(i/3)*25) + '%';
     }
     addListener(name, callback) {
+      if (name.startsWith('gmp-')) throw new Error('Advanced Marker gmp events require addEventListener');
       const domName = name === 'gmp-click' ? 'click' : name;
       this.node.addEventListener(domName, callback);
       return { remove: () => this.node.removeEventListener(domName, callback) };
     }
+    addEventListener(name, callback) { this.node.addEventListener(name === 'gmp-click' ? 'click' : name, callback); }
+    removeEventListener(name, callback) { this.node.removeEventListener(name === 'gmp-click' ? 'click' : name, callback); }
   }
   const maps = window.google.maps;
   maps.ControlPosition = { RIGHT_CENTER: 'right-center' };
-  maps.CollisionBehavior = { REQUIRED_AND_HIDES_OPTIONAL: 'required', REQUIRED: 'always' };
+  maps.CollisionBehavior = { REQUIRED_AND_HIDES_OPTIONAL: 'required', REQUIRED: 'always', OPTIONAL_AND_HIDES_LOWER_PRIORITY: 'optional' };
   maps.LatLng = LatLng;
   maps.LatLngBounds = LatLngBounds;
   maps.OverlayView = OverlayView;
@@ -110,6 +125,11 @@ const sdk = String.raw`
   window.__panTestMap = (lat, lng) => currentMap.panTo({ lat, lng });
   window.__zoomTestMap = (zoom) => currentMap.setZoom(zoom);
   window.__boundsTestMap = (bounds) => { currentMap.bounds = bounds; trigger(currentMap, 'idle'); };
+  window.__movingTestMap = (zoom) => { if (zoom != null) currentMap.host.dataset.zoom = String(zoom); trigger(currentMap, 'bounds_changed'); };
+  window.__markerTestStats = () => [...markers].map(marker => ({
+    title: marker.node.getAttribute('aria-label'), id: marker.node.dataset.markerId,
+    attachments: marker.attachments, detachments: marker.detachments, visible: !!marker.map,
+  }));
   maps.__ib__();
 })();
 `;

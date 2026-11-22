@@ -34,6 +34,7 @@ Field types map onto the Pydantic domain models in `backend/app/models/domain.py
 | Experience | `experiences` | `models/experiences.py` | `(place_id)`, `(user_id, place_id, visited_on)` |
 | Bookmark | `bookmarks` | `models/places.py` | |
 | TasteProfile | `taste_profiles` | `models/experiences.py` | |
+| UserInterest | `user_interests` (migration `0005`) | `models/auth.py` | Unique `(user_id, category)` |
 
 Ids are UUIDs, exposed to the recommender and the API as strings. Foreign keys cascade on delete. CHECK constraints repeat the rules in the tables below (rating range and half steps, verdict and category values, review length, coordinates, no self-follow), so rows written outside the API are rejected too. In `users`, `display_name` is optional and unbounded; the recommender shows an empty name as `"Anonymous"` and cuts names to 60 characters.
 
@@ -136,7 +137,9 @@ c_u[k] ← c_u[k] + value(e)      where k is the category of e's Place
 
 Experiences are never edited or deleted, so this is the only update. A repeat visit to the same Place adds its value again.
 
-A user who visits many cafés and likes them gets a large positive café score; avoided visits push a category negative. Categories a user never logged are 0.
+A user who visits many cafés and likes them gets a large positive café score; avoided visits push a category negative. Categories a user never logged have a stored score of 0.
+
+First-login onboarding requires 1–14 distinct category interests, stored separately in `user_interests`. For similarity only, use `effective_u[k] = c_u[k] + 1` when the category is selected, otherwise `c_u[k]`. Combine each user/category once before cosine similarity, for both recommendation results and Place log relations. Updating onboarding replaces the interest set and never changes `taste_profiles`, creates Experiences, or inflates activity counts. Reviews keep accumulating normally and gradually outweigh the initial interest signal.
 
 Example:
 
@@ -149,7 +152,7 @@ Example:
 ### 2.3 Similar users
 
 ```
-taste_sim(u, v) = max( cosine(c_u, c_v), 0 )      # 0 if either vector is all zeros
+taste_sim(u, v) = max( cosine(effective_u, effective_v), 0 )      # 0 if either vector is all zeros
 ```
 
 Cosine compares the shape of two profiles, not their size, so a heavy logger and a light logger with the same preferences still match. In the example, Viewer–Kai ≈ 0.97 and Viewer–Sam = 0.
@@ -188,7 +191,7 @@ The random generator is seeded with the first 8 bytes of `sha256(user_id + ":" +
 
 ### 2.7 Cold start
 
-A viewer who follows no one and has no logs has no trusted authors, so every slot is an explore slot. For this case only, explore picks are ordered by number of liked logs instead of random, so the best-liked Places in view show first.
+A viewer who follows no one and has neither logs nor matching onboarding interests has no trusted authors, so every slot is an explore slot. For this case only, explore picks are ordered by number of liked logs instead of random, so the best-liked Places in view show first.
 
 ### 2.8 Logs shown per Place
 
@@ -273,18 +276,33 @@ Response: `{ "place": {...}, "logs": [...] }`. Errors: `401` as in 3.1; `404` `"
 
 ### 3.3 When the frontend calls it
 
-These are the integration points for a future ranked-recommendations layer. The current Discover
-map uses the separate public `/api/discovery` endpoints to show every app-reviewed Place in view,
-including neutral/negative and self-reviewed Places. Its review form calls the existing Experience
-service via `POST /api/discovery/experiences`, keeping taste profiles current. See
-[discovery-data.md](discovery-data.md).
+Home retains its original prototype UI; its redesign and data integration are separate frontend work.
+Discover calls the same API with `limit=30` for a bbox expanded 25% beyond each visible edge. Date-line views use two ordinary
+bboxes and deduplicate by app Place ID. These results highlight the original reviewed/Google nearby
+map rather than replacing its background results.
+
+`friend` results are purple; `similar_taste` and `explore` results are amber. Reviewed Places outside
+recommendations are white, and unreviewed nearby results remain neutral grey. A followed-user review
+alone stays white. Results merge into existing app Places by UUID, retaining available aggregate
+ratings and exact provider identity; supporting recommendation logs remain visible in the preview.
+Friend recommendations take precedence over personal recommendations and base reviews.
+
+Full responses replace only highlight membership. A Place excluded after the viewer logs/bookmarks
+it returns to the base review layer rather than disappearing. Empty or failed recommendations leave
+base layers available. Up to eight buffered-area snapshots remain fresh for one minute. Small pans,
+focus, and tab return reuse fresh rankings and applicable in-flight requests. Leaving coverage
+requests a new full buffered area after 500 ms idle; expiry refreshes the same area quietly. Successful
+reviews invalidate rankings. Existing pins remain during pending/failed refreshes; colour updates
+preserve cluster visibility. Ranking does not gate base-map loading or empty-state readiness, and
+all loaded Places share counted clusters. See
+[discovery-data.md](discovery-data.md) for base-layer caching and precedence.
 
 | Trigger | Call |
 |---|---|
-| Map first load | `GET /recommendations` for the visible bbox |
-| Map stops moving outside the fetched bbox | Same, debounced |
+| Map first load | `GET /recommendations` for the buffered bbox |
+| Map stops moving after a pan/zoom | New buffered bbox only when outside fresh coverage, debounced 500 ms |
 | Viewer logs, bookmarks, follows, or unfollows | Refetch the current bbox |
-| Pin tapped | `GET /places/{id}/logs` |
+| Pin tapped | Returned supporting logs plus `GET /discovery/places/{id}` for public review details |
 
 ---
 
@@ -339,7 +357,7 @@ Shaped so every `kind` appears in the demo:
 | Normalise ratings by each author's average | Real users rate on visibly different scales |
 | Recency decay on logs | Logs span many months |
 | Category match and distance in the place score | Results feel off-topic or too far away |
-| Onboarding categories and bookmarks in the category vector | New users get weak matches |
+| Bookmarks in the category vector | Saved Places should contribute additional taste signals |
 | Thompson sampling for explore picks | Random explore picks feel like noise |
 | Category diversity re-ranking (MMR) | One category dominates the map |
 | `mode=explore` ("Surprise me"), `categories` filter, `seed` param | A UI needs them |

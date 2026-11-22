@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { authClient } from "@/lib/api-client/auth";
-import { ApiError } from "@/lib/api-client/client";
+import { useSession } from "@/components/auth/session-provider";
 import { discoveryClient } from "@/lib/api-client/discovery";
 import { bufferBounds, intersects } from "@/lib/maps/bounds";
 import { DiscoveryCache, DISCOVERY_FRESH_MS } from "@/lib/maps/discovery-cache";
@@ -14,8 +13,11 @@ interface View {
 }
 
 export function useDiscovery(map: MapHandle | null, active: boolean, revision: number, reviewedPlace: MapPlace | null) {
+  const { session } = useSession();
+  const viewerKey = session?.user.id ?? "guest";
+  const identityReady = Boolean(session);
   const cache = useRef(new DiscoveryCache());
-  const viewer = useRef<string | null | undefined>(undefined);
+  const viewer = useRef(viewerKey);
   const loaded = useRef(false);
   const appliedRevision = useRef(0);
   const [retry, setRetry] = useState(0);
@@ -26,9 +28,6 @@ export function useDiscovery(map: MapHandle | null, active: boolean, revision: n
     let disposed = false;
     let debounce: ReturnType<typeof setTimeout>;
     let expiry: ReturnType<typeof setTimeout>;
-    let authRequest: AbortController | undefined;
-    let checkingIdentity = false;
-    let identityReady = viewer.current !== undefined;
     let error = "";
     let job: { controller: AbortController; bounds: MapBounds[] } | undefined;
 
@@ -38,11 +37,11 @@ export function useDiscovery(map: MapHandle | null, active: boolean, revision: n
       const complete = visible.length > 0 && !cache.current.missing(visible, now).length;
       if (complete) loaded.current = true;
       const places = cache.current.read(bufferBounds(visible), now);
-      const fetching = Boolean(job) || checkingIdentity;
+      const fetching = Boolean(job);
       const snapshot = {
         loading: !loaded.current && !error, fetching, complete,
         hasVisiblePlaces: cache.current.read(visible, now).length > 0,
-        error, viewerKey: viewer.current ?? (identityReady ? "guest" : "unknown"), identityReady,
+        error, viewerKey, identityReady,
       };
       setView((previous) => ({
         ...snapshot,
@@ -55,7 +54,7 @@ export function useDiscovery(map: MapHandle | null, active: boolean, revision: n
       if (disposed || document.hidden) return;
       const now = Date.now();
       const next = error ? now + DISCOVERY_FRESH_MS : cache.current.nextExpiry(map!.bounds(), now);
-      expiry = setTimeout(() => void verifyIdentity(), Math.max(100, next - now));
+      expiry = setTimeout(refresh, Math.max(100, next - now));
     }
 
     async function load(bounds: MapBounds[]) {
@@ -95,7 +94,7 @@ export function useDiscovery(map: MapHandle | null, active: boolean, revision: n
     }
 
     function refresh() {
-      if (disposed || !identityReady || checkingIdentity || document.hidden) return;
+      if (disposed || !identityReady || document.hidden) return;
       const visible = map!.bounds();
       if (!visible.length) return;
       const now = Date.now();
@@ -117,71 +116,39 @@ export function useDiscovery(map: MapHandle | null, active: boolean, revision: n
       debounce = setTimeout(refresh, 250);
     }
 
-    async function verifyIdentity() {
-      if (disposed || document.hidden || checkingIdentity) return;
-      checkingIdentity = true;
-      const currentAuth = new AbortController();
-      authRequest = currentAuth;
-      try {
-        await Promise.resolve();
-        if (disposed || currentAuth.signal.aborted) return;
-        if (revision !== appliedRevision.current && reviewedPlace) {
-          cache.current.merge([reviewedPlace], Date.now());
-          cache.current.invalidateAt(reviewedPlace.location);
-          appliedRevision.current = revision;
-          publish();
-        }
-        let next: string | null;
-        try {
-          next = (await authClient.getSession(currentAuth.signal)).user.id;
-        } catch (failure) {
-          if (!(failure instanceof ApiError) || failure.status !== 401) throw failure;
-          next = null;
-        }
-        if (disposed || currentAuth.signal.aborted) return;
-        if (viewer.current !== undefined && next !== viewer.current) {
-          job?.controller.abort(); job = undefined;
-          cache.current.clearPersonalization();
-        }
-        viewer.current = next;
-        identityReady = true;
-        error = "";
-      } catch (failure) {
-        if (disposed || currentAuth.signal.aborted) return;
-        job?.controller.abort(); job = undefined;
+    function sync() {
+      if (disposed || document.hidden) return;
+      if (viewer.current !== viewerKey) {
         cache.current.clearPersonalization();
-        identityReady = false;
-        viewer.current = undefined;
-        error = failure instanceof Error ? failure.message : "Could not verify sign-in.";
-      } finally {
-        if (!disposed && !currentAuth.signal.aborted) {
-          checkingIdentity = false;
-          publish();
-          if (identityReady) queueRefresh();
-          scheduleExpiry();
-        }
+        viewer.current = viewerKey;
       }
+      if (revision !== appliedRevision.current && reviewedPlace) {
+        cache.current.merge([reviewedPlace], Date.now());
+        cache.current.invalidateAt(reviewedPlace.location);
+        appliedRevision.current = revision;
+        publish();
+      }
+      queueRefresh();
     }
 
     function visibility() {
       if (document.hidden) {
         clearTimeout(debounce); clearTimeout(expiry);
-        authRequest?.abort(); checkingIdentity = false;
         job?.controller.abort(); job = undefined;
-      } else void verifyIdentity();
+      } else sync();
     }
 
     const unsubscribe = map.onIdle(queueRefresh);
-    window.addEventListener("focus", verifyIdentity);
+    window.addEventListener("focus", sync);
     document.addEventListener("visibilitychange", visibility);
-    void verifyIdentity();
+    queueMicrotask(sync);
     return () => {
       disposed = true; clearTimeout(debounce); clearTimeout(expiry);
-      authRequest?.abort(); job?.controller.abort(); unsubscribe();
-      window.removeEventListener("focus", verifyIdentity);
+      job?.controller.abort(); unsubscribe();
+      window.removeEventListener("focus", sync);
       document.removeEventListener("visibilitychange", visibility);
     };
-  }, [map, active, revision, reviewedPlace, retry]);
+  }, [map, active, revision, reviewedPlace, retry, viewerKey, identityReady]);
 
   return { ...view, getPlace: (id: string) => cache.current.get(id), retry: () => setRetry((n) => n + 1) };
 }

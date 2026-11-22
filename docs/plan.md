@@ -230,22 +230,25 @@ Ultimately, we want someone to open the app and think:
 ## Current implementation
 
 Discover fills the phone above navigation, with floating search, location controls, and place previews.
-Google supplies the basemap, global place/city search, and nearby experience destinations through FastAPI.
-Unreviewed destinations use smaller neutral custom category pins matching the app. Nearby searches
-sample neighborhood areas as users explore; they do not guarantee every Google listing. Existing pins
-remain stable as finer samples load on zoom-in. Nearby work runs up to three searches at once and
-is limited to 18 attempts per minute per open map, with automatic continuation when slots reopen.
-App markers take precedence for matching Google IDs. Provider results remain temporary and create no database rows.
-App-reviewed Places come
-from PostgreSQL for the visible map area after initial load, panning, zooming, search, or geolocation.
-Every reviewed Place is eligible, including low ratings; recommendation ranking remains separate.
-Pins remain stable while moving around the map. Buffered app-data coverage is cached in memory,
-newly exposed areas load incrementally, and stale ratings refresh quietly after one minute. New
-reviews update their marker immediately.
-Dense locations cluster rather than being dropped. London, Ontario is the initial camera position; location
+Google supplies the basemap, global search, and nearby destinations through FastAPI. The original
+map remains visible: smaller neutral grey nearby pins and white reviewed Places, including low-rated,
+self-reviewed, and bookmarked Places. The recommendations API overlays amber personalized picks and
+purple friends' recommendations. Friend > personalized recommendation > base review determines
+each app Place's colour; exact provider IDs remove duplicate nearby pins. A followed-user review
+alone does not make a Place purple. The legend is removed; selection preserves the marker’s appearance.
+
+Reviewed-place coverage remains buffered and paginated. Nearby discovery reuses stable geographic
+roots across zooms, fills visible areas progressively, and refines capped responses while retaining
+parent results. One queue owns provider concurrency, cache, retries and request budgets. Ranked
+highlights use separate one-minute buffered-area snapshots and never block ordinary browsing.
+Empty or failed rankings leave the base map available. A new review updates the white base layer
+and refreshes recommendation eligibility. Every loaded Place has a pin or contributes to a numbered
+cluster, including grey nearby destinations. Only overlapping captions are suppressed; icons no
+longer disappear through a separate nearby collision filter. Selection retains its layer colour.
+London, Ontario is the initial camera position; location
 permission is requested only on tap.
 
-Visitors can browse public ratings and reviews without signing in. Signed-in viewers also see the
+The app requires sign-in before showing Home or Discover. New and existing incomplete accounts must choose at least one of the 14 place-category interests once before entering. Interests seed recommendation similarity separately from review scores; Auth0 continues to manage identity. Returning accounts go straight home. Public backend read APIs retain public access. Signed-in viewers see the
 Experiences of users they follow highlighted as friends. The app uses the existing directed-follow
 model and public Experience visibility. Each user's latest visit per Place contributes one rating
 (1–5 in half steps). Marker averages are displayed to one decimal.
@@ -259,8 +262,8 @@ are still future work. Image storage remains undecided. See [discovery-data.md](
 The social backend now supports directed follow management, public profiles and display-name search,
 Experience likes and flat editable comments, independent private saved reviews/Places, and a
 following feed of published Experiences. Saving a new Place can create its app record without a
-review. Profiles remain read-only and Auth0-managed; all Experiences and social read surfaces are
-public, while saves and the personalized feed require sign-in. No frontend integration is included.
+review. Profile identity remains read-only and Auth0-managed; category interests are persisted separately during first-login onboarding; all Experiences and social read surfaces are
+public, while saves and the personalized feed require sign-in. Home uses the new landmark carousel and prototype Experience feed. Discover retains the live map, global place search, recommendations, and incremental rendering fixes. Profile uses the authenticated identity, selected interests, and real Experience/saved Place/following counts. Other social frontend integration remains future work.
 See [social-api.md](social-api.md) for contracts and the remaining social scope.
 Local development can opt into 24 London Places and labeled mock reviews using the repeatable seed
 script; a guarded reset script clears local application rows. See [local-demo-data.md](local-demo-data.md).

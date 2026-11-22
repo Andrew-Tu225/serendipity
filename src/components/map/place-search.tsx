@@ -15,6 +15,7 @@ export function PlaceSearch({ active, getCenter, onSelect }: {
   const token = useRef<string | null>(null);
   const request = useRef<AbortController | null>(null);
   const sequence = useRef(0);
+  const failedSelection = useRef<PlaceSuggestion | null>(null);
   const listId = useId();
   const input = useRef<HTMLInputElement>(null);
   const showDropdown = open && (suggestions.length > 0 || phase === "empty" || phase === "loading");
@@ -48,6 +49,7 @@ export function PlaceSearch({ active, getCenter, onSelect }: {
     request.current?.abort();
     sequence.current++;
     token.current = null;
+    failedSelection.current = null;
     setPhase("idle");
   }, [active]);
 
@@ -60,6 +62,7 @@ export function PlaceSearch({ active, getCenter, onSelect }: {
     setError("");
     setPhase("idle");
     setOpen(value.trim().length >= 2);
+    failedSelection.current = null;
     if (!value.trim()) token.current = null;
   }
 
@@ -75,6 +78,7 @@ export function PlaceSearch({ active, getCenter, onSelect }: {
     setQuery(suggestion.primary_text);
     setPhase("details");
     setError("");
+    failedSelection.current = null;
     try {
       const place = await placesClient.details(suggestion.place_id, sessionToken, controller.signal);
       if (controller.signal.aborted || current !== sequence.current) return;
@@ -83,6 +87,7 @@ export function PlaceSearch({ active, getCenter, onSelect }: {
     } catch (error) {
       if (controller.signal.aborted || current !== sequence.current) return;
       setPhase("idle");
+      failedSelection.current = suggestion;
       setError(error instanceof Error ? error.message : "Could not open this place.");
     }
   }
@@ -127,6 +132,9 @@ export function PlaceSearch({ active, getCenter, onSelect }: {
       <span className="discovery-search-credit">Google Maps</span>
     </div>}
     {(phase === "loading" || phase === "details") && <p className="discovery-search-status" role="status">{phase === "details" ? "Opening place…" : "Searching…"}</p>}
-    {error && <div className="discovery-search-status" role="alert">{error} <button type="button" onClick={() => { setOpen(true); setAttempt((n) => n + 1); }}>Try again</button></div>}
+    {error && <div className="discovery-search-status" role="alert">{error} <button type="button" onClick={() => {
+      if (failedSelection.current) void select(failedSelection.current);
+      else { setOpen(true); setAttempt((n) => n + 1); }
+    }}>Try again</button></div>}
   </div>;
 }

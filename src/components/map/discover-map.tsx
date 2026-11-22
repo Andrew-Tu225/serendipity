@@ -7,6 +7,11 @@ import { discoveryClient } from "@/lib/api-client/discovery";
 import { ApiError } from "@/lib/api-client/client";
 import { useDiscovery } from "@/hooks/use-discovery";
 import { useNearbyPlaces } from "@/hooks/use-nearby-places";
+import { mergeMapLayers } from "@/lib/maps/layers";
+import { useRecommendations } from "@/hooks/use-recommendations";
+import { recommendationReasons } from "@/lib/maps/recommendations";
+import { mapBrowseStatus } from "@/lib/maps/browse-status";
+import { containsPoint } from "@/lib/maps/bounds";
 import { mapPlace, type PlaceExperiences } from "@/types/discovery";
 import { PlaceGlyph, PlaceMarker } from "./place-marker";
 import { PlaceSearch } from "./place-search";
@@ -38,19 +43,28 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   const [resolveError, setResolveError] = useState("");
   const [reviewLookup, setReviewLookup] = useState<"" | "checking" | "empty">("");
   const resolveRequest = useRef<AbortController | null>(null);
+  const recommendations = useRecommendations(map, active, revision);
   const discovery = useDiscovery(map, active, revision, reviewedPlace);
   const nearby = useNearbyPlaces(map, active && !picking);
+  const markerPlaces = mergeMapLayers(nearby.places, discovery.places, recommendations.places);
+  const currentSelection = selectedInput ? markerPlaces.get(`${selectedInput.source}:${selectedInput.place_id}`) : undefined;
   const selected = selectedInput?.source === "app"
-    ? discovery.getPlace(selectedInput.place_id) ?? { ...selectedInput, friend: undefined, friend_count: 0 }
-    : nearby.places.find((place) => place.place_id === selectedInput?.place_id) ?? selectedInput;
-  const markerPlaces = new Map(nearby.places.map((place) => [`google:${place.place_id}`, place]));
-  for (const place of discovery.places) markerPlaces.set(`app:${place.place_id}`, place);
-  if (selected?.source === "app") markerPlaces.set(`app:${selected.place_id}`, selected);
-  if (searchPlace) {
-    markerPlaces.set(`google:${searchPlace.place_id}`, nearby.places.find((place) => place.place_id === searchPlace.place_id) ?? searchPlace);
+    ? { ...selectedInput, ...currentSelection,
+      rating_summary: currentSelection?.rating_summary ?? selectedInput.rating_summary,
+      recommendation: currentSelection?.recommendation,
+      friend: currentSelection ? currentSelection.friend : selectedInput.friend }
+    : currentSelection ?? selectedInput;
+  if (searchPlace && searchPlace.place_id === selectedInput?.place_id &&
+    !markerPlaces.has(`${searchPlace.source}:${searchPlace.place_id}`) && !markerPlaces.has(`app:${searchPlace.place_id}`)) {
+    markerPlaces.set(`${searchPlace.source}:${searchPlace.place_id}`, searchPlace);
   }
-  const appGoogleIds = new Set([...markerPlaces.values()].filter((place) => place.source === "app").map((place) => place.google_place_id));
+  // A selected base Place remains available while moving between loaded areas.
+  if (selected?.source === "app" && !markerPlaces.has(`app:${selected.place_id}`)) markerPlaces.set(`app:${selected.place_id}`, selected);
+  const appGoogleIds = new Set([...markerPlaces.values()].filter((place) => place.source === "app").map((place) => place.google_place_id).filter(Boolean));
   for (const [key, place] of markerPlaces) if (place.source === "google" && appGoogleIds.has(place.place_id)) markerPlaces.delete(key);
+  const visibleBounds = map?.bounds() ?? [];
+  const visibleCount = [...markerPlaces.values()].filter((place) => visibleBounds.some((area) => containsPoint(area, place.location))).length;
+  const browseStatus = mapBrowseStatus(discovery, nearby, visibleCount);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,9 +112,10 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
     onSelect(place);
     discoveryClient.resolve(place.place_id, controller.signal).then((appPlace) => {
       if (controller.signal.aborted) return;
-      setSearchPlace(null);
+      const resolved = mapPlace(appPlace);
+      setSearchPlace(resolved);
       setReviewLookup("");
-      onSelect(mapPlace(appPlace));
+      onSelect(resolved);
     }).catch((error) => {
       if (controller.signal.aborted) return;
       if (error instanceof ApiError && error.status === 404) { setReviewLookup("empty"); return; }
@@ -111,7 +126,8 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   const selectPlace = useCallback((place: MapPlace) => {
     if (place.source === "google") { resolvePlace(place); return; }
     resolveRequest.current?.abort();
-    setResolveError(""); setReviewLookup(""); setSearchPlace(null);
+    setResolveError(""); setReviewLookup("");
+    setSearchPlace((current) => current?.place_id === place.place_id ? current : null);
     onSelect(place);
   }, [onSelect, resolvePlace]);
   const selectSearch = useCallback((place: MapPlace) => {
@@ -157,11 +173,15 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
         {picking ? <div className="discovery-data-status" role="status">Tap the map to place your pin, or review an existing place.
           <button onClick={() => onPick(map.center())}>Use map center</button><button onClick={onCancelPick}>Cancel</button>
         </div> : <>
-          {discovery.loading && <div className="discovery-data-status" role="status">Loading app-reviewed places…</div>}
-          {discovery.error && <div className="discovery-data-status" role="alert">{discovery.error} <button onClick={discovery.retry}>Reload places</button></div>}
-          {nearby.error && !discovery.error && <div className="discovery-data-status" role="alert">{nearby.error} <button onClick={nearby.retry}>Retry nearby places</button></div>}
-          {nearby.waiting && !nearby.error && !discovery.error && <div className="discovery-data-status" role="status">More nearby places will appear shortly.</div>}
-          {discovery.complete && !discovery.loading && !discovery.error && !nearby.error && !discovery.hasVisiblePlaces && nearby.places.length === 0 && <div className="discovery-data-status" role="status">No app reviews in this area yet. {nearby.zoomIn && "Zoom in to discover nearby places."} <button onClick={() => onReview(null)}>Review a place</button></div>}
+          {browseStatus === "loading" && <div className="discovery-data-status" role="status">Loading places…</div>}
+          {(discovery.error || recommendations.error || nearby.error) && <div className="discovery-data-status" role="alert">
+            {discovery.error && <p>{discovery.error} <button onClick={discovery.retry}>Reload reviews</button></p>}
+            {recommendations.error && <p>{recommendations.error} <button onClick={recommendations.retry}>Reload recommendations</button></p>}
+            {nearby.error && <p>{nearby.error} <button onClick={nearby.retry}>Retry nearby places</button></p>}
+          </div>}
+          {browseStatus === "waiting" && !nearby.error && <div className="discovery-data-status" role="status">Nearby searches are paused briefly. More places will load automatically.</div>}
+          {browseStatus === "zoom-in" && <div className="discovery-data-status" role="status">Zoom in to discover nearby places, or search for a destination.</div>}
+          {browseStatus === "empty" && <div className="discovery-data-status" role="status">No places in this area yet. Search for a place or zoom in. <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}
       {selected && !picking && <article className="discovery-preview" aria-label="Selected place">
@@ -170,9 +190,16 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           <p className="discovery-place-description">{selected.address
             ? `${selected.display_name} is located at ${selected.address}.`
             : `A ${selected.app_category ?? selected.category?.toLowerCase() ?? "local"} place shared by the Serendipity community.`}</p>
-          {selected.app_id && active
+          {selected.app_id && active && discovery.identityReady
             ? <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id} ratingSummary={selected.rating_summary}/>
             : <PlaceProfileSummary ratingSummary={selected.rating_summary} />}
+          {selected.recommendation && <div className="discovery-reviews" aria-label="Why this place is recommended">
+            <p className="discovery-friend-note">{recommendationReasons[selected.recommendation.kind]}</p>
+            {selected.recommendation.logs.map((log) => <div className="discovery-review" key={log.experience_id}>
+              <strong>{log.author.display_name} · {log.rating}/5 · {log.relation === "following" ? "Following" : log.relation === "similar_taste" ? "Similar taste" : "Community"}</strong>
+              <p>{log.review || "Recommends this place"}</p>
+            </div>)}
+          </div>}
           {selected.friend && <p className="discovery-friend-note">{selected.friend.name} {selected.friend.note}{(selected.friend_count ?? 0) > 1 ? ` · ${selected.friend_count} friends reviewed` : ""}</p>}
           {resolveError && selected.source === "google" && <p role="alert">{resolveError}</p>}
           {selected.source === "google" && reviewLookup === "checking" && <p role="status">Checking app reviews…</p>}
@@ -183,7 +210,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
             {externalUrl(attribution.provider_uri) ? <a href={externalUrl(attribution.provider_uri)} target="_blank" rel="noopener noreferrer">{attribution.provider}</a> : attribution.provider}
           </small>)}
         </div>
-        <button type="button" className="discovery-preview-close" aria-label="Close place preview" onClick={() => { resolveRequest.current?.abort(); onSelect(null); }}>×</button>
+        <button type="button" className="discovery-preview-close" aria-label="Close place preview" onClick={() => { resolveRequest.current?.abort(); setSearchPlace(null); onSelect(null); }}>×</button>
       </article>}
       {locationError && <p className="discovery-location-error" role="alert">{locationError}</p>}
     </div>

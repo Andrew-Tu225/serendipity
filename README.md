@@ -85,7 +85,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). [http://localhost:3000/api/health](http://localhost:3000/api/health) should return `{"status":"ok"}` through the proxy.
 
-The homepage at `/` shows the imported Figma discovery interface. Open [http://localhost:3000/login](http://localhost:3000/login) to test authentication. Its login button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/success`. That page shows **Successful**, the verified Auth0 claims snapshot, the current user record queried from Postgres, and a **Sign out** button. Profile fields can be absent; email verification is not required in this initial version. Logout revokes the local session and ends Auth0's browser session.
+Open [http://localhost:3000](http://localhost:3000). Signed-out visitors are sent to `/login`, whose button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/`. First-time accounts must choose at least one place-category interest at `/onboarding`; completed accounts go straight home. `/success` redirects to `/` for old links. Home retains the original prototype UI for separate frontend work. Profile shows the signed-in identity, real counts, and selected interests. Profile fields can be absent; email verification is not required. Sign out from Profile to revoke the local session and end Auth0's browser session.
+
+Run `cd backend && uv run alembic upgrade head` before starting the updated backend. Migration `0005` adds persisted interests and onboarding completion; existing accounts complete setup once. No new environment variables or dependencies are required.
 
 Sessions expire after 8 hours; temporary login attempts expire after 10 minutes. Expired rows are removed when a new login starts. A blocked/deleted Auth0 account does not automatically revoke an existing local session; immediate account-wide revocation can be added later.
 
@@ -111,20 +113,28 @@ Google's cloud style editor, publish it, and associate it with that Map ID. See
 to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production requires an explicit
 Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
 
-Search, details, and nearby destination discovery are available without login or a database.
-Nearby places use matching custom category markers, even without app reviews. Neighborhood searches
-reuse temporary geographic cells; wider views retain app-reviewed places to limit paid Google calls.
-The existing backend key must allow Places API (New) Nearby Search; no new environment values are needed.
-Discover initially centers on London, Ontario.
-Run `npm install` for the marker clustering dependency and `cd backend && uv run alembic upgrade head`
-before using app-reviewed places. Migration 0003 links app Places to optional Google IDs; migration
-0002 supplies Places, Experiences, and follows. The map loads every app-reviewed Place in view from
-PostgreSQL. Visitors can browse public reviews; signed-in users can write reviews and see followed
-users highlighted. Use Add to name a new Place and choose its map point, or Write a review on an
-existing marker. An empty database can still show Google nearby destinations; app ratings appear after
-reviews are submitted. No demo data is inserted
-automatically. Photos, saving UI, friend-management UI, and filters are deferred. See
-[the database discovery guide](docs/discovery-data.md).
+Discover initially centers on London, Ontario and keeps the original results visible beneath
+recommendation highlights. Pins use neutral grey for nearby places, white for reviews,
+amber for personalized recommendations, and purple for friends' recommendations. Recommendation
+colours come from `GET /api/recommendations` (`limit=30` per buffered bbox), preserving its supporting
+reviews. A followed-user review alone stays white. App UUIDs and exact Google IDs prevent duplicate
+pins, and selection preserves a pin's colour. Compact icons show more destinations; overlapping
+labels yield while every loaded destination appears as a pin or contributes to a counted cluster. No legend is displayed.
+
+Base database review queries and temporary Google nearby searches continue independently. Ranked
+responses highlight those results; an empty or failed ranking leaves the original map available.
+A successful review updates the white base marker and refetches rankings. Recommendation snapshots
+stay fresh for one minute and extend 25% beyond the viewport, so small pans and focus/tab return
+reuse them. Leaving coverage requests another area after 500 ms idle. The original base coverage
+cache and nearby request budget remain. Nearby searches reuse geographic roots across zooms,
+fill visible areas progressively, and subdivide only capped responses; one failing area does not
+block the others. Recommendation refreshes do not block browsing.
+Use Add to name a new Place and choose its map point, or Write a review on a selected Place.
+
+Run `npm install` and `cd backend && uv run alembic upgrade head` for the existing setup. This map
+change adds no migration, dependency, or environment variable. No demo data is inserted automatically.
+Photos, saving UI, friend-management UI, and filters remain deferred. See
+[the discovery guide](docs/discovery-data.md).
 
 ### Social endpoints (backend only)
 
@@ -163,6 +173,8 @@ See [docs/architecture.md](docs/architecture.md) for the full repository flow an
 | `GET /api/auth/login` | Starts Auth0 login/signup |
 | `GET /api/auth/callback` | Validates callback, persists user/session, redirects |
 | `GET /api/auth/me` | Returns `{ auth0, user, csrf_token }`; requires a valid session |
+| `GET /api/me/profile` | Signed-in identity, interests, completion, Experience/saved Place/following counts |
+| `PUT /api/me/onboarding` | CSRF-protected `{ interests: Category[] }`; 1–14 unique categories; replaces interests and completes setup |
 | `POST /api/auth/logout` | Requires matching Origin and X-CSRF-Token; revokes session and returns `{ logout_url }` |
 
 Auth responses use `Cache-Control: no-store`. Session cookies are HttpOnly, SameSite=Lax, host-only, and Secure in production. The page never renders the CSRF token. No passwords, raw ID/access tokens, or OAuth verifiers are returned by the session endpoint.
