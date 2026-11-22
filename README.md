@@ -140,7 +140,7 @@ Photos, saving UI, friend-management UI, and filters remain deferred. See
 
 Likes, editable comments, private saved reviews/Places, directed follows, public profiles/user
 search, and a following review feed are available through FastAPI. Run
-`cd backend && uv run alembic upgrade head` to apply the merged schema through revision `0008`. No new
+`cd backend && uv run alembic upgrade head` to apply the merged schema through revision `0009`. No new
 dependencies or environment variables are required. UI integration remains separate.
 See [the social API reference](docs/social-api.md) for routes, request/response fields, pagination,
 and session/CSRF requirements, or inspect `/api/docs` on the backend.

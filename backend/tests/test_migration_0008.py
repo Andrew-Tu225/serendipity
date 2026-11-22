@@ -78,7 +78,7 @@ async def test_reconciles_experience_schema(postgres_factory, migrate_postgres):
 
         connection = await session.connection()
         await connection.run_sync(migrate_postgres)
-        assert await session.scalar(text("SELECT version_num FROM alembic_version")) == "0008"
+        assert await session.scalar(text("SELECT version_num FROM alembic_version")) == "0009"
         values = list(await session.scalars(text("SELECT value FROM experiences ORDER BY id")))
         assert values == expected_values
         likes = await session.scalar(text("SELECT count(*) FROM experience_likes"))

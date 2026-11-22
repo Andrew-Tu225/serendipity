@@ -233,6 +233,11 @@ Revision `0008` reconciles the two versions of revision `0004`. It adds the miss
 tables or Experience values while retaining existing rows. Upgrade either branch with
 `uv run alembic upgrade head` from `backend/`. Downgrading to the merged branch?s `0007`
 schema drops the stored Experience values and retains the social tables.
+Revision `0009` reconciles the two historical `0005` user schemas. The original onboarding
+migration keeps ID `0005`; character storage is restored at `0009`, which also adds any missing
+onboarding column/table for databases that originally applied the character branch. Existing
+characters, interests, completion timestamps, and users are preserved. The history has one head;
+run `uv run alembic upgrade head` even when an existing database already reports `0005` or `0008`.
 Only Place bookmarks and follows affect existing recommendations; social likes/comments do not
 alter taste profiles. Experiences stay immutable. The feed queries all published Experiences of
 currently followed users, including repeat visits, ordered by publication time rather than visit date.
@@ -262,6 +267,12 @@ After verification, commit with a descriptive conventional commit message, push 
 Onboarding uses the same 430px phone frame, desktop rounded corners/shadow, and status bar as the app. Interests scroll inside the frame while an explicit Continue button and sign-out action stay at its bottom; mobile screens fill the viewport without document overflow. Continue stays visible while disabled, with a hint to select at least one interest, then saves onboarding before entering Home. If a running local dev server serves stale CSS and clips these actions, restart it with a fresh `SERENDIPITY_DIST_DIR` before verifying layout.
 
 `api/onboarding.py` → `OnboardingService` → `OnboardingRepository` owns `/api/me/profile` and `/api/me/onboarding`. Private profile responses expose a public user summary, interests, completion timestamp, and counts for Experiences, saved Places, and following. Requests never accept an owner ID. Category values match the domain enum; unknown/duplicate/empty interests are rejected. `users.onboarding_completed_at` starts null for existing users. Interests are unique by user/category and cascade when a user is removed.
+
+`app.models` exports `UserInterest` for the recommendation and onboarding repositories, and
+`app.main` mounts the onboarding router alongside Profile and Taste Buddies. Both registrations
+must survive integration merges: a missing model export prevents FastAPI from starting, while a
+missing router makes the first-login profile/onboarding endpoints return 404. A dev reloader can
+retain port 8000 after its worker crashes; confirm `/api/health` responds before diagnosing Auth0.
 
 Home mounts the new `HomeDiscoveryFeed`, with the landmark carousel, category filters, and
 Experience feed. Its images have explicit dimensions and fit their carousel/card containers,
