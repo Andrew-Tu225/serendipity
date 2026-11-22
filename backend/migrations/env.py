@@ -1,4 +1,5 @@
 import asyncio
+import sys
 
 from alembic import context
 from sqlalchemy import pool
@@ -43,4 +44,7 @@ if context.config.attributes.get("connection") is not None:
 elif context.is_offline_mode():
     run_migrations_offline()
 else:
+    if sys.platform == "win32":
+        # Async psycopg cannot run on the default Proactor loop on Windows.
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(run_migrations_online())
