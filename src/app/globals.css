@@ -325,8 +325,6 @@
 .discovery-preview-copy { width: 100%; min-width: 0; }
 .discovery-place-description { margin: 7px 0 11px; color: #786780; font-size: 12px; line-height: 1.5; }
 .discovery-place-photo { display: block; width: 100%; max-height: 180px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 14px; background: #eee8f1; }
-.discovery-place-photo-empty { display: flex; align-items: center; justify-content: center; gap: 9px; color: #805b97; }
-.discovery-place-photo-empty span { font-size: 11px; }
 .discovery-friends-heading { margin: 12px 0 3px; color: #433749; font-size: 13px; font-weight: 700; }
 .discovery-preview-copy > span { color: #85659a; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .discovery-preview h2 { margin: 3px 0; color: #433749; font-family: 'DM Serif Display', serif; font-size: 19px; font-weight: 400; line-height: 1.15; }
@@ -347,7 +345,11 @@
 .discovery-review { padding: 8px 0; border-top: 1px solid #eee7f1; font-size: 11px; }
 .discovery-review small { margin-top: 3px; color: #87788f; }
 .discovery-reviews button { border: 0; padding: 6px 0; color: #654577; background: transparent; text-decoration: underline; }
-.discovery-preview .discovery-review-button { display: block; margin-top: 9px; padding: 9px 12px; border: 0; border-radius: 12px; color: white; background: #76548f; font-size: 12px; }
+.discovery-preview-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
+.discovery-preview-actions .discovery-review-button, .discovery-preview-actions .discovery-maps-button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; margin: 0; padding: 9px 10px; border: 1px solid #76548f; border-radius: 12px; font-size: 12px; line-height: 1.3; text-align: center; text-decoration: none; }
+.discovery-preview-actions .discovery-review-button { color: white; background: #76548f; }
+.discovery-preview-actions .discovery-maps-button { color: #704b87; background: white; }
+.discovery-maps-button svg { flex-shrink: 0; }
 .review-intro { margin: 8px 0 18px; color: #786780; font-size: 13px; }
 .review-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .review-form label { margin-top: 14px; }

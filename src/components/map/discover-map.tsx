@@ -14,7 +14,7 @@ import { recommendationReasons } from "@/lib/maps/recommendations";
 import { mapBrowseStatus } from "@/lib/maps/browse-status";
 import { containsPoint } from "@/lib/maps/bounds";
 import { mapPlace, type PlaceExperiences } from "@/types/discovery";
-import { PlaceGlyph, PlaceMarker } from "./place-marker";
+import { PlaceMarker } from "./place-marker";
 import { PlaceSearch } from "./place-search";
 
 // Provider links and attribution URLs are external, so accept only HTTP(S) destinations.
@@ -205,8 +205,15 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           {resolveError && selected.source === "google" && <p role="alert">{resolveError}</p>}
           {selected.source === "google" && reviewLookup === "checking" && <p role="status">Checking app reviews…</p>}
           {selected.source === "google" && reviewLookup === "empty" && <p>No Serendipity reviews yet. Be the first to review it.</p>}
-          <button className="discovery-review-button" onClick={() => onReview(selected)}>Write a review</button>
-          <a href={externalUrl(selected.google_maps_uri)} target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>
+          <div className="discovery-preview-actions">
+            <button className="discovery-review-button" onClick={() => onReview(selected)}>Write a review</button>
+            <a className="discovery-maps-button" href={externalUrl(selected.google_maps_uri)} target="_blank" rel="noopener noreferrer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>
+              </svg>
+              <span>Open in Google Maps</span>
+            </a>
+          </div>
           {selected.attributions.map((attribution, index) => <small key={`${attribution.provider}-${index}`}>
             {externalUrl(attribution.provider_uri) ? <a href={externalUrl(attribution.provider_uri)} target="_blank" rel="noopener noreferrer">{attribution.provider}</a> : attribution.provider}
           </small>)}
@@ -220,9 +227,6 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
 
 function PlaceProfileSummary({ ratingSummary }: { ratingSummary?: MapPlace["rating_summary"] }) {
   return <>
-    <div className="discovery-place-photo discovery-place-photo-empty" role="img" aria-label="No place photo has been shared yet">
-      <PlaceGlyph category="Place"/><span>Photos from visits will show here</span>
-    </div>
     {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
   </>;
 }
@@ -258,10 +262,7 @@ function PlaceReviews({ placeId, ratingSummary }: { placeId: string; ratingSumma
   const photo = data?.experiences.flatMap((review) => review.photo_urls ?? [])[0];
   return <div className="discovery-reviews">
     {!data && !error && <p role="status">Loading reviews…</p>}
-    {photo ? <img className="discovery-place-photo" src={photo} alt={`A photo shared from ${data?.place.name ?? "this place"}`} />
-      : <div className="discovery-place-photo discovery-place-photo-empty" role="img" aria-label="No place photo has been shared yet">
-        <PlaceGlyph category="Place"/><span>Photos from visits will show here</span>
-      </div>}
+    {photo && <img className="discovery-place-photo" src={photo} alt={`A photo shared from ${data?.place.name ?? "this place"}`} />}
     {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
     <h3 className="discovery-friends-heading">Friends’ reviews</h3>
     {data?.experiences.map((review) => <div className="discovery-review flex items-start gap-2" key={review.id}>

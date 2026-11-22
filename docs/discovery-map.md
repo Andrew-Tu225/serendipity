@@ -17,8 +17,11 @@ Previews and search suggestions scroll internally when needed. Selecting a Googl
 viewport or centers at zoom 16. Unknown Google Places remain temporary markers, displaying
 provider name/address/link and returned attributions without invented app activity.
 Place previews use the updated merged design: a description, first photo shared in loaded app
-reviews (or a placeholder), rating summary, app reviews, and recommendation evidence in a larger
-scrolling card. App review requests wait for the active viewer identity to be ready. Discover
+reviews when available, rating summary, app reviews, and recommendation evidence in a larger
+scrolling card. Previews without a review photo omit the photo area entirely. The actions share one
+row, with Write a review on the left and an outlined Open in Google Maps link button with a map-pin
+icon on the right. The Maps link opens in a new tab; its label can wrap within the button on narrow
+screens. App review requests wait for the active viewer identity to be ready. Discover
 retains live global place search and the stable map renderer.
 The separate Home tab mounts the new landmark carousel and Experience feed; its scoped layout
 styles do not replace map styles. Home images use explicit dimensions rather than absolute fill.
