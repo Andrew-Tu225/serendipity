@@ -130,6 +130,7 @@ Instead of repeatedly asking these friends for recommendations, users can explor
 Friends help vet places by sharing their genuine opinions, both positive and negative.
 
 In Taste Buddies, swipe left to pass on a suggestion and right to open a private conversation.
+The small arrow buttons below the card perform the same actions.
 The Send button delivers a message. The Taste Buddies header opens the inbox for continuing chats.
 
 This creates an environment where recommendations feel more personal and relevant than anonymous public reviews.

@@ -229,9 +229,11 @@
 .buddy-swipe-photo img { pointer-events: none; }
 .buddy-swipe-label { position: absolute; top: 12px; right: 12px; padding: 6px 10px; border: 2px solid #fff; border-radius: 10px; color: #fff; background: #4d755f; font-size: 12px; }
 .buddy-swipe-label[data-direction='skip'] { right: auto; left: 12px; background: #88566b; }
-.buddy-swipe-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 13px; }
-.buddy-swipe-actions button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; border: 1px solid #e6daee; border-radius: 13px; background: #fff; color: #6e537e; font-size: 12px; font-weight: 700; }
-.buddy-swipe-actions button:last-child { border-color: #75548c; background: #75548c; color: #fff; }
+.buddy-swipe-actions { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+.buddy-swipe-actions button { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #6e537e; }
+.buddy-swipe-actions button span { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #e6daee; border-radius: 50%; background: #fff; }
+.buddy-swipe-actions button:first-child svg { transform: rotate(180deg); }
+.buddy-swipe-actions button:last-child span { border-color: #75548c; background: #75548c; color: #fff; }
 .buddy-swipe-actions button:disabled { opacity: .6; cursor: wait; }
 .buddy-empty { text-align: center; color: #63536d; font-size: 12px; }
 .buddy-empty button { margin-top: 10px; }

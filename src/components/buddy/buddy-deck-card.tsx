@@ -69,8 +69,12 @@ export function BuddyDeckCard({ buddy, busy, onSkip, onMessage }: {
         {buddy.interests && <div className="taste-tags">{buddy.interests.map((interest) => <span key={interest}>{interest}</span>)}</div>}
       </article>
       <div className="buddy-swipe-actions">
-        <button type="button" disabled={busy} onClick={onSkip}><Icon name="close" size={19} /> Skip</button>
-        <button type="button" disabled={busy} onClick={onMessage}><Icon name="message" size={19} /> Message</button>
+        <button type="button" aria-label="Skip" title="Skip" disabled={busy} onClick={onSkip}>
+          <span><Icon name="arrow" size={17} /></span>
+        </button>
+        <button type="button" aria-label="Message" title="Message" disabled={busy} onClick={onMessage}>
+          <span><Icon name="arrow" size={17} /></span>
+        </button>
       </div>
     </>
   );
