@@ -110,7 +110,7 @@ function App() {
   }
 
   const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : 'London, Ontario'
-  const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Profile' : activeTab === 'Discover' ? 'Discover' : 'Serendipity'
+  const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Taste profile' : activeTab === 'Discover' ? 'Discover' : 'Serendipity'
 
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
