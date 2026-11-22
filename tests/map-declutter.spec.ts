@@ -24,6 +24,7 @@ test("compact nearby icons survive overlapping names and selection reveals the f
   })) } }));
   await page.goto("/");
   await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-zoom", /\d/);
   await page.evaluate(() => {
     const map = window as unknown as { __zoomTestMap: (n: number) => void; __boundsTestMap: (b: object) => void };
     map.__zoomTestMap(18); map.__boundsTestMap({ west: -81.251, east: -81.248, south: 42.984, north: 42.986 });
@@ -55,6 +56,7 @@ test("clustered-away reviews neither block nearby icons nor reappear when their 
   }] } }));
   await page.goto("/");
   await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-zoom", /\d/);
   await page.evaluate(() => (window as unknown as { __boundsTestMap: (b: object) => void }).__boundsTestMap({ west: -81.26, east: -81.235, south: 42.98, north: 42.99 }));
   await expect(page.getByRole("button", { name: "Zoom to 2 places", exact: true })).toBeVisible();
   const nearby = page.getByRole("button", { name: "View Beside cluster", exact: true });
@@ -80,6 +82,7 @@ test("overlapping nearby places are represented in counts and retain identity wh
   await page.route("**/api/places/nearby?**", (route) => route.fulfill({ json: { places: dense } }));
   await page.goto("/");
   await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-zoom", /\d/);
   await page.evaluate(() => (window as unknown as { __boundsTestMap: (b: object) => void }).__boundsTestMap({ west: -81.25, east: -81.24, south: 42.98, north: 42.99 }));
   await expect(page.getByRole("button", { name: "Zoom to 20 places", exact: true })).toBeVisible();
   const before = await page.evaluate(() => (window as unknown as { __markerTestStats: () => {title: string; id: string}[] }).__markerTestStats());
