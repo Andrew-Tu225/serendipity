@@ -245,7 +245,7 @@ reviews update their marker immediately.
 Dense locations cluster rather than being dropped. London, Ontario is the initial camera position; location
 permission is requested only on tap.
 
-Visitors can browse public ratings and reviews without signing in. Signed-in viewers also see the
+The app requires sign-in before showing Home or Discover. New and existing incomplete accounts must choose at least one of the 14 place-category interests once before entering. Interests seed recommendation similarity separately from review scores; Auth0 continues to manage identity. Returning accounts go straight home. Public backend read APIs retain public access. Signed-in viewers see the
 Experiences of users they follow highlighted as friends. The app uses the existing directed-follow
 model and public Experience visibility. Each user's latest visit per Place contributes one rating
 (1–5 in half steps). Marker averages are displayed to one decimal.
@@ -259,8 +259,8 @@ are still future work. Image storage remains undecided. See [discovery-data.md](
 The social backend now supports directed follow management, public profiles and display-name search,
 Experience likes and flat editable comments, independent private saved reviews/Places, and a
 following feed of published Experiences. Saving a new Place can create its app record without a
-review. Profiles remain read-only and Auth0-managed; all Experiences and social read surfaces are
-public, while saves and the personalized feed require sign-in. No frontend integration is included.
+review. Profile identity remains read-only and Auth0-managed; category interests are persisted separately during first-login onboarding; all Experiences and social read surfaces are
+public, while saves and the personalized feed require sign-in. Home now shows real ranked recommendations around London with supporting reviews. Profile uses the authenticated identity, selected interests, and real Experience/saved Place/following counts. Other social frontend integration remains future work.
 See [social-api.md](social-api.md) for contracts and the remaining social scope.
 Local development can opt into 24 London Places and labeled mock reviews using the repeatable seed
 script; a guarded reset script clears local application rows. See [local-demo-data.md](local-demo-data.md).

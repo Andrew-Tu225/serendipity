@@ -14,6 +14,7 @@ class UserResponse(BaseModel):
     email_verified: bool | None
     display_name: str | None
     picture_url: str | None
+    onboarding_completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

@@ -13,6 +13,7 @@ export interface UserAccount {
   email_verified: boolean | null;
   display_name: string | null;
   picture_url: string | null;
+  onboarding_completed_at: string | null;
   created_at: string;
   updated_at: string;
 }

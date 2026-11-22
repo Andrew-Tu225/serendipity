@@ -42,7 +42,7 @@ test("custom nearby pins have no fabricated rating, resolve on tap, and stay mou
   await expect(page.getByRole("article")).toContainText("No Serendipity reviews yet");
   await page.getByRole("button", { name: "Write a review", exact: true }).click();
   await page.getByRole("button", { name: "Use map center", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Sign in to review", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Share experience", exact: true })).toBeVisible();
 });
 
 test("app identity takes precedence over duplicate Google results", async ({ page }) => {

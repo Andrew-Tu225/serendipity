@@ -7,5 +7,5 @@ async def authenticate(client, identity_provider):
         "/api/auth/callback", params={"code": "valid-code", "state": params["state"][0]}
     )
     assert callback.status_code == 303
-    assert callback.headers["location"] == "http://localhost:3000/success"
+    assert callback.headers["location"] == "http://localhost:3000/"
     return callback

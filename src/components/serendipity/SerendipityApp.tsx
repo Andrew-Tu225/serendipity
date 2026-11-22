@@ -2,12 +2,14 @@
 
 import Image from 'next/image'
 import { useState, type ReactNode } from 'react'
-import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
 import DiscoverMap from '@/components/map/discover-map'
 import { ReviewComposer } from '@/components/experience/review-composer'
 import { mapPlace, type PlaceExperiences } from '@/types/discovery'
 import type { Coordinates, MapPlace } from '@/types/places'
+import { useSession } from '@/components/auth/session-provider'
+import { ProfileView } from '@/components/profile/profile-view'
+import { HomeRecommendations } from '@/components/recommendations/home-recommendations'
 import { FriendAvatar } from '@/components/map/friend-avatar'
 
 type IconName =
@@ -53,16 +55,14 @@ function Icon({ name, size = 22, filled = false }: { name: IconName; size?: numb
   )
 }
 
-const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
 function App() {
+  const { session } = useSession()
   const [activeTab, setActiveTab] = useState('Home')
   const [discovered, setDiscovered] = useState(false)
-  const [activeFilter, setActiveFilter] = useState('For you')
-  const [liked, setLiked] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [sheet, setSheet] = useState<'post' | 'soon' | null>(null)
   const [posted, setPosted] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null)
+  const [focusTarget, setFocusTarget] = useState<MapPlace | null>(null)
   const [reviewTarget, setReviewTarget] = useState<MapPlace | null>(null)
   const [reviewPoint, setReviewPoint] = useState<Coordinates | null>(null)
   const [picking, setPicking] = useState(false)
@@ -105,7 +105,7 @@ function App() {
     setActiveTab(tab)
   }
 
-  const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : 'Good morning, Mia'
+  const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : `Hello, ${session?.user.display_name?.trim().split(/\s+/)[0] || 'Explorer'}`
   const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Taste profile' : activeTab === 'Discover' ? 'Discover' : 'What feels fun?'
 
   return (
@@ -131,7 +131,7 @@ function App() {
         <div className="app-content">
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
             {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision} reviewedPlace={reviewedPlace}
-              selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
+              selected={selectedPlace} focusTarget={focusTarget} onSelect={setSelectedPlace} onReview={startReview}
               picking={picking} onCancelPick={() => setPicking(false)}
               onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
           </div>
@@ -140,54 +140,11 @@ function App() {
           ) : activeTab === 'Profile' ? (
             <ProfileView />
           ) : activeTab === 'Discover' ? null : (
-            <>
-              <section className="filters" aria-label="Experience categories">
-                {filters.map((filter) => (
-                  <button key={filter} className={activeFilter === filter ? 'filter active' : 'filter'} onClick={() => setActiveFilter(filter)}>
-                    {filter}
-                  </button>
-                ))}
-              </section>
-
-              <section className="hero-card">
-                <Image src={potteryImage} sizes="(max-width: 430px) 100vw, 430px" alt="Friends shaping clay at a sunlit pottery workshop"/>
-                <div className="image-shade"/>
-                <div className="match-pill"><Icon name="sparkle" size={13}/> 96% your vibe</div>
-                <button className={`save-button ${saved ? 'selected' : ''}`} onClick={() => setSaved(!saved)} aria-label={saved ? 'Remove from saved' : 'Save experience'}>
-                  <Icon name="bookmark" size={20} filled={saved}/>
-                </button>
-                <div className="hero-copy">
-                  <div className="meta-row"><span>CREATIVE</span><i/><span>THIS SATURDAY</span></div>
-                  <h2>Clay & rosé: a slow pottery afternoon</h2>
-                  <p><Icon name="map" size={15}/> Mend Studio · 1.2 mi</p>
-                </div>
-              </section>
-
-              <section className="social-row">
-                <div className="friends"><span>EL</span><span>JR</span><span>+4</span></div>
-                <p><strong>Elena</strong> and 5 others want to go</p>
-                <button className={liked ? 'liked' : ''} onClick={() => setLiked(!liked)} aria-label={liked ? 'Unlike' : 'Like'}>
-                  <Icon name="heart" size={21} filled={liked}/><span>{liked ? 129 : 128}</span>
-                </button>
-              </section>
-
-              <section className="section-heading">
-                <div><p className="eyebrow">NEAR YOU</p><h3>Worth leaving home for</h3></div>
-                <button>See all <Icon name="arrow" size={16}/></button>
-              </section>
-
-              <article className="mini-card">
-                <Image src={rooftopImage} sizes="430px" alt="Friends sharing dinner on a rooftop at sunset"/>
-                <div className="mini-copy">
-                  <span className="category">FOOD & DRINK</span>
-                  <h4>Secret rooftop supper</h4>
-                  <p>Fri, 7:30 PM · Greenpoint</p>
-                  <div><span className="rating">4.9</span><span> · $48 per person</span></div>
-                </div>
-                <button aria-label="Save rooftop supper"><Icon name="bookmark" size={18}/></button>
-              </article>
-
-            </>
+            <HomeRecommendations revision={reviewRevision} onExplore={() => changeTab('Discover')} onSelect={(place) => {
+              setSelectedPlace(place)
+              setFocusTarget(place)
+              changeTab('Discover')
+            }}/>
           )}
         </div>
 
@@ -304,183 +261,5 @@ function WorldwideLock() {
   )
 }
 
-function ProfileView() {
-  const [tastes, setTastes] = useState({ Sweet: 4, Spicy: 3, Umami: 5 })
-  const [experienceStyle, setExperienceStyle] = useState({ Adventurous: 5, Chill: 4 })
-  const [customizing, setCustomizing] = useState(false)
-  const [character, setCharacter] = useState<CharacterOptions>({
-    features: 'feminine',
-    hairStyle: 'wavy',
-    hairColor: '#5a392c',
-    shirt: '#8664a0',
-    pants: '#4d526b',
-    shoes: '#eee8f2',
-    hat: 'none',
-  })
-
-  return (
-    <section className="profile-view">
-      <div className="profile-card">
-        <button className="avatar character-avatar" onClick={() => setCustomizing(true)} aria-label="Customize your character">
-          <CharacterFigure options={character} compact/>
-          <span><Icon name="sparkle" size={13}/></span>
-        </button>
-        <div className="profile-name"><h2>Mia Morgan</h2><p>@miatastes · Brooklyn, NY</p></div>
-        <p className="profile-bio">Always looking for tiny restaurants, tactile workshops, and plans worth crossing town for.</p>
-        <div className="profile-stats">
-          <div><strong>38</strong><span>Experiences</span></div>
-          <div><strong>126</strong><span>Saved</span></div>
-          <div><strong>24</strong><span>Buddies</span></div>
-        </div>
-      </div>
-
-      <div className="taste-panel">
-        <div className="panel-heading"><div><p className="eyebrow">TASTE BUDS</p><h3>Your flavor profile</h3></div><span>1–5</span></div>
-        <p className="panel-intro">Tap a number to tune your matches and recommendations.</p>
-        {Object.entries(tastes).map(([label, value]) => (
-          <ScaleRating key={label} label={label} value={value} onChange={(rating) => setTastes((current) => ({ ...current, [label]: rating }))}/>
-        ))}
-      </div>
-
-      <div className="taste-panel experience-panel">
-        <div className="panel-heading"><div><p className="eyebrow">EXPERIENCE ENERGY</p><h3>How you like to go out</h3></div><span>1–5</span></div>
-        {Object.entries(experienceStyle).map(([label, value]) => (
-          <ScaleRating key={label} label={label} value={value} onChange={(rating) => setExperienceStyle((current) => ({ ...current, [label]: rating }))}/>
-        ))}
-      </div>
-
-      <ActivityCalendar />
-      {customizing && <CharacterCustomizer value={character} onChange={setCharacter} onClose={() => setCustomizing(false)}/>}
-    </section>
-  )
-}
-
-type CharacterOptions = {
-  features: 'feminine' | 'masculine'
-  hairStyle: 'short' | 'wavy' | 'curly' | 'bun'
-  hairColor: string
-  shirt: string
-  pants: string
-  shoes: string
-  hat: 'none' | 'cap' | 'beanie'
-}
-
-function CharacterCustomizer({ value, onChange, onClose }: { value: CharacterOptions; onChange: (value: CharacterOptions) => void; onClose: () => void }) {
-  const update = <K extends keyof CharacterOptions>(key: K, next: CharacterOptions[K]) => onChange({ ...value, [key]: next })
-
-  return (
-    <section className="character-studio" role="dialog" aria-modal="true" aria-label="Customize your character">
-      <header className="studio-header">
-        <button onClick={onClose} aria-label="Back to profile"><Icon name="arrow" size={20}/></button>
-        <div><p className="eyebrow">YOUR LOOK</p><h2>Customize character</h2></div>
-        <button className="studio-done" onClick={onClose}>Done</button>
-      </header>
-      <div className="character-preview">
-        <CharacterFigure options={value}/>
-        <p>This is how friends see you on the map</p>
-      </div>
-      <div className="customizer-controls">
-        <ControlGroup title="Features">
-          <div className="option-pills">
-            {(['feminine', 'masculine'] as const).map((option) => <button key={option} className={value.features === option ? 'selected' : ''} onClick={() => update('features', option)}>{option === 'feminine' ? 'Feminine' : 'Masculine'}</button>)}
-          </div>
-        </ControlGroup>
-        <ControlGroup title="Hair style">
-          <div className="option-pills four">
-            {(['short', 'wavy', 'curly', 'bun'] as const).map((option) => <button key={option} className={value.hairStyle === option ? 'selected' : ''} onClick={() => update('hairStyle', option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
-          </div>
-        </ControlGroup>
-        <ControlGroup title="Hair color">
-          <ColorSwatches colors={['#211d20', '#5a392c', '#9a6038', '#e1b36d', '#a75b75', '#74558f']} value={value.hairColor} onChange={(color) => update('hairColor', color)}/>
-        </ControlGroup>
-        <ControlGroup title="Shirt">
-          <ColorSwatches colors={['#8664a0', '#d5747f', '#4e8379', '#d79d4f', '#517099', '#332e38']} value={value.shirt} onChange={(color) => update('shirt', color)}/>
-        </ControlGroup>
-        <ControlGroup title="Pants">
-          <ColorSwatches colors={['#4d526b', '#2f3037', '#6e5547', '#8290a3', '#786078']} value={value.pants} onChange={(color) => update('pants', color)}/>
-        </ControlGroup>
-        <ControlGroup title="Shoes">
-          <ColorSwatches colors={['#eee8f2', '#28252a', '#966a50', '#b66972', '#6e7184']} value={value.shoes} onChange={(color) => update('shoes', color)}/>
-        </ControlGroup>
-        <ControlGroup title="Hat">
-          <div className="option-pills">
-            {(['none', 'cap', 'beanie'] as const).map((option) => <button key={option} className={value.hat === option ? 'selected' : ''} onClick={() => update('hat', option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
-          </div>
-        </ControlGroup>
-      </div>
-    </section>
-  )
-}
-
-function ControlGroup({ title, children }: { title: string; children: ReactNode }) {
-  return <div className="control-group"><p>{title}</p>{children}</div>
-}
-
-function ColorSwatches({ colors, value, onChange }: { colors: string[]; value: string; onChange: (color: string) => void }) {
-  return <div className="color-swatches">{colors.map((color) => <button key={color} className={value === color ? 'selected' : ''} style={{ backgroundColor: color }} onClick={() => onChange(color)} aria-label={`Choose color ${color}`}/>)}</div>
-}
-
-function CharacterFigure({ options, compact = false }: { options: CharacterOptions; compact?: boolean }) {
-  const feminine = options.features === 'feminine'
-  return (
-    <svg className={compact ? 'character-figure compact' : 'character-figure'} viewBox="0 0 180 320" aria-hidden="true">
-      <ellipse cx="90" cy="307" rx="48" ry="8" fill="rgba(55,42,63,.13)"/>
-      <path d="M61 185 55 279h31l5-94ZM92 185l3 94h31l-8-94Z" fill={options.pants}/>
-      <path d="M52 274h36v24H43c0-10 3-18 9-24ZM94 274h34c7 6 10 14 9 24H94Z" fill={options.shoes}/>
-      <path d={feminine ? 'M56 123c12-15 55-15 68 0l9 72H47Z' : 'M51 124c16-16 62-16 78 0l4 71H47Z'} fill={options.shirt}/>
-      <path d="m55 132-26 54M125 132l26 54" fill="none" stroke="#dca985" strokeWidth="18" strokeLinecap="round"/>
-      <circle cx="27" cy="190" r="10" fill="#dca985"/><circle cx="153" cy="190" r="10" fill="#dca985"/>
-      <rect x="80" y="101" width="20" height="29" rx="9" fill="#dca985"/>
-      {options.hairStyle === 'wavy' && <path d="M50 72C50 25 70 11 91 11s43 15 42 63c15 30 4 62-14 74l-8-47H67l-7 48c-23-15-24-48-10-77Z" fill={options.hairColor}/>}
-      {options.hairStyle === 'short' && <path d="M54 77C52 34 67 17 91 17c27 0 39 21 37 58l-15-20c-19 8-38 7-59 22Z" fill={options.hairColor}/>}
-      {options.hairStyle === 'curly' && <><circle cx="59" cy="53" r="23" fill={options.hairColor}/><circle cx="86" cy="35" r="25" fill={options.hairColor}/><circle cx="116" cy="48" r="24" fill={options.hairColor}/><circle cx="126" cy="78" r="23" fill={options.hairColor}/><circle cx="54" cy="84" r="22" fill={options.hairColor}/></>}
-      {options.hairStyle === 'bun' && <><circle cx="91" cy="23" r="24" fill={options.hairColor}/><path d="M53 76C52 34 69 20 91 20s39 16 38 56l-15-20c-19 7-38 6-61 20Z" fill={options.hairColor}/></>}
-      <path d={feminine ? 'M58 68c0-35 14-49 33-49s34 16 33 49v26c0 25-14 40-33 40S58 119 58 94Z' : 'M57 69c0-34 15-48 34-48s35 15 34 48v27c0 24-15 39-34 39S57 120 57 96Z'} fill="#dca985"/>
-      <path d="M57 70C57 37 71 19 91 19s35 18 35 50c-10-3-18-9-24-18-10 8-24 13-45 19Z" fill={options.hairColor}/>
-      <path d="M58 70c7-2 15-18 19-34 11 18 27 24 48 22" fill="none" stroke={options.hairColor} strokeWidth="14" strokeLinecap="round"/>
-      {feminine ? <><path d="m69 82 8-2M105 80l8 2" stroke="#3f303a" strokeWidth="3" strokeLinecap="round"/><path d="M72 86h8M102 86h8" stroke="#3f303a" strokeWidth="2.5" strokeLinecap="round"/></> : <><path d="M69 80h11M102 80h11" stroke="#3f303a" strokeWidth="4" strokeLinecap="round"/></>}
-      <circle cx="76" cy="87" r="3" fill="#3f303a"/><circle cx="107" cy="87" r="3" fill="#3f303a"/>
-      <path d="M81 111c7 6 14 6 21 0" fill="none" stroke="#9b565c" strokeWidth="3" strokeLinecap="round"/>
-      {options.hat === 'cap' && <><path d="M50 49c6-30 26-42 44-42 22 0 37 15 39 41Z" fill={options.shirt}/><path d="M91 46h57c-8 10-31 12-57 8Z" fill={options.shirt}/></>}
-      {options.hat === 'beanie' && <><path d="M53 54C53 18 70 2 91 2s38 17 38 52Z" fill={options.shirt}/><rect x="50" y="43" width="81" height="17" rx="8" fill={options.shirt}/></>}
-    </svg>
-  )
-}
-
-function ActivityCalendar() {
-  const outingDays = new Set([2, 6, 9, 14, 18, 21, 27])
-  const days = Array.from({ length: 35 }, (_, index) => index < 6 ? null : index - 5)
-
-  return (
-    <section className="calendar-card">
-      <div className="calendar-heading">
-        <div><p className="eyebrow">ACTIVITY</p><h3>June 2025</h3></div>
-        <div className="calendar-legend"><i/> Went out</div>
-      </div>
-      <div className="calendar-grid weekdays">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
-      </div>
-      <div className="calendar-grid calendar-days">
-        {days.map((day, index) => (
-          <span key={index} className={day && outingDays.has(day) ? 'outing-day' : ''}>{day}</span>
-        ))}
-      </div>
-      <p className="calendar-summary"><strong>7 nights out</strong> this month · your most social month yet</p>
-    </section>
-  )
-}
-
-function ScaleRating({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return (
-    <div className="scale-row">
-      <span>{label}</span>
-      <div role="radiogroup" aria-label={`${label} rating`}>
-        {[1, 2, 3, 4, 5].map((rating) => (
-          <button key={rating} className={rating <= value ? 'selected' : ''} onClick={() => onChange(rating)} role="radio" aria-checked={rating === value} type="button">{rating}</button>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export default App

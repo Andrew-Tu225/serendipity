@@ -96,27 +96,17 @@ test("expired ratings update quietly in the same marker and click handlers see t
   await expect(page.getByRole("article")).toContainText("2.5/5 · 24 reviewers");
 });
 
-test("switching viewers clears friend labels and refetches without replacing the marker", async ({ page }) => {
-  let guest = false;
-  let calls = 0;
-  await page.route("**/api/auth/me", (route) => guest
+test("session expiration removes the map and returns to login", async ({ page }) => {
+  let expired = false;
+  await page.route("**/api/auth/me", (route) => expired
     ? route.fulfill({ status: 401, json: { detail: "Sign in to continue" } })
     : route.fulfill({ json: signedIn }));
-  await page.route("**/api/discovery/places?**", (route) => {
-    calls++;
-    return route.fulfill({ json: { places: [guest ? { ...appPlaces[0], friend_count: 0, friends: [] } : appPlaces[0]], next_cursor: null } });
-  });
   await open(page);
   await expect(marker(page)).toBeVisible();
-  await expect(marker(page)).toContainText("Elena");
-  const identity = await marker(page).getAttribute("data-marker-id");
-  await marker(page).click();
-  guest = true;
+  expired = true;
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await expect.poll(() => calls).toBe(2);
-  await expect(marker(page)).not.toContainText("Elena");
-  await expect(page.getByRole("article")).not.toContainText("Elena recommends this");
-  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(marker(page)).toHaveCount(0);
 });
 
 test("background failure preserves pins and has no loading banner", async ({ page }) => {
@@ -149,15 +139,15 @@ test("a late response from the previous viewer cannot restore old friend data", 
   });
   await open(page);
   await expect(marker(page)).toBeVisible();
-  const identity = await marker(page).getAttribute("data-marker-id");
   await page.clock.fastForward(61_000);
   await expect.poll(() => calls).toBe(2);
   account = "second-viewer";
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await expect.poll(() => calls).toBe(3);
+  await expect(page.getByRole("heading", { name: "What feels fun?" })).toBeVisible();
+  await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await expect.poll(() => calls).toBeGreaterThanOrEqual(3);
   await expect(marker(page)).not.toContainText("Elena");
   release();
   await page.waitForTimeout(350);
   await expect(marker(page)).not.toContainText("Elena");
-  await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
 });

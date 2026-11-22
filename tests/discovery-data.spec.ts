@@ -106,14 +106,12 @@ test("a Google search matching an app identity shows its actual reviews once", a
   await expect(page.getByRole("button", { name: "View Google Market", exact: true })).toHaveCount(0);
 });
 
-test("signed-out visitors browse reviews but are asked to sign in before writing", async ({ page }) => {
-  await choosePlace(page);
-  const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("button", { name: "Sign in to review" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Share experience" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Close", exact: true }).press("Escape");
-  await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("article")).toContainText("Go early, grab something warm");
+test("signed-out visitors are redirected before they can browse or write", async ({ page }) => {
+  await page.route("**/api/auth/me", (route) => route.fulfill({ status: 401, json: { detail: "Sign in to continue" } }));
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("button", { name: "Sign in / Sign up" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Discover places" })).toHaveCount(0);
 });
 
 test("review submission sends CSRF, preserves errors, and refreshes ratings only on success", async ({ page }) => {

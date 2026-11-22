@@ -66,7 +66,7 @@ async def callback(request: Request, service: AuthServiceDependency, provider: P
         )
         clear_session_cookie(response, service)
         return response
-    response = RedirectResponse(f"{service.settings.app_base_url}/success", status_code=303)
+    response = RedirectResponse(f"{service.settings.app_base_url}/", status_code=303)
     set_session_cookie(response, service, token, service.settings.session_lifetime_seconds)
     return response
 

@@ -16,12 +16,13 @@ export const appPlaces: DiscoveryPlace[] = names.map((name, index) => ({
 }));
 
 export const signedIn = {
-  user: { id: "viewer", display_name: "Viewer" }, auth0: {}, csrf_token: "review-csrf",
+  user: { id: "viewer", display_name: "Viewer", picture_url: null, onboarding_completed_at: "2026-11-22T12:00:00Z" }, auth0: {}, csrf_token: "review-csrf",
 };
 
 export async function mockDiscovery(page: Page) {
+  await page.route("**/api/recommendations?**", (route) => route.fulfill({ json: { items: [] } }));
   await page.route("**/api/places/nearby?**", (route) => route.fulfill({ json: { places: [] } }));
-  await page.route("**/api/auth/me", (route) => route.fulfill({ status: 401, json: { detail: "Sign in to continue" } }));
+  await page.route("**/api/auth/me", (route) => route.fulfill({ json: signedIn }));
   await page.route("**/api/discovery/places?**", (route) => {
     const [west, south, east, north] = new URL(route.request().url()).searchParams.get("bbox")!.split(",").map(Number);
     return route.fulfill({ json: { places: appPlaces.filter((place) => place.longitude >= west && place.longitude <= east && place.latitude >= south && place.latitude <= north), next_cursor: null } });

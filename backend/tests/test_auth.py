@@ -28,7 +28,7 @@ async def test_login_provisions_user_and_rotates_session(
     response = await client.get(
         "/api/auth/callback", params={"state": params["state"][0], "code": "valid-code"}
     )
-    assert response.headers["location"].endswith("/success")
+    assert response.headers["location"] == "http://localhost:3000/"
     session_cookie = client.cookies["serendipity_session"]
     assert session_cookie != temporary_cookie
     assert "Max-Age=28800" in response.headers["set-cookie"]

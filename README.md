@@ -85,7 +85,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). [http://localhost:3000/api/health](http://localhost:3000/api/health) should return `{"status":"ok"}` through the proxy.
 
-The homepage at `/` shows the imported Figma discovery interface. Open [http://localhost:3000/login](http://localhost:3000/login) to test authentication. Its login button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/success`. That page shows **Successful**, the verified Auth0 claims snapshot, the current user record queried from Postgres, and a **Sign out** button. Profile fields can be absent; email verification is not required in this initial version. Logout revokes the local session and ends Auth0's browser session.
+Open [http://localhost:3000](http://localhost:3000). Signed-out visitors are sent to `/login`, whose button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/`. First-time accounts must choose at least one place-category interest at `/onboarding`; completed accounts go straight home. `/success` redirects to `/` for old links. Home shows review-backed recommendations around London, Ontario, and Profile shows the signed-in identity, real counts, and selected interests. Profile fields can be absent; email verification is not required. Sign out from Profile to revoke the local session and end Auth0's browser session.
+
+Run `cd backend && uv run alembic upgrade head` before starting the updated backend. Migration `0005` adds persisted interests and onboarding completion; existing accounts complete setup once. No new environment variables or dependencies are required.
 
 Sessions expire after 8 hours; temporary login attempts expire after 10 minutes. Expired rows are removed when a new login starts. A blocked/deleted Auth0 account does not automatically revoke an existing local session; immediate account-wide revocation can be added later.
 
@@ -163,6 +165,8 @@ See [docs/architecture.md](docs/architecture.md) for the full repository flow an
 | `GET /api/auth/login` | Starts Auth0 login/signup |
 | `GET /api/auth/callback` | Validates callback, persists user/session, redirects |
 | `GET /api/auth/me` | Returns `{ auth0, user, csrf_token }`; requires a valid session |
+| `GET /api/me/profile` | Signed-in identity, interests, completion, Experience/saved Place/following counts |
+| `PUT /api/me/onboarding` | CSRF-protected `{ interests: Category[] }`; 1–14 unique categories; replaces interests and completes setup |
 | `POST /api/auth/logout` | Requires matching Origin and X-CSRF-Token; revokes session and returns `{ logout_url }` |
 
 Auth responses use `Cache-Control: no-store`. Session cookies are HttpOnly, SameSite=Lax, host-only, and Secure in production. The page never renders the CSRF token. No passwords, raw ID/access tokens, or OAuth verifiers are returned by the session endpoint.

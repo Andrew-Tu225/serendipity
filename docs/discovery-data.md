@@ -49,11 +49,7 @@ the buffered area are released; the selected marker remains pinned. Cache state 
 mounted map, including navigation between app tabs, and is reset by page reload.
 
 Session identity is checked on entering Discover, window/tab return, and freshness revalidation.
-An account change/expiry clears friend-specific fields and coverage while retaining public ratings
-and coordinates, then reloads the current area for the new viewer. Identity-check failures keep only
-public cached marker data and offer retry; they are not treated as signed-out success. Selected
-review panels reload when viewer identity changes. No cache is shared between browser sessions or
-persisted to localStorage, and all existing HTTP no-store headers remain in place.
+The shared app gate now removes the map on account changes or expiry: an account change mounts a fresh app, and expiry redirects to login. Session-service failures show a retry screen. Map-local identity revalidation still clears personalized coverage before refreshing. No cache is shared between browser sessions or persisted to localStorage, and all HTTP no-store headers remain in place.
 
 After a successful review submission, its returned Place merges immediately and invalidates the
 coverage containing that point. Other cached areas remain available; background revalidation then
@@ -64,9 +60,9 @@ One user's latest Experience per Place contributes to the rating average and rev
 `visited_on`, then `created_at`, then UUID as descending tie breakers, consistently with recommendations.
 The average can have more precision than the individual 0.5-step ratings; the UI displays one decimal.
 Friend counts and snippets include the latest Experience from users the viewer follows, even when
-their verdict is neutral or avoid. Signed-out and expired-session visitors see public ratings and
-reviews without friend/self labels. Only session-authentication 401s become anonymous; database
-failures remain errors. Every discovery response, including errors, is `Cache-Control: no-store`.
+their verdict is neutral or avoid. The backend discovery API retains anonymous public ratings and reviews without friend/self labels.
+The app itself requires sign-in and completed onboarding; session expiration redirects to login.
+Database failures remain errors. Every discovery response, including errors, is `Cache-Control: no-store`.
 
 Selecting an app marker fetches its public reviews in pages of 20. Reviews show author name, rating,
 verdict or written text, and visit date; signed-in viewers also see Friend/You labels. Blank areas show
@@ -83,7 +79,7 @@ The form requires sign-in before submission. Its fields survive save errors; it 
 clicks and closing during a pending save. Success is shown only after the API confirms the write,
 then the selected card and viewport ratings refresh. A new reviewed Place therefore appears on the
 next query and remains available after reload. No photo/video storage provider is introduced.
-After Auth0 sign-in, the diagnostic success page includes an Explore places link back to the app.
+After Auth0 sign-in, incomplete accounts choose category interests at `/onboarding`; completed accounts reach Home. Home recommendation cards open real discovery details and focus the map without resetting the camera when switching tabs.
 
 `CurrentUser` supplies the author. `VerifiedMutation` enforces CSRF and origin checking. Pydantic
 rejects unknown fields such as a forged owner, invalid ratings, future visits, blank/long names,
@@ -150,7 +146,7 @@ guarded reset command clears application rows; see [local-demo-data.md](local-de
 
 Run frontend lint, TypeScript/production build, and the browser suite. Browser tests mock the external
 Google SDK and backend HTTP contracts, exercising pagination, cancellation, date-line bounds,
-clustering, search identity, public browsing, and successful/failed review submission. Backend tests
+clustering, search identity, login gating, and successful/failed review submission. Backend tests
 exercise real repositories and services with SQLite; set `TEST_DATABASE_URL` to run isolated PostgreSQL
 migration and concurrent-insert tests. Provider billing, Cloud Console styling, and live OAuth still
 require their separately configured smoke tests.

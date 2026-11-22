@@ -425,3 +425,31 @@
   .sheet-backdrop { border-radius: 32px; overflow: hidden; }
   .character-studio { top: 24px; bottom: 24px; border-radius: 32px; box-shadow: 0 25px 80px rgba(63, 46, 76, .2); }
 }
+
+.session-content { display: contents; }
+.account-page { width: 100%; max-width: 470px; margin: auto; padding: 40px 24px; color: #292333; background: #faf8fc; border-radius: 24px; }
+.account-page h1 { font-family: 'DM Serif Display', serif; font-size: 36px; line-height: 1.15; margin: 16px 0; }
+.account-page p { line-height: 1.65; }
+.account-intro { font-size: 21px; margin-bottom: 12px; }
+.account-note { font-size: 12px; color: #766b7f; margin-top: 22px; }
+.onboarding-symbol { display: grid; place-items: center; width: 64px; height: 64px; background: #eee5f4; color: #73508b; border-radius: 22px; font-size: 38px; margin-top: 28px; }
+.interest-fieldset { margin-top: 28px; }
+.interest-fieldset legend { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.interest-grid { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0; }
+.interest-chip, .interest-tag { border: 1px solid #ded3e6; border-radius: 99px; background: #fff; padding: 11px 16px; color: #624974; font-size: 13px; }
+.interest-chip[aria-pressed="true"] { background: #73508b; color: #fff; border-color: #73508b; }
+.interest-tag { background: #f4edf8; font-size: 12px; }
+button:disabled { cursor: default; opacity: .55; }
+button:focus-visible, a:focus-visible { outline: 3px solid #a37bbc; outline-offset: 4px; }
+.text-button { display: block; margin: 20px auto; padding: 10px 12px; color: #73508b; text-decoration: underline; font-size: 13px; }
+[role="alert"] { color: #a03448; line-height: 1.5; }
+.account-avatar { width: 84px; height: 84px; display: grid; place-items: center; border-radius: 50%; margin: 0 auto 15px; background: #e8dcf1; color: #73508b; font-size: 27px; font-weight: 600; overflow: hidden; }
+.account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.recommendations-intro { color: #766b7f; font-size: 13px; margin: 10px 0 20px; }
+.recommendation-list { display: grid; gap: 16px; }
+.recommendation-card { padding: 23px; border: 1px solid #e7dfed; border-radius: 24px; background: #fff; box-shadow: 0 8px 24px #3e2d4809; }
+.recommendation-card h2, .recommendations-view h2 { font-family: 'DM Serif Display', serif; font-size: 26px; font-weight: 400; margin-top: 7px; }
+.recommendation-reason { font-size: 12px; color: #73508b; margin: 9px 0 18px; }
+.recommendation-card blockquote { border-left: 2px solid #e6d9ee; padding-left: 12px; margin-top: 14px; }
+.recommendation-card blockquote p { font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.recommendation-card footer { color: #766b7f; font-size: 11px; margin-top: 8px; }
