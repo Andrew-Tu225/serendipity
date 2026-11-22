@@ -25,4 +25,3 @@ test("buffering handles ordinary, date-line, pole, and worldwide views", () => {
   expect(bufferBounds([{ west: -180, east: 180, south: -85, north: 85 }])).toEqual([{ west: -180, east: 180, south: -90, north: 90 }]);
   expect(bufferBounds([{ west: -179, east: -175, south: 80, north: 90 }])).toEqual([{ west: -180, east: -174, south: 77.5, north: 90 }]);
 });
-
