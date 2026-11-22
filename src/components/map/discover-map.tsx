@@ -185,7 +185,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           {browseStatus === "empty" && <div className="discovery-data-status" role="status">No places in this area yet. Search for a place or zoom in. <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}
-      {selected && !picking && <article className="discovery-preview" aria-label="Selected place">
+      {selected && !picking && <article className={`discovery-preview${(selected.rating_summary?.count ?? 0) > 0 ? " has-reviews" : ""}`} aria-label="Selected place">
         <div className="discovery-preview-copy"><span>{selected.source === "app" ? `${selected.app_category} · Serendipity` : selected.category ?? "Place"}</span>
           <h2>{selected.display_name}</h2>
           <p className="discovery-place-description">{selected.address

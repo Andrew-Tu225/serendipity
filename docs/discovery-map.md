@@ -22,8 +22,9 @@ scrolling card. Previews without a review photo omit the photo area entirely. Th
 row, with Write a review on the left and an outlined Open in Google Maps button on the right. The
 native Maps button keeps its map-pin icon beside the label in a horizontal flex row and opens the
 validated Maps URL in a new tab; its label can wrap within the button on narrow
-screens. The card keeps a visible 28 px white bottom inset below its content. Only the inner content
-scrolls, so the white space remains visible when the preview reaches its maximum height.
+screens. Cards with at least one app review keep a 40 px white bottom inset; unreviewed cards use
+a compact 14 px inset. Only the inner content scrolls, so the white space remains visible when the
+preview reaches its maximum height.
 App review requests wait for the active viewer identity to be ready. Discover
 retains live global place search and the stable map renderer.
 The separate Home tab mounts the new landmark carousel and Experience feed; its scoped layout
