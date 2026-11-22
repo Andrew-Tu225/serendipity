@@ -15,6 +15,9 @@
 
 # next.js
 /.next/
+/.next-*/
+/test-results/
+/playwright-report/
 /out/
 
 # production
@@ -47,3 +50,6 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+
+# AI session files
+.claude/

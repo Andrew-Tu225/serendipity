@@ -4,6 +4,9 @@ import type { NextConfig } from "next";
 const API_URL = process.env.API_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
+  // Floating map controls and navigation occupy the phone's corners.
+  devIndicators: false,
+  distDir: process.env.SERENDIPITY_DIST_DIR || ".next",
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

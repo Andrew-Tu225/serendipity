@@ -227,6 +227,38 @@ Ultimately, we want someone to open the app and think:
 
 **"I wonder what interesting places my friends have discovered around here."**
 
+## Current implementation
+
+Discover fills the phone above navigation, with floating search, location controls, and place previews.
+Google supplies the basemap, global place/city search, and nearby experience destinations through FastAPI.
+Unreviewed destinations use smaller neutral custom category pins matching the app. Nearby searches
+sample neighborhood areas as users explore; they do not guarantee every Google listing. Existing pins
+remain stable as finer samples load on zoom-in. Nearby work runs up to three searches at once and
+is limited to 18 attempts per minute per open map, with automatic continuation when slots reopen.
+App markers take precedence for matching Google IDs. Provider results remain temporary and create no database rows.
+App-reviewed Places come
+from PostgreSQL for the visible map area after initial load, panning, zooming, search, or geolocation.
+Every reviewed Place is eligible, including low ratings; recommendation ranking remains separate.
+Pins remain stable while moving around the map. Buffered app-data coverage is cached in memory,
+newly exposed areas load incrementally, and stale ratings refresh quietly after one minute. New
+reviews update their marker immediately.
+Dense locations cluster rather than being dropped. London, Ontario is the initial camera position; location
+permission is requested only on tap.
+
+Visitors can browse public ratings and reviews without signing in. Signed-in viewers also see the
+Experiences of users they follow highlighted as friends. The app uses the existing directed-follow
+model and public Experience visibility. Each user's latest visit per Place contributes one rating
+(1–5 in half steps). Marker averages are displayed to one decimal.
+
+Signed-in users can review an existing app Place or add a Place by choosing a map point and supplying
+a name and category. Review submission persists the Place, Experience, and taste update together,
+then refreshes the map. Google IDs optionally link provider searches to app records; provider names,
+addresses, and coordinates remain transient search data. Fake discovery pins are removed. No fixtures
+are inserted automatically. Friend-management UI, saving/bookmark UI, uploads, and category filters
+are still future work. Image storage remains undecided. See [discovery-data.md](discovery-data.md).
+Local development can opt into 24 London Places and labeled mock reviews using the repeatable seed
+script; a guarded reset script clears local application rows. See [local-demo-data.md](local-demo-data.md).
+
 ## 8. Open Questions and Ideas to Explore
 
 _These are intentionally unresolved and can be developed as the concept evolves._
