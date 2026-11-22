@@ -276,7 +276,7 @@ Response: `{ "place": {...}, "logs": [...] }`. Errors: `401` as in 3.1; `404` `"
 
 ### 3.3 When the frontend calls it
 
-Home calls the ranked endpoint for up to 12 Places around London, Ontario (`-81.4,42.85,-81.1,43.12`).
+Home retains its original prototype UI; its redesign and data integration are separate frontend work.
 Discover calls the same API with `limit=30` for its full visible bbox. Date-line views use two ordinary
 bboxes and deduplicate by app Place ID. These results highlight the original reviewed/Google nearby
 map rather than replacing its background results.

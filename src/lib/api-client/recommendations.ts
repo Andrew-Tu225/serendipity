@@ -9,9 +9,4 @@ export const recommendationsClient = {
     });
     return apiRequest<{ items: Recommendation[] }>(`/recommendations?${params}`, { signal });
   },
-  aroundLondon(signal?: AbortSignal) {
-    return apiRequest<{ items: Recommendation[] }>(
-      "/recommendations?bbox=-81.4,42.85,-81.1,43.12&limit=12", { signal },
-    );
-  },
 };

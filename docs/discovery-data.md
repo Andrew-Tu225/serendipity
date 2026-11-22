@@ -108,7 +108,7 @@ clicks and closing during a pending save. Success is shown only after the API co
 then the selected card and viewport ratings refresh. A new reviewed Place therefore appears in the base review layer and remains available after reload.
 The ranking is also invalidated: the API excludes the viewer’s logged/bookmarked Places from
 recommendations, so these remain white rather than being forced into a recommendation highlight. No photo/video storage provider is introduced.
-After Auth0 sign-in, incomplete accounts choose category interests at `/onboarding`; completed accounts reach Home. Home recommendation cards open real discovery details and focus the map without resetting the camera when switching tabs.
+After Auth0 sign-in, incomplete accounts choose category interests at `/onboarding`; completed accounts reach Home. Home retains its original prototype UI for separate frontend work; it does not load a replacement recommendation feed.
 
 `CurrentUser` supplies the author. `VerifiedMutation` enforces CSRF and origin checking. Pydantic
 rejects unknown fields such as a forged owner, invalid ratings, future visits, blank/long names,

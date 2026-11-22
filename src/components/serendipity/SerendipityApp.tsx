@@ -2,14 +2,13 @@
 
 import Image from 'next/image'
 import { useState, type ReactNode } from 'react'
+import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
 import DiscoverMap from '@/components/map/discover-map'
 import { ReviewComposer } from '@/components/experience/review-composer'
 import { mapPlace, type PlaceExperiences } from '@/types/discovery'
 import type { Coordinates, MapPlace } from '@/types/places'
-import { useSession } from '@/components/auth/session-provider'
 import { ProfileView } from '@/components/profile/profile-view'
-import { HomeRecommendations } from '@/components/recommendations/home-recommendations'
 import { FriendAvatar } from '@/components/map/friend-avatar'
 
 type IconName =
@@ -55,14 +54,16 @@ function Icon({ name, size = 22, filled = false }: { name: IconName; size?: numb
   )
 }
 
+const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
 function App() {
-  const { session } = useSession()
   const [activeTab, setActiveTab] = useState('Home')
   const [discovered, setDiscovered] = useState(false)
+  const [activeFilter, setActiveFilter] = useState('For you')
+  const [liked, setLiked] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [sheet, setSheet] = useState<'post' | 'soon' | null>(null)
   const [posted, setPosted] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null)
-  const [focusTarget, setFocusTarget] = useState<MapPlace | null>(null)
   const [reviewTarget, setReviewTarget] = useState<MapPlace | null>(null)
   const [reviewPoint, setReviewPoint] = useState<Coordinates | null>(null)
   const [picking, setPicking] = useState(false)
@@ -105,7 +106,7 @@ function App() {
     setActiveTab(tab)
   }
 
-  const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : `Hello, ${session?.user.display_name?.trim().split(/\s+/)[0] || 'Explorer'}`
+  const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : 'Good morning, Mia'
   const pageTitle = activeTab === 'Buddy' ? 'Taste buddies' : activeTab === 'Profile' ? 'Taste profile' : activeTab === 'Discover' ? 'Discover' : 'What feels fun?'
 
   return (
@@ -131,7 +132,7 @@ function App() {
         <div className="app-content">
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
             {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision} reviewedPlace={reviewedPlace}
-              selected={selectedPlace} focusTarget={focusTarget} onSelect={setSelectedPlace} onReview={startReview}
+              selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
               picking={picking} onCancelPick={() => setPicking(false)}
               onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
           </div>
@@ -140,11 +141,54 @@ function App() {
           ) : activeTab === 'Profile' ? (
             <ProfileView />
           ) : activeTab === 'Discover' ? null : (
-            <HomeRecommendations revision={reviewRevision} onExplore={() => changeTab('Discover')} onSelect={(place) => {
-              setSelectedPlace(place)
-              setFocusTarget(place)
-              changeTab('Discover')
-            }}/>
+            <>
+              <section className="filters" aria-label="Experience categories">
+                {filters.map((filter) => (
+                  <button key={filter} className={activeFilter === filter ? 'filter active' : 'filter'} onClick={() => setActiveFilter(filter)}>
+                    {filter}
+                  </button>
+                ))}
+              </section>
+
+              <section className="hero-card">
+                <Image src={potteryImage} sizes="(max-width: 430px) 100vw, 430px" alt="Friends shaping clay at a sunlit pottery workshop"/>
+                <div className="image-shade"/>
+                <div className="match-pill"><Icon name="sparkle" size={13}/> 96% your vibe</div>
+                <button className={`save-button ${saved ? 'selected' : ''}`} onClick={() => setSaved(!saved)} aria-label={saved ? 'Remove from saved' : 'Save experience'}>
+                  <Icon name="bookmark" size={20} filled={saved}/>
+                </button>
+                <div className="hero-copy">
+                  <div className="meta-row"><span>CREATIVE</span><i/><span>THIS SATURDAY</span></div>
+                  <h2>Clay & rosé: a slow pottery afternoon</h2>
+                  <p><Icon name="map" size={15}/> Mend Studio · 1.2 mi</p>
+                </div>
+              </section>
+
+              <section className="social-row">
+                <div className="friends"><span>EL</span><span>JR</span><span>+4</span></div>
+                <p><strong>Elena</strong> and 5 others want to go</p>
+                <button className={liked ? 'liked' : ''} onClick={() => setLiked(!liked)} aria-label={liked ? 'Unlike' : 'Like'}>
+                  <Icon name="heart" size={21} filled={liked}/><span>{liked ? 129 : 128}</span>
+                </button>
+              </section>
+
+              <section className="section-heading">
+                <div><p className="eyebrow">NEAR YOU</p><h3>Worth leaving home for</h3></div>
+                <button>See all <Icon name="arrow" size={16}/></button>
+              </section>
+
+              <article className="mini-card">
+                <Image src={rooftopImage} sizes="430px" alt="Friends sharing dinner on a rooftop at sunset"/>
+                <div className="mini-copy">
+                  <span className="category">FOOD & DRINK</span>
+                  <h4>Secret rooftop supper</h4>
+                  <p>Fri, 7:30 PM · Greenpoint</p>
+                  <div><span className="rating">4.9</span><span> · $48 per person</span></div>
+                </div>
+                <button aria-label="Save rooftop supper"><Icon name="bookmark" size={18}/></button>
+              </article>
+
+            </>
           )}
         </div>
 
