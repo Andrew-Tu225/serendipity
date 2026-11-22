@@ -8,7 +8,8 @@ test("empty recommendations leave the original reviewed map visible", async ({ p
   await page.route("**/api/recommendations?**", (route) => route.fulfill({ json: { items: [] } }));
   await page.goto("/");
   await page.getByRole("button", { name: "Discover", exact: true }).click();
-  await expect(page.locator('.discovery-pin[data-layer="review"]')).toHaveCount(6);
+  await expect(page.locator('.discovery-pin[data-layer="review"]')).toHaveCount(3);
+  await expect(page.locator('.discovery-pin[data-layer="friend"]')).toHaveCount(3);
   await expect(page.getByRole("group", { name: "Map marker colours" })).toHaveCount(0);
 });
 

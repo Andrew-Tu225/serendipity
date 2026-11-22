@@ -2,231 +2,97 @@
 
 **Discover the world through the experiences of people you trust.**
 
-Serendipity is a map-first social discovery app: Letterboxd for real-world places. Instead of ranking places by thousands of stranger reviews, your map is shaped by what your friends have visited, reviewed, and recommended.
+Serendipity is a map-first social discovery app, like Letterboxd for real-world places. Your map is shaped by what friends and people with similar taste have visited and recommended, rather than by thousands of strangers' ratings.
 
-Built for a hackathon on the theme **Discovering the Unknown**: not undiscovered places, but places that are unknown *to you*, like the café two streets over or the trail a friend loves.
+Built at **Hack Western 13** for the theme **Discovering the Unknown**. The focus is not undiscovered places but places unknown *to you*: the café two streets over, or the trail a friend loves.
 
-## What it does
+**Core loop:** Discover → Save → Experience → Review → Share → someone else discovers.
 
-- **Social map**: an interactive map where markers show places friends recommended, places friends reviewed, places you bookmarked, and possible hidden gems.
-- **Experiences**: log a visit to any place (restaurant, trail, climbing gym, museum, viewpoint) with a rating, a written review, photos, and whether you'd recommend it.
-- **Friends**: see the places your friends have been and what they thought, both good and bad.
-- **Bookmarks**: save a place the moment someone mentions it, so recommendations stop getting lost in DMs and notes apps.
+## Features
 
-The core loop: **Discover → Save → Experience → Review → Share → someone else discovers.**
+- **Discovery map:** an interactive Google map of London, Ontario. Pin colours show each place's relationship to you: nearby places, community reviews, personal recommendations, and friends' picks.
+- **Experiences:** log a visit to any place (restaurant, trail, gym, museum, viewpoint) with a rating, verdict (recommend, okay, avoid), date, and written review.
+- **Explainable recommendations:** every recommended place is backed by a real review from someone you follow or someone with similar taste, and the pin shows who and why. Some slots are reserved for hidden gems outside your circle.
+- **Taste profile:** first-login onboarding asks for the place categories you love. Every review then refines a per-category taste score.
+- **Taste Buddies:** swipe through people with similar taste and message them from a private inbox.
+- **Profile and social:** character avatars, followers and following, saved place lists, and your recent experiences.
 
-The full concept, user story, and open design questions are in [docs/plan.md](docs/plan.md).
+## How recommendations work
 
-## Tech stack
+1. **Log value:** each review becomes a score from −1 to +1. Recommend is +1, avoid is −1, and a neutral verdict is scaled from the star rating.
+2. **Taste profile:** a user's log values are summed per category. Onboarding interests give a small initial boost.
+3. **Similar users:** taste profiles are compared with cosine similarity, and the closest users you don't already follow become your similar-taste circle.
+4. **Trust:** people you follow have trust 1. Similar users are weighted by how closely their taste matches yours, and everyone else has trust 0.
+5. **Place score:** for places in view that you haven't logged or saved, the score is the sum of trust × log value. Only places with a positive score are recommended.
+6. **Fill:** about 80% of slots go to the top-scoring places and the rest to hidden gems. The selection is seeded per user per day, so it stays stable within a day.
 
-- **Frontend:** [Next.js 16](https://nextjs.org) (App Router, Turbopack) with React 19, TypeScript, and [Tailwind CSS v4](https://tailwindcss.com)
-- **Backend:** [FastAPI](https://fastapi.tiangolo.com) on Python 3.11+, managed with [uv](https://docs.astral.sh/uv/)
+Full schema, formulas, and API: [docs/recommendations.md](docs/recommendations.md).
 
-The Next.js app proxies `/api/*` to FastAPI. Authentication uses Auth0 with server-managed sessions; PostgreSQL runs locally through Docker Compose. Maps use Google Maps JavaScript API and Places API (New). Image storage is still to be decided.
+## Architecture
+
+See [docs/architecture.md](docs/architecture.md).
 
 ## Getting started
 
-Requires Node.js 20.9+, Python 3.11+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and a running Docker Desktop/Engine.
-
-Copy the configuration examples once; preserve any existing local values:
+Requires Node.js 20.9+, Python 3.11+, [uv](https://docs.astral.sh/uv/), and Docker.
 
 ```bash
-cp backend/.env.example backend/.env
-cp .env.example .env.local
+cp backend/.env.example backend/.env    # Auth0 + Google server key + database
+cp .env.example .env.local              # Google Maps browser key + Map ID
 npm install
-```
 
-Start Postgres and apply migrations:
-
-```bash
 docker compose --env-file backend/.env up -d db
-cd backend
-uv sync
-uv run alembic upgrade head
+cd backend && uv sync && uv run alembic upgrade head && cd ..
+npm run db:seed                          # optional: London demo users, places, reviews
 ```
 
-The default development database is `serendipity`, with username `serendipity` and password `serendipity_dev`, bound to `127.0.0.1:5433` (to avoid an existing Postgres server on port 5432). Keep `POSTGRES_*` and `DATABASE_URL` consistent if changing them. Port changes use `POSTGRES_PORT` with `--env-file` as shown above. The named volume preserves data across container restarts. `docker compose stop db` stops the database without deleting it. Database credentials are fixed when its volume is first initialized.
-
-### Auth0 setup
-
-Create an Auth0 account/development tenant and a **Regular Web Application** named **Serendipity Web**. Enable the database email/password connection and allow signup. Set these exact application URLs:
-
-| Auth0 setting | Local value |
-|---|---|
-| Allowed Callback URLs | `http://localhost:3000/api/auth/callback` |
-| Allowed Logout URLs | `http://localhost:3000/login` |
-| Application Login URI | `http://localhost:3000/api/auth/login` |
-
-Set `AUTH0_DOMAIN` (tenant hostname), `AUTH0_CLIENT_ID`, and `AUTH0_CLIENT_SECRET` in `backend/.env`. The backend requests `openid profile email`. This session-based version does not require a separate Auth0 API registration or frontend Auth0 SDK.
-
-For MCP-assisted provisioning, register the official server in Codex:
+Run both servers:
 
 ```bash
-codex mcp add auth0 -- npx -y @auth0/auth0-mcp-server run
+cd backend && uv run fastapi dev app/main.py   # http://127.0.0.1:8000 (docs at /api/docs)
+npm run dev                                    # http://localhost:3000
 ```
 
-Authenticate the server using the official `npx -y @auth0/auth0-mcp-server init` flow (the current tool may also offer to configure a different MCP client; Codex is already registered by the command above). Restart Codex to load its tools, then create/configure the application through MCP. Account signup and browser authorization require your participation. Do not commit credentials or paste a client secret into chat.
+**Configuration:**
+- **Auth0:** create a Regular Web Application.
+  - Callback URL: `http://localhost:3000/api/auth/callback`
+  - Logout URL: `http://localhost:3000/login`
+  - In `backend/.env`, set `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, and `AUTH0_CLIENT_SECRET`.
+- **Google:** enable Maps JavaScript API and Places API (New).
+  - In `.env.local`, set the browser key `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`.
+  - In `backend/.env`, set the server key `BACKEND_API_KEY_GOOGLE`.
+  - Map setup and styling: [docs/discovery-map.md](docs/discovery-map.md).
 
-For deployment, set `APP_BASE_URL` to the public HTTPS origin and `COOKIE_SECURE=true`, update the Auth0 URLs, and provide a protected Postgres connection. Non-local HTTP or insecure cookies are rejected by configuration validation.
+Every variable is documented in the matching `.env.example`. Database, Auth0, deployment, and test details: [docs/setup.md](docs/setup.md).
 
-### Run the app
-
-Run the backend and frontend in two terminals:
+## Tests
 
 ```bash
-# terminal 1: backend
-cd backend
-uv sync
-uv run fastapi dev app/main.py   # http://127.0.0.1:8000, API docs at /api/docs
-
-# terminal 2: frontend
-npm run dev
+npm run lint && npm run build && npm run test:browser
+cd backend && uv run pytest && uv run ruff check . && uv run ruff format --check .
 ```
-
-Open [http://localhost:3000](http://localhost:3000). [http://localhost:3000/api/health](http://localhost:3000/api/health) should return `{"status":"ok"}` through the proxy.
-
-Open [http://localhost:3000](http://localhost:3000). Signed-out visitors are sent to `/login`, whose button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/`. First-time accounts must choose at least one place-category interest at `/onboarding`; completed accounts go straight home. `/success` redirects to `/` for old links. Home retains the original prototype UI for separate frontend work. Profile shows the signed-in character portrait, follower/following/list counts, and recent Experiences. Profile fields can be absent; email verification is not required. Sign out from the settings button on Profile to revoke the local session and end Auth0's browser session.
-
-Run `cd backend && uv run alembic upgrade head` before starting the updated backend. Migration `0009` adds persisted interests and onboarding completion; existing accounts complete setup once. It replaces an onboarding migration that collided with the character migration on revision `0005`; databases that applied either `0005` reach the same schema at `0009`. No new environment variables or dependencies are required.
-
-Sessions expire after 8 hours; temporary login attempts expire after 10 minutes. Expired rows are removed when a new login starts. A blocked/deleted Auth0 account does not automatically revoke an existing local session; immediate account-wide revocation can be added later.
-
-### Google discovery map
-
-Discover fills the phone above navigation, with floating search and place previews. The Next.js
-development badge is disabled to keep those controls clear; compile/runtime errors still surface.
-
-Discover uses Google Maps JavaScript API with custom Advanced Markers and public place search
-through FastAPI's Places API (New) integration. Set these values before starting the servers:
-
-- `.env.local`: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`.
-- `backend/.env`: `BACKEND_API_KEY_GOOGLE` (server-only).
-
-The Vite location picker also reads `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` from `.env.local`.
-
-Enable **Maps JavaScript API** and **Places API (New)** in a billing-enabled Google Cloud project.
-Restrict the browser key to Maps JavaScript API and your development/production website origins.
-Restrict the backend key to Places API (New), and server egress IPs where available. The browser
-key is intentionally public; never prefix the backend key with `NEXT_PUBLIC_`.
-
-Create a JavaScript **vector Map ID**, import [the map style](docs/google-map-style.json) into
-Google's cloud style editor, publish it, and associate it with that Map ID. See
-[the setup and behavior guide](docs/discovery-map.md) for details. Local development falls back
-to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production requires an explicit
-Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
-
-Discover initially centers on London, Ontario and keeps the original results visible beneath
-recommendation highlights. Pins use neutral grey for nearby places, white for reviews,
-amber for personalized recommendations, and purple for friends' recommendations. Recommendation
-colours come from `GET /api/recommendations` (`limit=30` per buffered bbox), preserving its supporting
-reviews. A followed-user review alone stays white. App UUIDs and exact Google IDs prevent duplicate
-pins, and selection preserves a pin's colour. Compact icons show more destinations; overlapping
-labels yield while every loaded destination appears as a pin or contributes to a counted cluster. No legend is displayed.
-
-Base database review queries and temporary Google nearby searches continue independently. Ranked
-responses highlight those results; an empty or failed ranking leaves the original map available.
-A successful review updates the white base marker and refetches rankings. Recommendation snapshots
-stay fresh for one minute and extend 25% beyond the viewport, so small pans and focus/tab return
-reuse them. Leaving coverage requests another area after 500 ms idle. The original base coverage
-cache and nearby request budget remain. Nearby searches reuse geographic roots across zooms,
-fill visible areas progressively, and subdivide only capped responses; one failing area does not
-block the others. Recommendation refreshes do not block browsing.
-Use **Add** to open the Experience form, then **Select location** to search for a Place or choose
-a map point. Questions appear as the previous answers are completed. **Write a review** opens the
-form with an existing Place selected.
-
-Profile opens separate Followers, Following, and Lists screens. Signed-in users can create private
-lists and add experiences by name and location. Apply migrations through revision `0010` for
-account-backed lists. Profile, its connection screens, and Saved places are also available on
-revision `0009`.
-
-Run `npm install` and `cd backend && uv run alembic upgrade head` for the existing setup. This map
-change adds no migration, dependency, or environment variable. No demo data is inserted automatically.
-Photos, saving UI, friend-management UI, and filters remain deferred. See
-[the discovery guide](docs/discovery-data.md).
-
-### Social endpoints (backend only)
-
-Likes, editable comments, private saved reviews/Places, directed follows, public profiles/user
-search, and a following review feed are available through FastAPI. Run
-`cd backend && uv run alembic upgrade head` to apply the merged schema through revision `0009`. No new
-dependencies or environment variables are required. UI integration remains separate.
-See [the social API reference](docs/social-api.md) for routes, request/response fields, pagination,
-and session/CSRF requirements, or inspect `/api/docs` on the backend.
-
-### Local mock reviews
-
-From the repository root, run `npm run db:seed` to insert 20 demo users, 24 London places, and 171 labeled mock
-reviews. Every demo user has at least five reviews. The seed is repeatable and preserves existing data. Use
-`npm run db:seed -- --viewer-id YOUR_USER_UUID` to follow three demo users from an existing account.
-
-`npm run db:clear -- --dry-run` shows app row counts. `npm run db:clear -- --confirm serendipity`
-deletes all app data, including users and sessions, from the configured local database while keeping
-its schema and migrations. Replace the confirmation name if your database has a different name.
-The clear command is provided for explicit use; seeding does not clear your data first. Both commands
-require the existing backend virtual environment and reject remote database hosts. See
-[the seed/reset guide](docs/local-demo-data.md) for details and backend `uv` equivalents.
-
-### Application layers
-
-```text
-UI → typed frontend API client → FastAPI router → service → repository → Postgres
-```
-
-Domain clients centralize HTTP, credentials, CSRF headers, and typed errors. Backend endpoint modules live in `backend/app/api/`; their routers validate requests/responses, services own business rules and commits, and repositories own SQLAlchemy queries. User creation starts at `GET /api/auth/callback` in `api/auth.py`, which calls the auth service and then the user repository. Auth0 HTTP integration is separate from database repositories. Future protected routes use `CurrentUser`; mutations also use `VerifiedMutation` and check ownership in their service. The same-origin proxy is transport, not an authorization boundary.
-
-See [docs/architecture.md](docs/architecture.md) for the full repository flow and guidance for adding features.
-
-| Endpoint | Behavior |
-|---|---|
-| `GET /api/auth/login` | Starts Auth0 login/signup |
-| `GET /api/auth/callback` | Validates callback, persists user/session, redirects |
-| `GET /api/auth/me` | Returns `{ auth0, user, csrf_token }`; requires a valid session |
-| `GET /api/me/profile` | Signed-in identity, interests, completion, Experience/saved Place/following counts |
-| `PUT /api/me/onboarding` | CSRF-protected `{ interests: Category[] }`; 1–14 unique categories; replaces interests and completes setup |
-| `POST /api/auth/logout` | Requires matching Origin and X-CSRF-Token; revokes session and returns `{ logout_url }` |
-
-Auth responses use `Cache-Control: no-store`. Session cookies are HttpOnly, SameSite=Lax, host-only, and Secure in production. The page never renders the CSRF token. No passwords, raw ID/access tokens, or OAuth verifiers are returned by the session endpoint.
-
-### Tests
-
-```bash
-npm run lint
-npm run build
-npm run test:browser
-cd backend
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-```
-
-The backend suite uses isolated SQLite databases and a mocked OIDC provider with real RSA-signed tokens. To also run PostgreSQL concurrency tests, set `TEST_DATABASE_URL` to a PostgreSQL SQLAlchemy URL and run pytest. Those tests create and remove their own unique schema, leaving application tables untouched. A separate disposable database is recommended for testing migrations.
-
-Browser tests mock the auth API, Google Maps SDK, Places responses, and discovery/review HTTP responses, and run a dedicated Next.js server on port 3039 with `.next-auth-test` output and dummy Maps credentials. Install Chromium once with `npx playwright install chromium`. `TEST_BASE_URL` can target an existing test server configured with a browser map key and Map ID. `SERENDIPITY_DIST_DIR` optionally isolates other Next.js builds from a running dev server.
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm run start` | Serve the production build |
-| `npm run lint` | Run ESLint |
-| `npm run db:seed` | Insert repeatable London mock reviews in local PostgreSQL |
-| `npm run db:clear -- --confirm serendipity` | Clear all local app rows, retaining schema |
-| `uv run pytest` (in `backend/`) | Run backend tests |
-| `uv run ruff check .` (in `backend/`) | Lint the backend |
 
 ## Project structure
 
 ```
-docs/               product plan and design notes
-backend/            FastAPI service (app/, tests/, pyproject.toml)
-src/app/            routes and layouts (App Router)
-src/components/     feature components; ui/ for generic primitives
-src/hooks/          client hooks
-src/lib/            helpers and service clients
-src/types/          shared domain types (Place, Experience, Bookmark, ...)
+src/app/          routes and layouts (App Router)
+src/components/   feature components (map, experience, profile, buddy, ...)
+src/lib/          typed API clients and map helpers
+backend/app/      FastAPI: api/, services/, repositories/, models/, schemas/, integrations/
+backend/tests/    pytest suite
+docs/             product plan and design docs
 ```
 
-## Contributing
+## Documentation
 
-Conventions for humans and AI coding agents live in [AGENTS.md](AGENTS.md). Update the relevant files in `docs/` alongside every code, configuration, schema, or workflow change. Commit messages follow `<type>: <description>`, for example `feat: add bookmark toggle`.
+| Doc | Covers |
+|---|---|
+| [plan.md](docs/plan.md) | Product concept, user story, open questions |
+| [architecture.md](docs/architecture.md) | Layers, request flow, auth, adding features |
+| [recommendations.md](docs/recommendations.md) | Recommendation schema, algorithm, API |
+| [discovery-map.md](docs/discovery-map.md) / [discovery-data.md](docs/discovery-data.md) | Map setup, pin layers, data loading |
+| [social-api.md](docs/social-api.md) | Follows, likes, comments, saves, feed |
+| [setup.md](docs/setup.md) | Database, Auth0, deployment, and test configuration |
+| [local-demo-data.md](docs/local-demo-data.md) | Seeding and clearing local data |
+
+Contributor and AI-agent conventions are in [AGENTS.md](AGENTS.md).

@@ -67,7 +67,7 @@ test("a small pan preserves an applicable in-flight ranking", async ({ page }) =
   await page.waitForTimeout(650);
   expect(calls).toBe(1);
   release();
-  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "recommendation");
   expect(calls).toBe(1);
 });
 
@@ -82,13 +82,13 @@ test("an obsolete delayed ranking cannot overwrite the new browsing area", async
   await open(page);
   await expect.poll(() => calls).toBe(1);
   await bounds(page, shifted);
-  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
+  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "recommendation");
   release();
   await page.waitForTimeout(650);
-  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
 });
 
-test("a place leaving recommendations returns to the white review layer without replacing its marker", async ({ page }) => {
+test("a place leaving recommendations returns to the friend review layer without replacing its marker", async ({ page }) => {
   let calls = 0;
   await ranked(page, () => ({ items: [recommendation(appPlaces[calls++ === 0 ? 0 : 1])] }));
   await open(page);
@@ -99,7 +99,7 @@ test("a place leaving recommendations returns to the white review layer without 
   await expect(page.getByRole("article", { name: "Selected place" })).toBeVisible();
   await bounds(page, shifted);
   await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true })).toBeVisible();
-  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
   await expect(page.getByRole("article", { name: "Selected place" })).toBeVisible();
 });
@@ -118,7 +118,7 @@ test("expired recommendation evidence updates quietly without replacing its mark
   await page.clock.fastForward(61_000);
   await expect.poll(() => calls).toBe(2);
   await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "recommendation");
-  await expect(marker(page)).toHaveAttribute("data-priority", "20");
+  await expect(marker(page)).toHaveAttribute("data-priority", "30");
   await expect(marker(page)).toHaveAttribute("data-marker-id", identity!);
   await expect(page.getByText("Loading recommendations…")).toHaveCount(0);
   await marker(page).click();
@@ -177,5 +177,5 @@ test("a late response from another account cannot restore old recommendations", 
   await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true })).toBeVisible();
   release();
   await page.waitForTimeout(350);
-  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
+  await expect(marker(page).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
 });
