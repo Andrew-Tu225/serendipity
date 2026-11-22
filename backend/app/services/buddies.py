@@ -52,11 +52,20 @@ class BuddyService:
         rows = await self.buddies.inbox(user.id, offset, limit + 1)
         return BuddyInbox(
             threads=[
-                BuddyThread(buddy=person_summary(person), latest=message_summary(message, user.id))
-                for person, message in rows[:limit]
+                BuddyThread(
+                    buddy=person_summary(person),
+                    latest=message_summary(message, user.id),
+                    unread_count=unread,
+                )
+                for person, message, unread in rows[:limit]
             ],
             next_offset=offset + limit if len(rows) > limit else None,
+            unread_count=await self.buddies.unread_count(user.id),
         )
+
+    async def mark_read(self, user: User, buddy_id: UUID | None) -> None:
+        await self.buddies.mark_read(user.id, buddy_id, datetime.now(UTC))
+        await self.database.commit()
 
     async def history(
         self, user: User, buddy_id: UUID, before: UUID | None, limit: int
@@ -104,5 +113,9 @@ def message_summary(message: BuddyMessage, viewer: UUID) -> BuddyMessageOut:
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=UTC)
     return BuddyMessageOut(
-        id=message.id, body=message.body, from_you=message.sender_id == viewer, sent_at=timestamp
+        id=message.id,
+        body=message.body,
+        from_you=message.sender_id == viewer,
+        sent_at=timestamp,
+        unread=message.recipient_id == viewer and message.read_at is None,
     )

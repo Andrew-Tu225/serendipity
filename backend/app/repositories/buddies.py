@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +37,9 @@ class BuddyRepository:
         query = insert(BuddySkip).values(user_id=viewer, buddy_id=buddy).on_conflict_do_nothing()
         await self.session.execute(query)
 
-    async def inbox(self, viewer: UUID, offset: int, limit: int) -> list[tuple[User, BuddyMessage]]:
+    async def inbox(
+        self, viewer: UUID, offset: int, limit: int
+    ) -> list[tuple[User, BuddyMessage, int]]:
         partner = other_participant(viewer)
         latest = (
             select(
@@ -49,12 +51,13 @@ class BuddyRepository:
                     order_by=(BuddyMessage.sent_at.desc(), BuddyMessage.id.desc()),
                 )
                 .label("position"),
+                func.count().filter(unread_by(viewer)).over(partition_by=partner).label("unread"),
             )
             .where(participates(viewer))
             .subquery()
         )
         query = (
-            select(User, BuddyMessage)
+            select(User, BuddyMessage, latest.c.unread)
             .select_from(User)
             .join(latest, User.id == latest.c.buddy_id)
             .join(BuddyMessage, latest.c.message_id == BuddyMessage.id)
@@ -64,7 +67,17 @@ class BuddyRepository:
             .limit(limit)
         )
         rows = await self.session.execute(query)
-        return [(person, message) for person, message in rows]
+        return [(person, message, unread) for person, message, unread in rows]
+
+    async def unread_count(self, viewer: UUID) -> int:
+        query = select(func.count()).select_from(BuddyMessage).where(unread_by(viewer))
+        return (await self.session.execute(query)).scalar_one()
+
+    async def mark_read(self, viewer: UUID, buddy: UUID | None, now: datetime) -> None:
+        query = update(BuddyMessage).where(unread_by(viewer))
+        if buddy is not None:
+            query = query.where(BuddyMessage.sender_id == buddy)
+        await self.session.execute(query.values(read_at=now))
 
     async def history(
         self, viewer: UUID, buddy: UUID, before: BuddyMessage | None, limit: int
@@ -115,6 +128,10 @@ class BuddyRepository:
 
 def participates(viewer: UUID):
     return or_(BuddyMessage.sender_id == viewer, BuddyMessage.recipient_id == viewer)
+
+
+def unread_by(viewer: UUID):
+    return and_(BuddyMessage.recipient_id == viewer, BuddyMessage.read_at.is_(None))
 
 
 def other_participant(viewer: UUID):

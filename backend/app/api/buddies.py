@@ -48,6 +48,13 @@ async def inbox(
     return await service.inbox(user, offset, limit)
 
 
+@router.put("/inbox/read", status_code=204)
+async def mark_read(
+    user: CurrentUser, verified: VerifiedMutation, service: Service, buddy_id: UUID | None = None
+):
+    await service.mark_read(user, buddy_id)
+
+
 @router.get("/chats/{buddy_id}", response_model=BuddyConversation)
 async def history(
     buddy_id: UUID,

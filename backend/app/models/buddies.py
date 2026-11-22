@@ -33,3 +33,4 @@ class BuddyMessage(Base):
     recipient_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"))
     body: Mapped[str] = mapped_column(Text)
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

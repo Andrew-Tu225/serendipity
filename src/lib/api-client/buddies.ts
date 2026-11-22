@@ -11,6 +11,10 @@ export const buddyClient = {
   inbox(offset: number, signal: AbortSignal): Promise<BuddyInboxPage> {
     return apiRequest<BuddyInboxPage>(`/buddies/inbox?offset=${offset}`, { signal });
   },
+  markRead(csrfToken: string, buddyId?: string, signal?: AbortSignal): Promise<void> {
+    const query = buddyId ? `?buddy_id=${encodeURIComponent(buddyId)}` : "";
+    return apiRequest<void>(`/buddies/inbox/read${query}`, { method: "PUT", csrfToken, signal });
+  },
   history(buddyId: string, before?: string, signal?: AbortSignal): Promise<BuddyConversation> {
     const query = before ? `?before=${encodeURIComponent(before)}` : "";
     return apiRequest<BuddyConversation>(`/buddies/chats/${encodeURIComponent(buddyId)}${query}`, { signal });

@@ -86,6 +86,14 @@ async def test_private_conversation_replies_pagination_and_idempotency(
     assert inbox.headers["cache-control"] == "no-store"
     assert inbox.json()["threads"][0]["buddy"]["id"] == str(alice)
     assert inbox.json()["threads"][0]["latest"]["from_you"] is False
+    assert inbox.json()["unread_count"] == 1
+    assert inbox.json()["threads"][0]["unread_count"] == 1
+    assert (await client.put(f"{API}/inbox/read")).status_code == 403
+    await client.put(f"{API}/inbox/read", params={"buddy_id": CASEY}, headers=bob_headers)
+    assert (await client.get(f"{API}/inbox")).json()["unread_count"] == 1
+    read = await client.put(f"{API}/inbox/read", params={"buddy_id": alice}, headers=bob_headers)
+    assert read.status_code == 204
+    assert (await client.get(f"{API}/inbox")).json()["unread_count"] == 0
     reply = {"id": str(UUID(int=71)), "body": "I’m in!"}
     bob_chat = f"{API}/chats/{alice}"
     assert (await client.post(bob_chat, json=reply, headers=bob_headers)).status_code == 201
@@ -101,3 +109,8 @@ async def test_private_conversation_replies_pagination_and_idempotency(
     assert (await client.get(f"{API}/inbox")).json()["threads"] == []
     assert (await client.get(path)).json()["messages"] == []
     assert (await client.get(path, params={"before": reply["id"]})).status_code == 404
+
+    _, headers = await sign_in(client, identity_provider, "Alice")
+    assert (await client.get(f"{API}/inbox")).json()["unread_count"] == 1
+    assert (await client.put(f"{API}/inbox/read", headers=headers)).status_code == 204
+    assert (await client.get(f"{API}/inbox")).json()["unread_count"] == 0

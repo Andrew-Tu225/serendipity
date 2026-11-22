@@ -117,7 +117,7 @@ The signed-out preview keeps its character edits for the current page session.
 Suggestions rank up to 100 eligible recent accounts by the existing category taste similarity.
 Accounts with no overlapping taste scores can appear without a match percentage. A saved pass or
 an existing conversation removes the account from future suggestions. Swiping right opens the
-message composer. Only Send writes a message, with a client-generated UUID to make retries
+first-message sheet over the deck. Only Send writes a message, with a client-generated UUID to make retries
 idempotent. The inbox lists the latest message for each conversation, and an open chat periodically
 checks for new messages and can page back through its history.
 
@@ -126,6 +126,10 @@ mutations use `VerifiedMutation`. Inbox queries include only messages involving 
 history and cursors are restricted to the viewer and selected account. These routes use no-store
 responses. Signed-out visitors can try swipes and messages with the demo buddies during the current
 page session.
+
+Alembic `0007` adds the message read timestamp. Opening a thread acknowledges incoming messages,
+and Read all acknowledges every unread message addressed to the signed-in viewer. The inbox shows
+the total unread count and highlights conversations with unread messages.
 
 ## Authentication flow
 

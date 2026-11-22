@@ -28,6 +28,7 @@ class BuddyMessageOut(BaseModel):
     from_you: bool
     body: str
     sent_at: datetime
+    unread: bool
 
 
 class BuddyConversation(BaseModel):
@@ -38,8 +39,10 @@ class BuddyConversation(BaseModel):
 class BuddyThread(BaseModel):
     buddy: BuddyPerson
     latest: BuddyMessageOut
+    unread_count: int
 
 
 class BuddyInbox(BaseModel):
     threads: list[BuddyThread]
     next_offset: int | None
+    unread_count: int

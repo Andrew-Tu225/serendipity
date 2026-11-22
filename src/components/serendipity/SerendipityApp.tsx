@@ -15,7 +15,9 @@ import { demoPlaceLists } from '@/components/profile/demo-place-lists'
 import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
 import { ProfileConnections } from '@/components/profile/profile-connections'
 import { BuddyDeckCard } from '@/components/buddy/buddy-deck-card'
-import { BuddyChat, BuddyInbox } from '@/components/buddy/buddy-messages'
+import { BuddyChat } from '@/components/buddy/buddy-messages'
+import { BuddyInbox } from '@/components/buddy/buddy-inbox'
+import { BuddyMatchSheet } from '@/components/buddy/buddy-match-sheet'
 import { demoBuddyMessages } from '@/components/buddy/demo-buddies'
 import { useBuddyDeck } from '@/hooks/use-buddy-deck'
 import { useProfileExperiences } from '@/hooks/use-profile-experiences'
@@ -24,13 +26,14 @@ import type { ConnectionDirection } from '@/types/profile'
 import { defaultCharacter, hairColors, hairStyles, miaCharacter, shirtColors, skinTones, type CharacterAppearance } from '@/types/character'
 import { authClient } from '@/lib/api-client/auth'
 import { profileClient } from '@/lib/api-client/profile'
-import type { BuddyPerson } from '@/types/buddies'
+import type { BuddyMessage, BuddyPerson, BuddySuggestion } from '@/types/buddies'
 
 const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
 
 type ProfileScreen = { kind: 'lists'; owner: ListOwner }
   | { kind: ConnectionDirection; owner: { name: string; demo: boolean }; count: number }
-type BuddyScreen = { kind: 'inbox' } | { kind: 'chat'; buddy: BuddyPerson; from: 'deck' | 'inbox' }
+type BuddyScreen = { kind: 'inbox' } | { kind: 'compose'; buddy: BuddySuggestion }
+  | { kind: 'chat'; buddy: BuddyPerson; initialMessage?: BuddyMessage }
 
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
@@ -55,7 +58,7 @@ function App() {
   const [sampleMessages, setSampleMessages] = useState(demoBuddyMessages)
   const buddyDeck = useBuddyDeck(activeTab === 'Buddy')
   const inboxTrigger = useRef<HTMLButtonElement>(null)
-  const subscreenOpen = profileScreen !== null || buddyScreen !== null
+  const subscreenOpen = profileScreen !== null || buddyScreen?.kind === 'inbox' || buddyScreen?.kind === 'chat'
 
   function closeProfileScreen() {
     setProfileScreen(null)
@@ -65,6 +68,16 @@ function App() {
   function closeBuddyScreen() {
     setBuddyScreen(null)
     requestAnimationFrame(() => inboxTrigger.current?.focus())
+  }
+
+  function addSampleMessage(buddyId: string, message: BuddyMessage) {
+    setSampleMessages((current) => ({ ...current, [buddyId]: [...(current[buddyId] ?? []), message] }))
+  }
+
+  function readSampleMessages(buddyId?: string) {
+    setSampleMessages((current) => Object.fromEntries(Object.entries(current).map(([id, messages]) => [
+      id, !buddyId || id === buddyId ? messages.map((message) => ({ ...message, unread: false })) : messages,
+    ])))
   }
 
   const startReview = (place: MapPlace | null) => {
@@ -137,7 +150,7 @@ function App() {
               onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
           </div>
           {activeTab === 'Buddy' ? (
-            <BuddyView deck={buddyDeck} onMessage={(buddy) => setBuddyScreen({ kind: 'chat', buddy, from: 'deck' })} />
+            <BuddyView deck={buddyDeck} onMessage={(buddy) => setBuddyScreen({ kind: 'compose', buddy })} />
           ) : activeTab === 'Profile' ? (
             <ProfileView demoListCount={demoLists.length} demoCharacter={demoCharacter} onDemoCharacter={setDemoCharacter}
               onCharacterSaved={() => {
@@ -220,17 +233,27 @@ function App() {
         )}
         {buddyScreen?.kind === 'inbox' && (
           <BuddyInbox demo={buddyDeck.status === 'demo'} demoMessages={sampleMessages} onClose={closeBuddyScreen}
-            onOpen={(buddy) => setBuddyScreen({ kind: 'chat', buddy, from: 'inbox' })} />
+            onReadDemo={readSampleMessages} onOpen={(buddy) => setBuddyScreen({ kind: 'chat', buddy })} />
+        )}
+        {buddyScreen?.kind === 'compose' && (
+          <BuddyMatchSheet buddy={buddyScreen.buddy} demo={buddyDeck.status === 'demo'} onClose={() => setBuddyScreen(null)}
+            onSent={(message) => {
+              const buddy = buddyScreen.buddy
+              if (buddyDeck.status === 'demo') {
+                addSampleMessage(buddy.id, message)
+                readSampleMessages(buddy.id)
+              }
+              buddyDeck.remove(buddy.id)
+              setBuddyScreen({ kind: 'chat', buddy, initialMessage: message })
+            }} />
         )}
         {buddyScreen?.kind === 'chat' && (
           <BuddyChat key={buddyScreen.buddy.id} buddy={buddyScreen.buddy} demo={buddyDeck.status === 'demo'}
+            initialMessage={buddyScreen.initialMessage}
             demoMessages={sampleMessages[buddyScreen.buddy.id] ?? []}
-            onDemoMessage={(message) => setSampleMessages((current) => ({
-              ...current, [buddyScreen.buddy.id]: [...(current[buddyScreen.buddy.id] ?? []), message],
-            }))}
+            onDemoMessage={(message) => addSampleMessage(buddyScreen.buddy.id, message)}
             onSent={() => buddyDeck.remove(buddyScreen.buddy.id)}
-            backLabel={buddyScreen.from === 'inbox' ? 'Back to inbox' : 'Back to Taste buddies'}
-            onBack={buddyScreen.from === 'inbox' ? () => setBuddyScreen({ kind: 'inbox' }) : closeBuddyScreen} />
+            onBack={() => setBuddyScreen({ kind: 'inbox' })} />
         )}
 
         {sheet && (
@@ -269,7 +292,7 @@ function NavButton({ label, icon, active, onClick }: { label: string; icon: Icon
   return <button className={active ? 'nav-item active' : 'nav-item'} onClick={onClick}><Icon name={icon} size={22} filled={active}/><span>{label}</span></button>
 }
 
-function BuddyView({ deck, onMessage }: { deck: ReturnType<typeof useBuddyDeck>; onMessage: (buddy: BuddyPerson) => void }) {
+function BuddyView({ deck, onMessage }: { deck: ReturnType<typeof useBuddyDeck>; onMessage: (buddy: BuddySuggestion) => void }) {
   const [mode, setMode] = useState<'local' | 'worldwide'>('local')
   const buddy = deck.cards[0]
   return (
@@ -280,7 +303,7 @@ function BuddyView({ deck, onMessage }: { deck: ReturnType<typeof useBuddyDeck>;
       </div>
       {mode === 'local' ? (
         <>
-          <p className="buddy-intro">Swipe left to skip or right to start a chat.</p>
+          <p className="buddy-intro">Find people with similar tastes and make a plan.</p>
           {deck.status === 'demo' && (
             <div className="local-progress">
               <div className="progress-copy"><span><Icon name="globe" size={16}/></span><p><strong>Worldwide is 70% unlocked</strong><small>Rate 3 more local experiences</small></p></div>

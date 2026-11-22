@@ -64,16 +64,20 @@ export function BuddyDeckCard({ buddy, busy, onSkip, onMessage }: {
           </strong>}
         </div>
         <div className="buddy-info">
-          <div><h2>{buddy.display_name}</h2>{buddy.location && <p>{buddy.location}</p>}</div>
+          <div><h2>{buddy.age ? `${buddy.display_name.split(" ")[0]}, ${buddy.age}` : buddy.display_name}</h2>{buddy.location && <p>{buddy.location}</p>}</div>
         </div>
         {buddy.interests && <div className="taste-tags">{buddy.interests.map((interest) => <span key={interest}>{interest}</span>)}</div>}
+        {buddy.sharedSaves && <p className="buddy-shared-saves"><strong>{buddy.sharedSaves.count} shared saves</strong> including {buddy.sharedSaves.places}.</p>}
       </article>
       <div className="buddy-swipe-actions">
         <button type="button" aria-label="Skip" title="Skip" disabled={busy} onClick={onSkip}>
           <span><Icon name="arrow" size={17} /></span>
+          <small aria-hidden="true">Skip</small>
         </button>
+        <p>Swipe or use the arrows</p>
         <button type="button" aria-label="Message" title="Message" disabled={busy} onClick={onMessage}>
           <span><Icon name="arrow" size={17} /></span>
+          <small aria-hidden="true">Message</small>
         </button>
       </div>
     </>

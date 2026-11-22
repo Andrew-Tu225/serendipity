@@ -41,5 +41,10 @@ export function useOffsetPages<T extends { id: string }>(
     setAttempt((current) => current + 1);
   }
 
-  return { items, status, hasMore: nextOffset !== null, loadMore, retry };
+  function reload() {
+    setOffset(0);
+    retry();
+  }
+
+  return { items, status, hasMore: nextOffset !== null, loadMore, retry, reload };
 }
