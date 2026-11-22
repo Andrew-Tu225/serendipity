@@ -1,8 +1,13 @@
-import type { ConnectionDirection, ProfileBookmarks, ProfileConnections, ProfileExperiences } from "@/types/profile";
+import type { PlaceCategory } from "@/types/discovery";
+import type { ConnectionDirection, MyProfile, ProfileBookmarks, ProfileConnections, ProfileExperiences } from "@/types/profile";
 import type { CharacterAppearance } from "@/types/character";
 import { apiRequest } from "./client";
 
 export const profileClient = {
+  get(signal?: AbortSignal) { return apiRequest<MyProfile>("/me/profile", { signal }); },
+  complete(interests: PlaceCategory[], csrfToken: string) {
+    return apiRequest<MyProfile>("/me/onboarding", { method: "PUT", body: { interests }, csrfToken });
+  },
   saveCharacter(appearance: CharacterAppearance, csrfToken: string): Promise<CharacterAppearance> {
     return apiRequest<CharacterAppearance>("/profile/character", { method: "PUT", body: appearance, csrfToken });
   },

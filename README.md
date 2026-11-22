@@ -87,7 +87,7 @@ Open [http://localhost:3000](http://localhost:3000). [http://localhost:3000/api/
 
 Open [http://localhost:3000](http://localhost:3000). Signed-out visitors are sent to `/login`, whose button opens Auth0. After signup/sign-in, FastAPI validates the ID token, upserts the user, rotates the session, and redirects to `/`. First-time accounts must choose at least one place-category interest at `/onboarding`; completed accounts go straight home. `/success` redirects to `/` for old links. Home retains the original prototype UI for separate frontend work. Profile shows the signed-in identity, real counts, and selected interests. Profile fields can be absent; email verification is not required. Sign out from Profile to revoke the local session and end Auth0's browser session.
 
-Run `cd backend && uv run alembic upgrade head` before starting the updated backend. Migration `0005` adds persisted interests and onboarding completion; existing accounts complete setup once. No new environment variables or dependencies are required.
+Run `cd backend && uv run alembic upgrade head` before starting the updated backend. Migration `0009` adds persisted interests and onboarding completion; existing accounts complete setup once. It replaces an onboarding migration that collided with the character migration on revision `0005`; databases that applied either `0005` reach the same schema at `0009`. No new environment variables or dependencies are required.
 
 Sessions expire after 8 hours; temporary login attempts expire after 10 minutes. Expired rows are removed when a new login starts. A blocked/deleted Auth0 account does not automatically revoke an existing local session; immediate account-wide revocation can be added later.
 
@@ -140,7 +140,7 @@ Photos, saving UI, friend-management UI, and filters remain deferred. See
 
 Likes, editable comments, private saved reviews/Places, directed follows, public profiles/user
 search, and a following review feed are available through FastAPI. Run
-`cd backend && uv run alembic upgrade head` to apply the merged schema through revision `0008`. No new
+`cd backend && uv run alembic upgrade head` to apply the merged schema through revision `0009`. No new
 dependencies or environment variables are required. UI integration remains separate.
 See [the social API reference](docs/social-api.md) for routes, request/response fields, pagination,
 and session/CSRF requirements, or inspect `/api/docs` on the backend.

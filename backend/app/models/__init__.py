@@ -1,4 +1,4 @@
-from app.models.auth import AuthSession, User
+from app.models.auth import AuthSession, User, UserInterest
 from app.models.buddies import BuddyMessage, BuddySkip
 from app.models.experiences import Experience, TasteProfile
 from app.models.places import Bookmark, Place
@@ -17,4 +17,5 @@ __all__ = [
     "Place",
     "TasteProfile",
     "User",
+    "UserInterest",
 ]
