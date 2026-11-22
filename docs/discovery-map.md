@@ -19,8 +19,9 @@ provider name/address/link and returned attributions without invented app activi
 Place previews use the updated merged design: a description, first photo shared in loaded app
 reviews when available, rating summary, app reviews, and recommendation evidence in a larger
 scrolling card. Previews without a review photo omit the photo area entirely. The actions share one
-row, with Write a review on the left and an outlined Open in Google Maps link button with a map-pin
-icon on the right. The Maps link opens in a new tab; its label can wrap within the button on narrow
+row, with Write a review on the left and an outlined Open in Google Maps button on the right. The
+native Maps button keeps its map-pin icon beside the label in a horizontal flex row and opens the
+validated Maps URL in a new tab; its label can wrap within the button on narrow
 screens. App review requests wait for the active viewer identity to be ready. Discover
 retains live global place search and the stable map renderer.
 The separate Home tab mounts the new landmark carousel and Experience feed; its scoped layout

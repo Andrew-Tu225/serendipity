@@ -346,10 +346,11 @@
 .discovery-review small { margin-top: 3px; color: #87788f; }
 .discovery-reviews button { border: 0; padding: 6px 0; color: #654577; background: transparent; text-decoration: underline; }
 .discovery-preview-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
-.discovery-preview-actions .discovery-review-button, .discovery-preview-actions .discovery-maps-button { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; margin: 0; padding: 9px 10px; border: 1px solid #76548f; border-radius: 12px; font-size: 12px; line-height: 1.3; text-align: center; text-decoration: none; }
+.discovery-preview-actions .discovery-review-button, .discovery-preview-actions .discovery-maps-button { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; margin: 0; padding: 9px 10px; border: 1px solid #76548f; border-radius: 12px; font-size: 12px; line-height: 1.3; text-align: center; text-decoration: none; }
 .discovery-preview-actions .discovery-review-button { color: white; background: #76548f; }
 .discovery-preview-actions .discovery-maps-button { color: #704b87; background: white; }
-.discovery-maps-button svg { flex-shrink: 0; }
+.discovery-maps-button svg { display: block; flex: 0 0 16px; width: 16px; height: 16px; }
+.discovery-maps-button span { min-width: 0; }
 .review-intro { margin: 8px 0 18px; color: #786780; font-size: 13px; }
 .review-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .review-form label { margin-top: 14px; }

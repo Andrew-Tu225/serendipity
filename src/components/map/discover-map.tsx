@@ -206,13 +206,16 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           {selected.source === "google" && reviewLookup === "checking" && <p role="status">Checking app reviews…</p>}
           {selected.source === "google" && reviewLookup === "empty" && <p>No Serendipity reviews yet. Be the first to review it.</p>}
           <div className="discovery-preview-actions">
-            <button className="discovery-review-button" onClick={() => onReview(selected)}>Write a review</button>
-            <a className="discovery-maps-button" href={externalUrl(selected.google_maps_uri)} target="_blank" rel="noopener noreferrer">
+            <button type="button" className="discovery-review-button" onClick={() => onReview(selected)}>Write a review</button>
+            <button type="button" className="discovery-maps-button" onClick={() => {
+              const url = externalUrl(selected.google_maps_uri);
+              if (url) window.open(url, "_blank", "noopener,noreferrer");
+            }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>
               </svg>
               <span>Open in Google Maps</span>
-            </a>
+            </button>
           </div>
           {selected.attributions.map((attribution, index) => <small key={`${attribution.provider}-${index}`}>
             {externalUrl(attribution.provider_uri) ? <a href={externalUrl(attribution.provider_uri)} target="_blank" rel="noopener noreferrer">{attribution.provider}</a> : attribution.provider}
