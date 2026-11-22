@@ -50,3 +50,6 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+
+# AI session files
+.claude/

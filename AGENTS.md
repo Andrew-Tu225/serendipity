@@ -27,11 +27,13 @@ Use these names consistently in code, routes, and the database.
 | Term | Meaning |
 |------|---------|
 | Place | A real-world location on the map: restaurant, trail, gym, museum, viewpoint, anything. Not limited to businesses. |
-| Experience | One user's log of a visit to a Place: rating, written review, photos, recommend/avoid. |
+| Experience | One user's log of a visit to a Place: rating, written review, photos, recommend/avoid. Public. |
 | Bookmark | A user saving a Place to visit later, whether or not they have been there. |
-| Friend | A social connection whose Experiences shape the user's map. Mutual vs. follow is undecided (see plan §8). |
+| Friend | A user the viewer follows (directed follow, not mutual). Their Experiences shape the viewer's map. |
 
 Map markers distinguish a Place's relationship to the viewer: recommended by friends, reviewed by friends, bookmarked by the viewer, or a possible hidden gem.
+
+Recommendations are always backed by a visible Experience from a followed or similar-taste user; see [docs/recommendations.md](docs/recommendations.md) for the schema, algorithm, and API.
 
 ## Stack
 
