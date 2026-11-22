@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from app.demo.london import PEOPLE, PLACES, demo_id, experiences
 from app.models import Experience, Follow, Place, TasteProfile, User
@@ -191,3 +191,20 @@ async def test_clear_cli_requires_confirmation_before_connecting(monkeypatch):
         assert "--confirm serendipity" in result.stderr
         assert "secret" not in result.stdout + result.stderr
         assert "Database operation failed" not in result.stderr
+
+
+async def test_seeded_logs_store_the_values_summed_into_profiles(database_factory):
+    async with database_factory() as session:
+        await DemoDataService(session).seed_london(date.today())
+        sums = (
+            await session.execute(
+                select(Experience.user_id, Place.category, func.sum(Experience.value))
+                .join(Place, Place.id == Experience.place_id)
+                .group_by(Experience.user_id, Place.category)
+            )
+        ).all()
+        rows = (await session.scalars(select(TasteProfile))).all()
+
+    assert {(u, c): pytest.approx(total) for u, c, total in sums} == {
+        (row.user_id, row.category): row.score for row in rows
+    }

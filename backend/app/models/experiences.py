@@ -19,8 +19,19 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-from app.models.domain import MAX_REVIEW_CHARS, Category, Verdict
+from app.models.domain import MAX_REVIEW_CHARS, Category, Verdict, verdict_value
 from app.models.places import in_values
+
+VERDICTS = frozenset(v.value for v in Verdict)
+
+
+def _value_from_row(context) -> float:
+    """Default for inserts that omit `value`, e.g. fixtures and raw seed rows."""
+    row = context.get_current_parameters()
+    verdict = row.get("verdict") or Verdict.NEUTRAL.value
+    if verdict not in VERDICTS:
+        return 0.0  # ck_experiences_verdict rejects the row
+    return verdict_value(Verdict(verdict), float(row["rating"]))
 
 
 class Experience(Base):
@@ -33,6 +44,7 @@ class Experience(Base):
             "rating * 2 = CAST(rating * 2 AS INTEGER)", name="ck_experiences_rating_half_step"
         ),
         CheckConstraint(in_values("verdict", Verdict), name="ck_experiences_verdict"),
+        CheckConstraint("value BETWEEN -1 AND 1", name="ck_experiences_value_range"),
         CheckConstraint(
             f"review IS NULL OR length(review) <= {MAX_REVIEW_CHARS}",
             name="ck_experiences_review_length",
@@ -50,6 +62,8 @@ class Experience(Base):
     )
     rating: Mapped[float] = mapped_column(Numeric(2, 1, asdecimal=False), nullable=False)
     verdict: Mapped[str] = mapped_column(String(10), nullable=False, default=Verdict.NEUTRAL)
+    # Positivity at write time; taste_profiles.score is the sum of these per category.
+    value: Mapped[float] = mapped_column(Float, nullable=False, default=_value_from_row)
     review: Mapped[str | None] = mapped_column(Text)
     photo_urls: Mapped[list[str]] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), nullable=False, default=list

@@ -58,6 +58,7 @@ class DemoDataService:
                         "place_id": UUID(log.place_id),
                         "rating": log.rating,
                         "verdict": log.verdict.value,
+                        "value": log_value(log),
                         "review": log.review,
                         "visited_on": log.visited_on,
                         "photo_urls": [],

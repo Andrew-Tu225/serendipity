@@ -135,7 +135,7 @@ backend/app/services/experiences.py: ExperienceService.create_experience()
   → one commit
 ```
 
-The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. `POST /api/discovery/experiences` calls it through `DiscoveryService`, using `CurrentUser` and `VerifiedMutation`; a new Place participates in that same transaction.
+The service computes the log's value with `verdict_value()` (`backend/app/models/domain.py`), stores it in `experiences.value`, and adds the same number to `taste_profiles`. The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. `POST /api/discovery/experiences` calls it through `DiscoveryService`, using `CurrentUser` and `VerifiedMutation`; a new Place participates in that same transaction.
 
 ## Adding a feature
 
