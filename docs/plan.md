@@ -233,6 +233,9 @@ Discover fills the phone above navigation, with floating search, location contro
 Google supplies the basemap, global place/city search, and nearby experience destinations through FastAPI.
 Unreviewed destinations use smaller neutral custom category pins matching the app. Nearby searches
 sample neighborhood areas as users explore; they do not guarantee every Google listing. App markers
+remain stable as finer samples load on zoom-in. Nearby work runs up to three searches at once and
+is limited to 18 attempts per minute per open map, with automatic continuation when slots reopen.
+App markers
 take precedence for matching Google IDs. Provider results remain temporary and create no database rows.
 App-reviewed Places come
 from PostgreSQL for the visible map area after initial load, panning, zooming, search, or geolocation.

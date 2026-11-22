@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { placesClient } from "@/lib/api-client/places";
 import { bufferBounds, containsPoint } from "@/lib/maps/bounds";
 import type { MapHandle } from "@/lib/maps/google-map";
-import { nearbyCells, nearbyPlace, prioritizeNearbyCells } from "@/lib/maps/nearby-places";
+import { nearbyCells, nearbyPlace, NearbyRequestBudget, prioritizeNearbyCells } from "@/lib/maps/nearby-places";
 import type { MapPlace } from "@/types/places";
 
 const FRESH_MS = 5 * 60_000;
@@ -10,8 +10,9 @@ const MAX_CONCURRENT = 3;
 // Provider results are transient display state, never persisted or put in app-data cache.
 export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
   const cells = useRef(new Map<string, { places: MapPlace[]; fetched: number }>());
+  const budget = useRef(new NearbyRequestBudget());
   const [attempt, setAttempt] = useState(0);
-  const [view, setView] = useState({ places: [] as MapPlace[], error: "", zoomIn: false });
+  const [view, setView] = useState({ places: [] as MapPlace[], error: "", zoomIn: false, waiting: false });
   useEffect(() => {
     if (!map || !active) return;
     let disposed = false;
@@ -21,6 +22,7 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
     let controller: AbortController | undefined;
     let error = "";
     let blockedUntil = 0;
+    const wantedCells = () => nearbyCells(map!.bounds(), map!.zoom());
     function publish() {
       if (disposed) return;
       const now = Date.now(), area = bufferBounds(map!.bounds());
@@ -30,7 +32,8 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
       for (const value of cells.current.values()) for (const place of value.places) {
         if (area.some((rectangle) => containsPoint(rectangle, place.location))) places.set(place.place_id, place);
       }
-      setView({ places: [...places.values()], error, zoomIn: !nearbyCells(map!.bounds()).length });
+      const waiting = wantedCells().some((cell) => !cells.current.has(cell.key)) && budget.current.retryAt(now) > now;
+      setView({ places: [...places.values()], error, zoomIn: !wantedCells().length, waiting });
     }
     async function refresh() {
       if (disposed || document.hidden) return;
@@ -40,7 +43,7 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
       controller = new AbortController();
       const current = controller;
       try {
-        const wanted = prioritizeNearbyCells(nearbyCells(map!.bounds()), map!.center());
+        const wanted = prioritizeNearbyCells(wantedCells(), map!.center());
         let nextCell = 0;
         let failed = false;
         error = "";
@@ -50,7 +53,8 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
             const cached = cells.current.get(cell.key);
             if (cached && Date.now() - cached.fetched < FRESH_MS) continue;
             // Skip queued areas that became obsolete while other searches were running.
-            if (!nearbyCells(map!.bounds()).some((next) => next.key === cell.key)) continue;
+            if (!wantedCells().some((next) => next.key === cell.key)) continue;
+            if (!budget.current.take(Date.now())) { publish(); return; }
             try {
               const result = await placesClient.nearby(cell.center, cell.radius, current.signal);
               if (disposed || current.signal.aborted) return;
@@ -70,9 +74,12 @@ export function useNearbyPlaces(map: MapHandle | null, active: boolean) {
         running = false;
         if (!disposed) {
           clearTimeout(expiry);
-          const next = Math.max(blockedUntil, Math.min(...nearbyCells(map!.bounds()).map((cell) => (cells.current.get(cell.key)?.fetched ?? Date.now()) + FRESH_MS), Date.now() + FRESH_MS));
+          const now = Date.now();
+          const pending = wantedCells().some((cell) => !cells.current.has(cell.key) || now - cells.current.get(cell.key)!.fetched >= FRESH_MS);
+          const next = Math.max(blockedUntil, pending ? budget.current.retryAt(now) : now,
+            pending ? now : Math.min(...wantedCells().map((cell) => cells.current.get(cell.key)!.fetched + FRESH_MS), now + FRESH_MS));
           expiry = setTimeout(queue, Math.max(1000, next - Date.now()));
-          if (!error && nearbyCells(map!.bounds()).some((cell) => !cells.current.has(cell.key))) queue();
+          if (!error && pending && budget.current.retryAt(now) <= now) queue();
         }
       }
     }

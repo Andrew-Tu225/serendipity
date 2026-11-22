@@ -39,9 +39,13 @@ distance-ranked results, including food/drink, parks/trails, culture, activities
 Utilities, offices, and residential addresses are not requested. The field mask excludes Google
 ratings, reviews, and photos. Names, coordinates, categories, links, and attributions support display.
 
-After a 500 ms map-idle pause, the UI searches newly encountered fixed zoom-13 geographic cells.
-Up to nine visible cells are eligible; larger views show app-reviewed Places and invite zooming in
-when empty. Each cell uses a circle enclosing it, so overlapping results are expected and deduplicated
+After a 500 ms map-idle pause, the UI searches newly encountered geographic cells. Map zooms 13–14
+use level-13 cells, zoom 15 uses level 14, zoom 16 uses level 15, and zoom 17+ uses level 16. Around
+Toronto these are approximately 3.5 km, 1.8 km, 900 m, and 450 m across. Search keys include the level,
+so a coarse area's 20 results never claim that finer detail has been fetched. Up to nine visible
+cells are eligible; views exceeding that budget fall back to coarser levels, down to level 13.
+Larger views show app-reviewed Places and invite zooming in when empty. Each cell uses a circle
+enclosing it, so overlapping results are expected and deduplicated
 by Google Place ID. This is a sample of destinations, not an exhaustive listing of all Google places.
 Results merge incrementally; unchanged markers retain their SDK objects. App Places with matching
 Google IDs take precedence. Names or coordinate proximity never establish identity.
@@ -50,6 +54,11 @@ cell is requested once per batch, and small pans still reuse fresh results. Conc
 when existing calls run, not how many cells are searched. Results appear as individual requests
 finish; a failed search stops queued work while already-running successful requests can still add
 places. Obsolete queued areas are skipped, and hiding the map cancels the entire request group.
+Zoom refinement can add paid searches. Each mounted map is capped at 18 attempted nearby requests
+per rolling minute, including failed/aborted attempts. This budget survives tab changes and manual
+retry, and remaining searches resume automatically as slots reopen. Previously loaded pins stay
+available while waiting. The backend's separate 60/minute per-process limit still applies across
+visitors; the client budget is not a shared/global billing cap.
 
 Search cells are reused for five minutes in mounted-map memory (up to 48 cells / 960 provider rows).
 Expired results refresh without first clearing visible pins; stale results may remain for up to 15

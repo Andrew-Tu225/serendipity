@@ -160,6 +160,7 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           {discovery.loading && <div className="discovery-data-status" role="status">Loading app-reviewed places…</div>}
           {discovery.error && <div className="discovery-data-status" role="alert">{discovery.error} <button onClick={discovery.retry}>Reload places</button></div>}
           {nearby.error && !discovery.error && <div className="discovery-data-status" role="alert">{nearby.error} <button onClick={nearby.retry}>Retry nearby places</button></div>}
+          {nearby.waiting && !nearby.error && !discovery.error && <div className="discovery-data-status" role="status">More nearby places will appear shortly.</div>}
           {discovery.complete && !discovery.loading && !discovery.error && !nearby.error && !discovery.hasVisiblePlaces && nearby.places.length === 0 && <div className="discovery-data-status" role="status">No app reviews in this area yet. {nearby.zoomIn && "Zoom in to discover nearby places."} <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
       </>}

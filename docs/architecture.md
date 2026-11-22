@@ -57,6 +57,10 @@ and a 50–5,000 m radius. The provider filters experience destinations and retu
 per search. `useNearbyPlaces` reuses bounded geographic search cells in temporary display memory,
 separately from the app's reviewed-place cache. Google IDs deduplicate results and let app Places
 take precedence. Nearby markers use our custom category glyphs, with no Google ratings or reviews.
+The map adapter exposes zoom so nearby search can refine geographic cells as users zoom in.
+The UI schedules up to three center-prioritized searches concurrently, with a separate mounted-map
+budget of 18 attempts per rolling minute. These limits control provider work without changing the
+backend contracts, persistence, or shared process rate limits.
 See [discovery-map.md](discovery-map.md) for sampling, freshness, density, and billing limits.
 
 Discovery follows `UI → discoveryClient → discovery router → DiscoveryService → DiscoveryRepository

@@ -6,6 +6,7 @@ export const LONDON = { latitude: 42.9849, longitude: -81.2453 };
 
 export interface MapHandle {
   center(): Coordinates;
+  zoom(): number;
   bounds(): MapBounds[];
   onIdle(callback: () => void): () => void;
   onPick(callback: (position: Coordinates) => void): () => void;
@@ -76,6 +77,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
   let locationMarker: google.maps.marker.AdvancedMarkerElement | undefined;
   authenticationListeners.add(onAuthenticationFailure);
   return {
+    zoom() { return map.getZoom() ?? 13; },
     bounds() {
       const bounds = map.getBounds()?.toJSON();
       if (!bounds || bounds.south >= bounds.north) return [];
