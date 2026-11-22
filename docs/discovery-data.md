@@ -9,22 +9,21 @@ An empty or failed recommendation request leaves the base results available.
 
 | Colour | Meaning | Source |
 |---|---|---|
-| Neutral grey, smaller pin | Nearby place without an app review | Google Nearby Search |
-| White | Reviewed Place, including self-reviewed/bookmarked Places and followed-user reviews | Discovery API |
-| Amber | Personalized recommendation (`similar_taste` or `explore`) | Recommendations API |
-| Purple | Friends' recommendation (`friend`) | Recommendations API |
+| Amber | Any recommendation (`friend`, `similar_taste`, or `explore`) | Recommendations API |
+| Teal | Friend-reviewed Place without an active recommendation | Discovery API friend count or review evidence |
+| White | Other reviewed Place without an active recommendation | Discovery API review count |
+| Neutral grey, smaller pin | Place without an app review | Google Nearby Search or app Place without reviews |
 
-No legend is shown. Selection preserves
-the marker's layer colour. A followed user's review alone stays white; purple requires the API's
-friend recommendation classification. App UUIDs deduplicate reviewed and recommended results;
+No legend is shown. Selection preserves the marker's layer colour. Recommendations always take
+precedence over friend reviews; friend reviews take precedence over other reviews. App UUIDs deduplicate reviewed and recommended results;
 exact Google IDs suppress duplicate provider pins. Recommendation metadata overlays the app's
-existing aggregate rating/identity. Each Place has one marker, with friend recommendation first,
-then personalized recommendation, then base review, then an unreviewed provider result.
+existing aggregate rating/identity and friend evidence. Each Place has one marker, with any
+recommendation first, then friend review, then other review, then an unreviewed result.
 
 All loaded Places share counted clusters, including grey nearby destinations. Selection temporarily
 leaves clustering while retaining its layer colour. The settled layout hides only overlapping
-captions, prioritizing selection, friend recommendations, personal recommendations, reviews, then
-nearby Places. Colour updates do not change cluster membership or reattach hidden members. Full names
+captions, prioritizing selection, recommendations, friend reviews, other reviews, then
+unreviewed Places. Colour updates do not change cluster membership or reattach hidden members. Full names
 and evidence remain in previews and accessible marker names; all SDK markers use `REQUIRED`.
 The [map documentation](discovery-map.md#overlapping-nearby-pins) describes sizing and settling.
 
@@ -35,7 +34,7 @@ focus, and tab return reuse the active fresh snapshot and applicable pending req
 refreshes the same ranking area. Successful reviews invalidate rankings; viewer changes clear them.
 Full successful responses replace recommendation membership, while existing results survive pending
 or failed requests and base review coverage remains independent. A Place leaving recommendations
-returns to its white review marker rather than vanishing. Supporting logs and relations remain in
+returns to its teal friend-review marker or white other-review marker rather than vanishing. Supporting logs and relations remain in
 the selected preview; aggregate ratings are used when available, otherwise supporting ratings are labelled.
 
 ## Browsing
@@ -99,7 +98,7 @@ The form requires sign-in before submission. Its fields survive save errors; it 
 clicks and closing during a pending save. Success is shown only after the API confirms the write,
 then the selected card and viewport ratings refresh. A new reviewed Place therefore appears in the base review layer and remains available after reload.
 The ranking is also invalidated: the API excludes the viewer’s logged/bookmarked Places from
-recommendations, so these remain white rather than being forced into a recommendation highlight. No photo/video storage provider is introduced.
+recommendations, so they use teal when reviewed by friends and white otherwise. No photo/video storage provider is introduced.
 After Auth0 sign-in, incomplete accounts choose category interests at `/onboarding`; completed accounts reach Home. Home retains its original prototype UI for separate frontend work; it does not load a replacement recommendation feed.
 
 `CurrentUser` supplies the author. `VerifiedMutation` enforces CSRF and origin checking. Pydantic

@@ -33,7 +33,7 @@ test("recommendation responses highlight the original reviewed places without du
   page.on("request", (request) => { if (/\/discovery\/places\/[^/?]+\?/.test(request.url())) details++; });
   await open(page);
   await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
-  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
+  await expect(page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
   expect(requests).toHaveLength(1);
   requests[0].split(",").map(Number).forEach((coordinate, i) => expect(coordinate).toBeCloseTo([-81.3953,42.8349,-81.0953,43.1349][i], 7));
   expect(databaseLists).toBeGreaterThan(0);
@@ -86,8 +86,9 @@ test("recommendation failure and empty results keep the original review layer av
   await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   failed = false;
   await page.getByRole("button", { name: "Reload recommendations" }).click();
-  await expect(page.locator('.discovery-pin[data-layer="review"]')).toHaveCount(6);
-  await expect(page.locator('.discovery-pin[data-layer="friend"], .discovery-pin[data-layer="recommendation"]')).toHaveCount(0);
+  await expect(page.locator('.discovery-pin[data-layer="review"]')).toHaveCount(3);
+  await expect(page.locator('.discovery-pin[data-layer="friend"]')).toHaveCount(3);
+  await expect(page.locator('.discovery-pin[data-layer="recommendation"]')).toHaveCount(0);
   await expect(page.getByRole("combobox")).toBeEnabled();
 });
 
@@ -160,7 +161,7 @@ test("review submission preserves errors and refetches recommendation eligibilit
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("article")).toContainText("4.5/5 · 24 reviews");
   await expect.poll(() => recommendationCalls).toBeGreaterThan(before);
-  await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "review");
+  await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).locator(".discovery-pin")).toHaveAttribute("data-layer", "friend");
   await expect(page.getByText("Your experience was shared", { exact: false })).toBeVisible();
   await expect.poll(() => posted).toBe(true);
 });

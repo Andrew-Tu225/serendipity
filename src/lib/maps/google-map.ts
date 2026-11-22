@@ -78,7 +78,7 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
     contentObserver: MutationObserver;
   }
   const pins = new Set<Pin>();
-  const priorities: Record<MarkerLayer, number> = { place: 1, review: 10, recommendation: 20, friend: 30 };
+  const priorities: Record<MarkerLayer, number> = { place: 1, review: 10, friend: 20, recommendation: 30 };
   let serial = 0;
   let settling: ReturnType<typeof setTimeout>;
   let moving = false;
