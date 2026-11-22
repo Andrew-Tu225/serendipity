@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import type { ProfilePage } from "@/types/profile";
+interface OffsetPage<T> {
+  items: T[];
+  nextOffset: number | null;
+}
 
-export function useProfilePages<T extends { id: string }>(
-  getPage: (offset: number, signal: AbortSignal) => Promise<ProfilePage<T>>,
+export function useOffsetPages<T extends { id: string }>(
+  getPage: (offset: number, signal: AbortSignal) => Promise<OffsetPage<T>>,
 ) {
   const [items, setItems] = useState<T[]>([]);
   const [offset, setOffset] = useState(0);

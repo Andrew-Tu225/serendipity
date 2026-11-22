@@ -111,6 +111,22 @@ The client draws a circular face-and-shoulders portrait on profiles, connection 
 markers, and review rows. Accounts with no saved appearance get a stable default based on their ID.
 The signed-out preview keeps its character edits for the current page session.
 
+## Taste Buddies and inbox
+
+`buddyClient` calls the FastAPI `/api/buddies` router, `BuddyService`, and `BuddyRepository`.
+Suggestions rank up to 100 eligible recent accounts by the existing category taste similarity.
+Accounts with no overlapping taste scores can appear without a match percentage. A saved pass or
+an existing conversation removes the account from future suggestions. Swiping right opens the
+message composer. Only Send writes a message, with a client-generated UUID to make retries
+idempotent. The inbox lists the latest message for each conversation, and an open chat periodically
+checks for new messages and can page back through its history.
+
+Alembic `0006` creates `buddy_skips` and `buddy_messages`. Reads and writes use `CurrentUser`, and
+mutations use `VerifiedMutation`. Inbox queries include only messages involving the viewer. Chat
+history and cursors are restricted to the viewer and selected account. These routes use no-store
+responses. Signed-out visitors can try swipes and messages with the demo buddies during the current
+page session.
+
 ## Authentication flow
 
 The user-creation entry point is `GET /api/auth/callback`. Its implementation follows this chain:

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 
-export function ProfileSubscreen({ title, subtitle, count, countLabel, backLabel, onBack, children }: {
+export function ProfileSubscreen({ title, subtitle, count, countLabel, backLabel, onBack, children, footer }: {
   title: string;
   subtitle: string;
   count?: number;
@@ -9,6 +9,7 @@ export function ProfileSubscreen({ title, subtitle, count, countLabel, backLabel
   backLabel: string;
   onBack: () => void;
   children: ReactNode;
+  footer?: ReactNode;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
 
@@ -29,6 +30,7 @@ export function ProfileSubscreen({ title, subtitle, count, countLabel, backLabel
         {count !== undefined && <span className="place-lists-count" aria-label={countLabel}>{count}</span>}
       </header>
       <div className="place-lists-content">{children}</div>
+      {footer}
     </section>
   );
 }

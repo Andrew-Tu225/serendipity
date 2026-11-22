@@ -40,8 +40,3 @@ export interface ProfileConnections {
   people: ProfileConnection[];
   next_offset: number | null;
 }
-
-export interface ProfilePage<T> {
-  items: T[];
-  nextOffset: number | null;
-}

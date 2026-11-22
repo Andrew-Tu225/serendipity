@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useProfilePages } from "@/hooks/use-profile-pages";
+import { useOffsetPages } from "@/hooks/use-offset-pages";
 import { profileClient } from "@/lib/api-client/profile";
 import type { ConnectionDirection, ProfileConnection } from "@/types/profile";
 import { CharacterPortrait } from "./character-portrait";
@@ -33,7 +33,7 @@ function LiveConnections({ direction }: { direction: ConnectionDirection }) {
   const getPage = useCallback((offset: number, signal: AbortSignal) => (
     profileClient.getConnections(direction, offset, signal)
   ), [direction]);
-  const { items, status, hasMore, loadMore, retry } = useProfilePages(getPage);
+  const { items, status, hasMore, loadMore, retry } = useOffsetPages(getPage);
 
   return (
     <>

@@ -16,6 +16,7 @@ export type IconName =
   | 'pin'
   | 'globe'
   | 'lock'
+  | 'message'
 
 export function Icon({ name, size = 22, filled = false }: { name: IconName; size?: number; filled?: boolean }) {
   const paths: Record<IconName, ReactNode> = {
@@ -34,6 +35,7 @@ export function Icon({ name, size = 22, filled = false }: { name: IconName; size
     pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
     globe: <><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></>,
     lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
+    message: <><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M8 9h8M8 13h5"/></>,
   }
 
   return (

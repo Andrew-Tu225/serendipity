@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Icon } from "@/components/ui/icon";
-import { useProfilePages } from "@/hooks/use-profile-pages";
+import { useOffsetPages } from "@/hooks/use-offset-pages";
 import { profileClient } from "@/lib/api-client/profile";
 import type { DemoPlaceList, ListedPlace } from "./demo-place-lists";
 import { ProfileSubscreen } from "./profile-subscreen";
@@ -100,7 +100,7 @@ function PlaceRows({ places }: { places: ListedPlace[] }) {
 }
 
 function BookmarkRows() {
-  const { items: places, status, hasMore, loadMore, retry } = useProfilePages(profileClient.getBookmarks);
+  const { items: places, status, hasMore, loadMore, retry } = useOffsetPages(profileClient.getBookmarks);
 
   return (
     <>

@@ -14,17 +14,23 @@ import { ProfileExperiencePanels } from '@/components/profile/profile-experience
 import { demoPlaceLists } from '@/components/profile/demo-place-lists'
 import { ProfilePlaceLists, type ListOwner } from '@/components/profile/profile-place-lists'
 import { ProfileConnections } from '@/components/profile/profile-connections'
+import { BuddyDeckCard } from '@/components/buddy/buddy-deck-card'
+import { BuddyChat, BuddyInbox } from '@/components/buddy/buddy-messages'
+import { demoBuddyMessages } from '@/components/buddy/demo-buddies'
+import { useBuddyDeck } from '@/hooks/use-buddy-deck'
 import { useProfileExperiences } from '@/hooks/use-profile-experiences'
 import { Icon, type IconName } from '@/components/ui/icon'
 import type { ConnectionDirection } from '@/types/profile'
 import { defaultCharacter, hairColors, hairStyles, miaCharacter, shirtColors, skinTones, type CharacterAppearance } from '@/types/character'
 import { authClient } from '@/lib/api-client/auth'
 import { profileClient } from '@/lib/api-client/profile'
+import type { BuddyPerson } from '@/types/buddies'
 
 const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
 
 type ProfileScreen = { kind: 'lists'; owner: ListOwner }
   | { kind: ConnectionDirection; owner: { name: string; demo: boolean }; count: number }
+type BuddyScreen = { kind: 'inbox' } | { kind: 'chat'; buddy: BuddyPerson; from: 'deck' | 'inbox' }
 
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
@@ -45,10 +51,20 @@ function App() {
   const [demoLists, setDemoLists] = useState(demoPlaceLists)
   const [demoCharacter, setDemoCharacter] = useState(miaCharacter)
   const profileTrigger = useRef<HTMLButtonElement>(null)
+  const [buddyScreen, setBuddyScreen] = useState<BuddyScreen | null>(null)
+  const [sampleMessages, setSampleMessages] = useState(demoBuddyMessages)
+  const buddyDeck = useBuddyDeck(activeTab === 'Buddy')
+  const inboxTrigger = useRef<HTMLButtonElement>(null)
+  const subscreenOpen = profileScreen !== null || buddyScreen !== null
 
   function closeProfileScreen() {
     setProfileScreen(null)
     requestAnimationFrame(() => profileTrigger.current?.focus())
+  }
+
+  function closeBuddyScreen() {
+    setBuddyScreen(null)
+    requestAnimationFrame(() => inboxTrigger.current?.focus())
   }
 
   const startReview = (place: MapPlace | null) => {
@@ -92,7 +108,7 @@ function App() {
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
       <div className={`app-shell${activeTab === 'Discover' ? ' is-discover' : ''}`}>
-        {activeTab !== 'Discover' && !profileScreen && (
+        {activeTab !== 'Discover' && !subscreenOpen && (
           <>
             <div className="status-bar" aria-hidden="true">
               <span>9:41</span>
@@ -104,12 +120,16 @@ function App() {
                 <p className="eyebrow">{pageEyebrow}</p>
                 <h1>{pageTitle}</h1>
               </div>
-              <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>
+              {activeTab === 'Buddy' ? (
+                <button ref={inboxTrigger} type="button" className="round-button" aria-label="Inbox" onClick={() => setBuddyScreen({ kind: 'inbox' })}>
+                  <Icon name="message" size={20}/>
+                </button>
+              ) : <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>}
             </header>
           </>
         )}
 
-        <div className="app-content" hidden={profileScreen !== null}>
+        <div className="app-content" hidden={subscreenOpen}>
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
             {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={discoveryRevision} reviewedPlace={reviewedPlace}
               selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
@@ -117,7 +137,7 @@ function App() {
               onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
           </div>
           {activeTab === 'Buddy' ? (
-            <BuddyView />
+            <BuddyView deck={buddyDeck} onMessage={(buddy) => setBuddyScreen({ kind: 'chat', buddy, from: 'deck' })} />
           ) : activeTab === 'Profile' ? (
             <ProfileView demoListCount={demoLists.length} demoCharacter={demoCharacter} onDemoCharacter={setDemoCharacter}
               onCharacterSaved={() => {
@@ -181,7 +201,7 @@ function App() {
 
         {posted && <div className="review-saved" role="status">Your experience was shared <button onClick={() => setPosted(false)} aria-label="Dismiss confirmation">×</button></div>}
 
-        {!profileScreen && <nav className="bottom-nav" aria-label="Primary navigation">
+        {!subscreenOpen && <nav className="bottom-nav" aria-label="Primary navigation">
           <NavButton label="Home" icon="home" active={activeTab === 'Home'} onClick={() => changeTab('Home')}/>
           <NavButton label="Discover" icon="pin" active={activeTab === 'Discover'} onClick={() => changeTab('Discover')}/>
           <button className="add-button" onClick={() => changeTab('Add')} aria-label="Add a post"><span><Icon name="plus" size={27}/></span><small>Add</small></button>
@@ -197,6 +217,20 @@ function App() {
         {profileScreen && profileScreen.kind !== 'lists' && (
           <ProfileConnections direction={profileScreen.kind} owner={profileScreen.owner}
             count={profileScreen.count} onClose={closeProfileScreen} />
+        )}
+        {buddyScreen?.kind === 'inbox' && (
+          <BuddyInbox demo={buddyDeck.status === 'demo'} demoMessages={sampleMessages} onClose={closeBuddyScreen}
+            onOpen={(buddy) => setBuddyScreen({ kind: 'chat', buddy, from: 'inbox' })} />
+        )}
+        {buddyScreen?.kind === 'chat' && (
+          <BuddyChat key={buddyScreen.buddy.id} buddy={buddyScreen.buddy} demo={buddyDeck.status === 'demo'}
+            demoMessages={sampleMessages[buddyScreen.buddy.id] ?? []}
+            onDemoMessage={(message) => setSampleMessages((current) => ({
+              ...current, [buddyScreen.buddy.id]: [...(current[buddyScreen.buddy.id] ?? []), message],
+            }))}
+            onSent={() => buddyDeck.remove(buddyScreen.buddy.id)}
+            backLabel={buddyScreen.from === 'inbox' ? 'Back to inbox' : 'Back to Taste buddies'}
+            onBack={buddyScreen.from === 'inbox' ? () => setBuddyScreen({ kind: 'inbox' }) : closeBuddyScreen} />
         )}
 
         {sheet && (
@@ -235,39 +269,33 @@ function NavButton({ label, icon, active, onClick }: { label: string; icon: Icon
   return <button className={active ? 'nav-item active' : 'nav-item'} onClick={onClick}><Icon name={icon} size={22} filled={active}/><span>{label}</span></button>
 }
 
-function BuddyView() {
-  const [matched, setMatched] = useState(false)
+function BuddyView({ deck, onMessage }: { deck: ReturnType<typeof useBuddyDeck>; onMessage: (buddy: BuddyPerson) => void }) {
   const [mode, setMode] = useState<'local' | 'worldwide'>('local')
+  const buddy = deck.cards[0]
   return (
     <section className="buddy-view">
       <div className="buddy-modes" role="tablist" aria-label="Buddy location">
-        <button className={mode === 'local' ? 'active' : ''} onClick={() => setMode('local')} role="tab" aria-selected={mode === 'local'}><Icon name="pin" size={15}/> Local</button>
+        <button className={mode === 'local' ? 'active' : ''} onClick={() => setMode('local')} role="tab" aria-selected={mode === 'local'}><Icon name="pin" size={15}/> {deck.status === 'demo' ? 'Local' : 'For you'}</button>
         <button className={mode === 'worldwide' ? 'active' : ''} onClick={() => setMode('worldwide')} role="tab" aria-selected={mode === 'worldwide'}><Icon name="globe" size={15}/> Worldwide <Icon name="lock" size={11}/></button>
       </div>
       {mode === 'local' ? (
         <>
-          <p className="buddy-intro">People who save what you save, skip what you skip, and are actually down to go.</p>
-          <div className="local-progress">
-            <div className="progress-copy"><span><Icon name="globe" size={16}/></span><p><strong>Worldwide is 70% unlocked</strong><small>Rate 3 more local experiences</small></p></div>
-            <div className="progress-track"><i/></div>
-          </div>
-          <div className="buddy-card">
-            <div className="buddy-photo">
-              <Image src={rooftopImage} sizes="430px" alt=""/>
-              <div className="buddy-portrait"><CharacterPortrait identity="Alex Bennett" size={112}/></div>
-              <span>94% match</span>
+          <p className="buddy-intro">Swipe left to skip or right to start a chat.</p>
+          {deck.status === 'demo' && (
+            <div className="local-progress">
+              <div className="progress-copy"><span><Icon name="globe" size={16}/></span><p><strong>Worldwide is 70% unlocked</strong><small>Rate 3 more local experiences</small></p></div>
+              <div className="progress-track"><i/></div>
             </div>
-            <div className="buddy-info">
-              <div><h2>Alex, 28</h2><p>Brooklyn · 2 mi away</p></div>
-              <span className="verified"><Icon name="sparkle" size={15}/></span>
-            </div>
-            <div className="taste-tags"><span>Natural wine</span><span>Live jazz</span><span>Hidden gems</span></div>
-            <p className="overlap"><strong>12 shared saves</strong> including Clay & rosé and Sunday Jazz Club.</p>
-            <button className={matched ? 'primary-button matched' : 'primary-button'} onClick={() => setMatched(!matched)}>
-              {matched ? 'Buddy request sent' : 'Say hey'} <Icon name={matched ? 'users' : 'arrow'} size={18}/>
-            </button>
-          </div>
-          <div className="buddy-note"><Icon name="heart" size={18}/><p><strong>Better together.</strong><br/>We only suggest people with real taste overlap.</p></div>
+          )}
+          {(deck.status === 'ready' || deck.status === 'demo') && (buddy ? (
+            <BuddyDeckCard key={buddy.id} buddy={buddy} busy={deck.skipping}
+              onSkip={() => void deck.skip(buddy.id)} onMessage={() => onMessage(buddy)} />
+          ) : <div className="buddy-card buddy-empty"><p>You’re caught up on Taste Buddies.</p>
+            {deck.status === 'ready' && <button className="place-lists-action" type="button" onClick={deck.reload}>Check for more</button>}
+          </div>)}
+          {deck.status === 'loading' && <p className="place-lists-message" role="status">Loading Taste Buddies…</p>}
+          {deck.status === 'error' && <p className="place-lists-message" role="alert">Couldn’t load Taste Buddies. <button className="profile-history-button" type="button" onClick={deck.reload}>Try again</button></p>}
+          {deck.skipError && <p className="place-lists-message" role="alert">{deck.skipError}</p>}
         </>
       ) : (
         <WorldwideLock />
