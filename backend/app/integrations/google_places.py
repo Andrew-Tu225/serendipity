@@ -78,3 +78,21 @@ class GooglePlacesClient:
                 "locationRestriction": {"circle": {"center": center, "radius": radius}},
             },
         )
+
+    async def photo(self, place_id: str) -> dict | None:
+        data = await self.request("GET", f"/v1/places/{quote(place_id, safe='')}", "photos")
+        photos = data.get("photos", [])
+        if not photos:
+            return None
+        photo = photos[0]
+        name = photo["name"]
+        prefix = f"places/{place_id}/photos/"
+        if not name.startswith(prefix) or not name[len(prefix) :] or "/" in name[len(prefix) :]:
+            raise ValueError("Invalid photo resource")
+        media = await self.request(
+            "GET",
+            f"/v1/{quote(name, safe='/')}/media",
+            "",
+            params={"maxWidthPx": 800, "skipHttpRedirect": "true"},
+        )
+        return {**photo, "url": media["photoUri"]}

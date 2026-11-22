@@ -13,6 +13,7 @@ from app.schemas.places import (
     NearbyResponse,
     PlaceDetails,
     PlaceId,
+    PlacePhotoResponse,
 )
 from app.services.places import PlacesRateLimiter, PlacesService
 
@@ -47,3 +48,8 @@ async def nearby(query: Annotated[NearbyQuery, Query()], service: Service):
 @router.get("/{place_id}", response_model=PlaceDetails)
 async def details(place_id: PlaceId, session_token: UUID, service: Service):
     return await service.details(place_id, session_token)
+
+
+@router.get("/{place_id}/photo", response_model=PlacePhotoResponse)
+async def photo(place_id: PlaceId, service: Service):
+    return await service.photo(place_id)

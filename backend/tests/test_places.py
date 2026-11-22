@@ -277,3 +277,81 @@ def test_nearby_failure_is_sanitized(places_client, failure):
     assert "private-provider-error" not in response.text
     if failure in {"missing-key", "rate"}:
         assert not requests
+
+
+def test_photo_resolves_media_and_keeps_key_private(places_client, monkeypatch):
+    client, requests, _, _, provider = places_client
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        if request.url.path.endswith("/media"):
+            return httpx.Response(
+                200, json={"photoUri": "https://lh3.googleusercontent.com/place-photo"}
+            )
+        return httpx.Response(
+            200,
+            json={
+                "photos": [
+                    {
+                        "name": "places/test-place/photos/reference",
+                        "authorAttributions": [
+                            {"displayName": "Elena", "uri": "https://maps.google.com/author"}
+                        ],
+                        "googleMapsUri": "https://maps.google.com/photo",
+                        "flagContentUri": "https://maps.google.com/report",
+                    }
+                ]
+            },
+        )
+
+    provider.transport = httpx.MockTransport(handle)
+    response = client.get("/api/places/test-place/photo")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    photo = response.json()["photo"]
+    assert photo["url"] == "https://lh3.googleusercontent.com/place-photo"
+    assert photo["authors"][0]["display_name"] == "Elena"
+    assert photo["google_maps_uri"] == "https://maps.google.com/photo"
+    assert photo["flag_content_uri"] == "https://maps.google.com/report"
+    assert calls[0].headers["x-goog-fieldmask"] == "photos"
+    assert calls[1].url.params["maxWidthPx"] == "800"
+    assert calls[1].url.params["skipHttpRedirect"] == "true"
+    assert "sessionToken" not in calls[0].url.params
+    assert "private-google-key" not in response.text
+    assert not requests
+
+
+@pytest.mark.parametrize("body", [{}, {"photos": []}])
+def test_photo_absent(places_client, body):
+    client, requests, state, *_ = places_client
+    state["body"] = body
+    assert client.get("/api/places/test-place/photo").json() == {"photo": None}
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize(
+    "failure", ["status", "timeout", "malformed", "resource", "rate", "missing-key"]
+)
+def test_photo_failure_is_sanitized(places_client, failure):
+    client, requests, state, limiter, provider = places_client
+    if failure == "status":
+        state["status"] = 403
+    elif failure == "timeout":
+        state["timeout"] = True
+    elif failure == "malformed":
+        state["body"] = {"photos": [None]}
+    elif failure == "resource":
+        state["body"] = {"photos": [{"name": "places/another-place/photos/private-provider-error"}]}
+    elif failure == "rate":
+        for _ in range(60):
+            limiter.check("photo")
+    else:
+        provider.api_key = ""
+    response = client.get("/api/places/test-place/photo")
+    assert response.status_code == (429 if failure == "rate" else 503)
+    assert response.headers["cache-control"] == "no-store"
+    assert "private-google-key" not in response.text
+    assert "private-provider-error" not in response.text
+    if failure in {"rate", "missing-key"}:
+        assert not requests

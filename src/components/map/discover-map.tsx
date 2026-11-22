@@ -14,8 +14,9 @@ import { recommendationReasons } from "@/lib/maps/recommendations";
 import { mapBrowseStatus } from "@/lib/maps/browse-status";
 import { containsPoint } from "@/lib/maps/bounds";
 import { mapPlace, type PlaceExperiences } from "@/types/discovery";
-import { PlaceGlyph, PlaceMarker } from "./place-marker";
+import { PlaceMarker } from "./place-marker";
 import { PlaceSearch } from "./place-search";
+import { PlacePhoto } from "./place-photo";
 
 // Provider links and attribution URLs are external, so accept only HTTP(S) destinations.
 function externalUrl(value?: string | null) {
@@ -192,8 +193,8 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
             ? `${selected.display_name} is located at ${selected.address}.`
             : `A ${selected.app_category ?? selected.category?.toLowerCase() ?? "local"} place shared by the Serendipity community.`}</p>
           {selected.app_id && active && discovery.identityReady
-            ? <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id} ratingSummary={selected.rating_summary}/>
-            : <PlaceProfileSummary ratingSummary={selected.rating_summary} />}
+            ? <PlaceReviews key={`${selected.app_id}-${revision}-${discovery.viewerKey}`} placeId={selected.app_id} ratingSummary={selected.rating_summary} name={selected.display_name} googleId={selected.google_place_id ?? (selected.source === "google" ? selected.place_id : undefined)}/>
+            : <PlaceProfileSummary ratingSummary={selected.rating_summary} name={selected.display_name} googleId={selected.google_place_id ?? (selected.source === "google" ? selected.place_id : undefined)} />}
           {selected.recommendation && <div className="discovery-reviews" aria-label="Why this place is recommended">
             <p className="discovery-friend-note">{recommendationReasons[selected.recommendation.kind]}</p>
             {selected.recommendation.logs.map((log) => <div className="discovery-review" key={log.experience_id}>
@@ -218,16 +219,14 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   </section>;
 }
 
-function PlaceProfileSummary({ ratingSummary }: { ratingSummary?: MapPlace["rating_summary"] }) {
+function PlaceProfileSummary({ ratingSummary, name, googleId }: { ratingSummary?: MapPlace["rating_summary"]; name: string; googleId?: string }) {
   return <>
-    <div className="discovery-place-photo discovery-place-photo-empty" role="img" aria-label="No place photo has been shared yet">
-      <PlaceGlyph category="Place"/><span>Photos from visits will show here</span>
-    </div>
+    <PlacePhoto name={name} googleId={googleId} />
     {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
   </>;
 }
 
-function PlaceReviews({ placeId, ratingSummary }: { placeId: string; ratingSummary?: MapPlace["rating_summary"] }) {
+function PlaceReviews({ placeId, ratingSummary, name, googleId }: { placeId: string; ratingSummary?: MapPlace["rating_summary"]; name: string; googleId?: string }) {
   const [data, setData] = useState<PlaceExperiences | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -258,10 +257,7 @@ function PlaceReviews({ placeId, ratingSummary }: { placeId: string; ratingSumma
   const photo = data?.experiences.flatMap((review) => review.photo_urls ?? [])[0];
   return <div className="discovery-reviews">
     {!data && !error && <p role="status">Loading reviews…</p>}
-    {photo ? <img className="discovery-place-photo" src={photo} alt={`A photo shared from ${data?.place.name ?? "this place"}`} />
-      : <div className="discovery-place-photo discovery-place-photo-empty" role="img" aria-label="No place photo has been shared yet">
-        <PlaceGlyph category="Place"/><span>Photos from visits will show here</span>
-      </div>}
+    <PlacePhoto name={name} googleId={googleId} reviewPhoto={photo} />
     {ratingSummary && <p className="discovery-rating-summary"><strong>★ {ratingSummary.average.toFixed(1)}/5</strong> · {ratingSummary.count} reviews</p>}
     <h3 className="discovery-friends-heading">Friends’ reviews</h3>
     {data?.experiences.map((review) => <div className="discovery-review flex items-start gap-2" key={review.id}>

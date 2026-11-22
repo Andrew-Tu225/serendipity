@@ -1,6 +1,7 @@
 import math
 from collections import deque
 from time import monotonic
+from urllib.parse import urlsplit
 from uuid import UUID
 
 import httpx
@@ -13,8 +14,11 @@ from app.schemas.places import (
     AutocompleteResponse,
     NearbyQuery,
     NearbyResponse,
+    PhotoAuthor,
     PlaceAttribution,
     PlaceDetails,
+    PlacePhoto,
+    PlacePhotoResponse,
     PlaceSuggestion,
 )
 
@@ -27,6 +31,7 @@ class PlacesRateLimiter:
             "autocomplete": deque(),
             "details": deque(),
             "nearby": deque(),
+            "photo": deque(),
         }
 
     def check(self, operation: str):
@@ -53,6 +58,49 @@ class PlacesService:
         if not self.provider.api_key:
             raise HTTPException(503, "Place search is not configured")
         self.limiter.check(operation)
+
+    async def photo(self, place_id: str) -> PlacePhotoResponse:
+        self.prepare("photo")
+        try:
+            data = await self.provider.photo(place_id)
+            if data is None:
+                return PlacePhotoResponse()
+            image_url = urlsplit(data["url"])
+            if (
+                image_url.scheme != "https"
+                or not image_url.hostname
+                or image_url.username
+                or not (
+                    image_url.hostname == "googleusercontent.com"
+                    or image_url.hostname.endswith(".googleusercontent.com")
+                    or image_url.hostname.endswith(".ggpht.com")
+                )
+            ):
+                raise ValueError("Invalid image URL")
+            return PlacePhotoResponse(
+                photo=PlacePhoto(
+                    url=data["url"],
+                    authors=[
+                        PhotoAuthor(
+                            display_name=author.get("displayName", "Photo contributor"),
+                            uri=author.get("uri"),
+                            photo_uri=author.get("photoUri"),
+                        )
+                        for author in data.get("authorAttributions", [])
+                    ],
+                    google_maps_uri=data.get("googleMapsUri"),
+                    flag_content_uri=data.get("flagContentUri"),
+                )
+            )
+        except (
+            httpx.HTTPError,
+            ValidationError,
+            ValueError,
+            KeyError,
+            TypeError,
+            AttributeError,
+        ) as error:
+            raise HTTPException(503, "Place photo is unavailable. Please try again.") from error
 
     async def nearby(self, query: NearbyQuery) -> NearbyResponse:
         self.prepare("nearby")

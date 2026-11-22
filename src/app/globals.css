@@ -685,3 +685,12 @@ a.place-list-arrow:hover { background: #f2eaf7; }
 .discovery-pin[data-layer] .discovery-pin-label, .discovery-pin[data-layer] .discovery-pin-rating { color: var(--pin-ink); }
 .discovery-pin[data-layer].is-selected .discovery-pin-icon, .discovery-pin[data-layer].is-selected .discovery-pin-label { background: var(--pin-color); color: var(--pin-foreground, #fff); }
 .discovery-pin[data-layer="review"].is-selected .discovery-pin-icon, .discovery-pin[data-layer="review"].is-selected .discovery-friend-avatar { box-shadow: 0 0 0 2px #76548f, 0 4px 12px #39284340; }
+
+.discovery-photo-figure { margin: 0; }
+.discovery-photo-credit { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 7px 0 12px; color: #654379; font-size: .875rem; }
+.discovery-photo-credit span { display: inline-flex; align-items: center; gap: 4px; }
+.discovery-photo-credit img { border-radius: 50%; }
+.discovery-photo-credit a { text-decoration: underline; }
+.discovery-photo-loading { animation: photo-pulse 1.5s ease-in-out infinite alternate; }
+@keyframes photo-pulse { to { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .discovery-photo-loading { animation: none; } }

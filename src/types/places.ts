@@ -5,6 +5,13 @@ export interface Coordinates {
   longitude: number;
 }
 
+export interface PlacePhoto {
+  url: string;
+  authors: { display_name: string; uri?: string | null; photo_uri?: string | null }[];
+  google_maps_uri?: string | null;
+  flag_content_uri?: string | null;
+}
+
 export interface PlaceSuggestion {
   place_id: string;
   primary_text: string;

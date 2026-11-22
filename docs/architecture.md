@@ -286,3 +286,11 @@ place. Recommendation mapping supplies the followed author's ID to the merged fr
 When checking a map restoration locally, verify the served stylesheet as well as source files:
 the development CSS cache can retain the earlier marker rules while JavaScript has updated.
 The compiled stylesheet must include `.discovery-pin-caption` and the `data-layer` colour rules.
+
+### Place photos
+
+The selected-place photo component calls the typed Places client, then the FastAPI Places
+router/service/provider integration. The provider requests fresh `photos` metadata and resolves
+the first resource through Place Photos with `skipHttpRedirect=true` and `maxWidthPx=800`.
+Only the resulting image URL and attribution reach the browser; responses use `no-store`.
+No database or image-storage provider is involved.

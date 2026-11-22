@@ -17,7 +17,7 @@ Previews and search suggestions scroll internally when needed. Selecting a Googl
 viewport or centers at zoom 16. Unknown Google Places remain temporary markers, displaying
 provider name/address/link and returned attributions without invented app activity.
 Place previews use the updated merged design: a description, first photo shared in loaded app
-reviews (or a placeholder), rating summary, app reviews, and recommendation evidence in a larger
+reviews, falling back to a fresh Google place photo (or a placeholder), rating summary, app reviews, and recommendation evidence in a larger
 scrolling card. App review requests wait for the active viewer identity to be ready. Discover
 retains live global place search and the stable map renderer.
 The separate Home tab mounts the new landmark carousel and Experience feed; its scoped layout
@@ -183,3 +183,13 @@ References: [Maps loader](https://developers.google.com/maps/documentation/javas
 [Places session tokens](https://developers.google.com/maps/documentation/places/web-service/place-session-tokens),
 [Nearby Search](https://developers.google.com/maps/documentation/places/web-service/nearby-search),
 [Places policies](https://developers.google.com/maps/documentation/places/web-service/policies).
+
+## Selected-place photos
+
+`GET /api/places/{google_place_id}/photo` returns `{photo: null}` when Google has no photo,
+or a photo with an 800 px image URL, author credits and available source/report links.
+Only selected popups request photos; nearby/search field masks remain unchanged. Backend
+credentials stay private. Photo metadata and URLs are not stored or cached. Credits appear
+beside the image. Review photos take precedence, including fallback after an image fails.
+Closing or changing the selection cancels the request; photo failure never blocks reviews.
+Photo requests have a separate 60-per-minute, per-process limit. No new configuration is needed.

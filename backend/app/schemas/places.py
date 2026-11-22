@@ -61,3 +61,20 @@ class PlaceDetails(BaseModel):
 
 class NearbyResponse(BaseModel):
     places: list[PlaceDetails]
+
+
+class PhotoAuthor(BaseModel):
+    display_name: str
+    uri: str | None = None
+    photo_uri: str | None = None
+
+
+class PlacePhoto(BaseModel):
+    url: str
+    authors: list[PhotoAuthor] = Field(default_factory=list)
+    google_maps_uri: str | None = None
+    flag_content_uri: str | None = None
+
+
+class PlacePhotoResponse(BaseModel):
+    photo: PlacePhoto | None = None
