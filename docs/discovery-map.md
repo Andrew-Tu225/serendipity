@@ -10,7 +10,7 @@ the preview keeps the marker available. See [discovery-data.md](discovery-data.m
 queries, review submission, public browsing, and exact Google-ID matching.
 
 Discover fills the phone frame above navigation. The simulated status bar and page header are hidden.
-Search floats at the top with safe-area spacing, the location button sits below it, and
+Search floats at the top with safe-area spacing, with a crosshair location button to its right, and
 place previews clear the raised Add button and Google's attribution. The desktop phone frame stays.
 Previews and search suggestions scroll internally when needed. Selecting a Google result fits its
 viewport or centers at zoom 16. Unknown Google Places remain temporary search markers, displaying
@@ -18,6 +18,8 @@ provider name/address/link and returned attributions without invented app activi
 The ratings/friends legend is removed. Optional Google controls, including zoom buttons and keyboard
 shortcuts, are disabled; touch gestures and the custom location button remain available. Google's
 required logo, map attribution, and legal notices remain visible along the bottom edge.
+The location button has a 48 px touch target and a "Use my current location" tooltip. It is disabled
+while the map is loading or a location request is pending; location is still requested only on tap.
 
 Search waits for two trimmed characters and a 300 ms pause, then requests up to five suggestions,
 biased toward a 25 km circle around the current map center. Searches remain global. The dropdown

@@ -95,7 +95,7 @@ export function PlaceSearch({ active, getCenter, onSelect }: {
   }}>
     <div className="discovery-search-field">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
-      <input ref={input} role="combobox" aria-label="Search places" placeholder="Find your next favorite place"
+      <input ref={input} role="combobox" aria-label="Search places" placeholder="Search places"
         aria-autocomplete="list" aria-expanded={showDropdown} aria-controls={listId}
         aria-activedescendant={showDropdown && suggestions[index] ? `${listId}-${index}` : undefined}
         value={query} maxLength={200} autoComplete="off"

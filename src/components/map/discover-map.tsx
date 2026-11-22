@@ -128,7 +128,16 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
   return <section className="discovery-view" aria-label="Discover places">
     <div className="discovery-canvas">
       <div ref={host} className="discovery-map" aria-label="Interactive discovery map"/>
-      <PlaceSearch active={active} getCenter={getCenter} onSelect={selectSearch}/>
+      <div className="discovery-toolbar">
+        <PlaceSearch active={active} getCenter={getCenter} onSelect={selectSearch}/>
+        <button type="button" className="discovery-locate" aria-label="Center on my location"
+          title="Use my current location" aria-busy={active && locating} disabled={!map || locating} onClick={locate}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          </svg>
+        </button>
+      </div>
       {!map && !mapError && <div className="discovery-map-message" role="status">Finding your next favorite corner…</div>}
       {mapError && <div className="discovery-map-message" role="alert"><strong>The map couldn’t load</strong><p>{mapError}</p><button type="button" onClick={() => { setMap(null); setMapError(""); setAttempt((n) => n + 1); }}>Try again</button></div>}
       {map && <>
@@ -140,8 +149,6 @@ export default function DiscoverMap({ active, revision, reviewedPlace, selected:
           {discovery.error && <div className="discovery-data-status" role="alert">{discovery.error} <button onClick={discovery.retry}>Reload places</button></div>}
           {discovery.complete && !discovery.loading && !discovery.error && !discovery.hasVisiblePlaces && <div className="discovery-data-status" role="status">No app reviews in this area yet. <button onClick={() => onReview(null)}>Review a place</button></div>}
         </>}
-        <button type="button" className="discovery-locate" aria-label="Center on my location" aria-busy={active && locating}
-          onClick={locate}><span aria-hidden="true">◎</span></button>
       </>}
       {selected && !picking && <article className="discovery-preview" aria-label="Selected place">
         <div className="discovery-place-art" aria-hidden="true"><PlaceGlyph category={selected.category}/></div>

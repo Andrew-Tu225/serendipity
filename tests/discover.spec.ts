@@ -229,7 +229,10 @@ for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, heig
     expect(map!.y + map!.height).toBeCloseTo(nav!.y, 0);
     expect(nav!.y + nav!.height).toBeCloseTo(shell!.y + shell!.height, 0);
     expect(search!.y).toBeGreaterThan(map!.y);
-    expect(locate!.y).toBeGreaterThan(search!.y + search!.height);
+    expect(locate!.x).toBeGreaterThan(search!.x + search!.width);
+    expect(locate!.y + locate!.height / 2).toBeCloseTo(search!.y + search!.height / 2, 0);
+    expect(locate!.width).toBeGreaterThanOrEqual(44);
+    expect(locate!.height).toBeGreaterThanOrEqual(44);
     // An uncovered patch of map must receive input directly, without an overlay intercepting it.
     const uncovered = { x: map!.x + 5, y: map!.y + map!.height / 2 };
     expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.classList.contains("discovery-map"), uncovered)).toBe(true);
