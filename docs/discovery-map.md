@@ -22,7 +22,8 @@ scrolling card. Previews without a review photo omit the photo area entirely. Th
 row, with Write a review on the left and an outlined Open in Google Maps button on the right. The
 native Maps button keeps its map-pin icon beside the label in a horizontal flex row and opens the
 validated Maps URL in a new tab; its label can wrap within the button on narrow
-screens. App review requests wait for the active viewer identity to be ready. Discover
+screens. The card has 28 px of bottom padding to leave space below its actions.
+App review requests wait for the active viewer identity to be ready. Discover
 retains live global place search and the stable map renderer.
 The separate Home tab mounts the new landmark carousel and Experience feed; its scoped layout
 styles do not replace map styles. Home images use explicit dimensions rather than absolute fill.
