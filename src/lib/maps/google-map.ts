@@ -1,13 +1,17 @@
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import type { Coordinates, PlaceDetails } from "@/types/places";
+import type { MapBounds } from "@/types/discovery";
 
 export const TORONTO = { latitude: 43.651, longitude: -79.386 };
 
 export interface MapHandle {
   center(): Coordinates;
+  bounds(): MapBounds[];
+  onIdle(callback: () => void): () => void;
+  onPick(callback: (position: Coordinates) => void): () => void;
   focus(place: Pick<PlaceDetails, "location" | "viewport">): void;
   locate(position: Coordinates): void;
-  marker(position: Coordinates, element: HTMLElement, title: string, onClick: () => void): {
+  marker(position: Coordinates, element: HTMLElement, title: string, onClick: () => void, cluster?: boolean): {
     select(selected: boolean): void;
     remove(): void;
   };
@@ -42,15 +46,55 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
   ]);
   signal.throwIfAborted();
   if (authenticationFailed) throw new Error("Google Maps authorization failed. Please check the map configuration.");
+  const { MarkerClusterer } = await import("@googlemaps/markerclusterer");
+  signal.throwIfAborted();
   const map = new Map(host, {
     center: latLng(TORONTO), zoom: 13, mapId,
     disableDefaultUI: true, zoomControl: true, clickableIcons: false,
     zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
     gestureHandling: "greedy", keyboardShortcuts: true,
   });
+  const clusters = new MarkerClusterer({ map, renderer: {
+    render({ count, position }) {
+      const content = document.createElement("span");
+      content.className = "discovery-cluster";
+      content.textContent = String(count);
+      return new AdvancedMarkerElement({ position, content, title: `Zoom to ${count} places`, zIndex: 500 });
+    },
+  } });
+  let frame = 0;
+  let destroyed = false;
+  const selectedMarkers = new Set<google.maps.marker.AdvancedMarkerElement>();
+  const renderClusters = () => {
+    if (destroyed) return;
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => {
+      clusters.render();
+      selectedMarkers.forEach((marker) => { marker.map = map; });
+    });
+  };
   let locationMarker: google.maps.marker.AdvancedMarkerElement | undefined;
   authenticationListeners.add(onAuthenticationFailure);
   return {
+    bounds() {
+      const bounds = map.getBounds()?.toJSON();
+      if (!bounds || bounds.south >= bounds.north) return [];
+      if (bounds.west <= bounds.east) return [bounds];
+      // The API uses ordinary rectangles; split a viewport crossing the date line.
+      return [
+        { ...bounds, east: 180 }, { ...bounds, west: -180 },
+      ].filter((part) => part.west < part.east);
+    },
+    onIdle(callback) {
+      const listener = map.addListener("idle", callback);
+      return () => listener.remove();
+    },
+    onPick(callback) {
+      const listener = map.addListener("click", (event: google.maps.MapMouseEvent) => {
+        if (event.latLng) callback({ latitude: event.latLng.lat(), longitude: event.latLng.lng() });
+      });
+      return () => listener.remove();
+    },
     center() {
       const center = map.getCenter();
       return center ? { latitude: center.lat(), longitude: center.lng() } : TORONTO;
@@ -74,8 +118,9 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       map.setZoom(15);
       map.panTo(latLng(position));
     },
-    marker(position, element, title, onClick) {
+    marker(position, element, title, onClick, cluster = true) {
       const marker = new AdvancedMarkerElement({ map, position: latLng(position), content: element, title, zIndex: 1 });
+      if (cluster) { clusters.addMarker(marker, true); renderClusters(); }
       const listener = marker.addListener("click", onClick);
       return {
         select(selected) {
@@ -83,9 +128,19 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
           marker.zIndex = selected ? 1000 : 1;
           marker.collisionBehavior = selected
             ? google.maps.CollisionBehavior.REQUIRED_AND_HIDES_OPTIONAL
-            : google.maps.CollisionBehavior.OPTIONAL_AND_HIDES_LOWER_PRIORITY;
+            : google.maps.CollisionBehavior.REQUIRED;
+          if (cluster) {
+            if (selected) { selectedMarkers.add(marker); clusters.removeMarker(marker, true); marker.map = map; }
+            else { selectedMarkers.delete(marker); clusters.addMarker(marker, true); }
+            renderClusters();
+          }
         },
-        remove() { listener.remove(); marker.map = null; },
+        remove() {
+          listener.remove();
+          selectedMarkers.delete(marker);
+          if (cluster) { clusters.removeMarker(marker, true); renderClusters(); }
+          marker.map = null;
+        },
       };
     },
     resize() {
@@ -94,6 +149,11 @@ export async function createGoogleMap(host: HTMLElement, signal: AbortSignal, on
       if (center) map.setCenter(center);
     },
     destroy() {
+      destroyed = true;
+      selectedMarkers.clear();
+      cancelAnimationFrame(frame);
+      clusters.clearMarkers(true);
+      clusters.setMap(null);
       authenticationListeners.delete(onAuthenticationFailure);
       if (locationMarker) locationMarker.map = null;
       google.maps.event.clearInstanceListeners(map);

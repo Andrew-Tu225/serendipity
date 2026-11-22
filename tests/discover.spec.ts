@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { mockGoogleMaps } from "./helpers/google-maps";
+import { mockDiscovery } from "./helpers/discovery";
+
+test.beforeEach(async ({ page }) => { await mockDiscovery(page); });
 
 const suggestion = { place_id: "garden", primary_text: "A garden", secondary_text: "Toronto, ON" };
 const details = {
@@ -15,16 +18,16 @@ async function openDiscover(page: import("@playwright/test").Page) {
   await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toBeVisible();
 }
 
-test("loads only on Discover, selects demo places, and preserves the map across tabs", async ({ page }) => {
+test("loads only on Discover, selects app places, and preserves the map across tabs", async ({ page }) => {
   const loads = await mockGoogleMaps(page);
   await page.goto("/");
   expect(loads()).toBe(0);
   await page.getByRole("button", { name: "Discover", exact: true }).click();
   await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toBeVisible();
-  await expect(page.getByText("Toronto · Demo ratings & friends")).toBeVisible();
+  await expect(page.getByText("Serendipity ratings · Friends highlighted")).toBeVisible();
   await expect(page.getByRole("button", { name: "Map filters" })).toHaveCount(0);
   await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).click();
-  await expect(page.getByRole("article", { name: "Selected place" })).toContainText("Elena recommends this · Demo");
+  await expect(page.getByRole("article", { name: "Selected place" })).toContainText("Elena recommends this");
   await page.evaluate(() => {
     (window as unknown as Window & { __panTestMap: (lat: number, lng: number) => void }).__panTestMap(43.7, -79.4);
   });
@@ -192,21 +195,21 @@ test("Google authorization failures show a useful error", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Google Maps authorization failed");
 });
 
-test("app-rated demo places include friends’ reviews and community-only ratings", async ({ page }) => {
+test("app-rated places include friends’ reviews and community-only ratings", async ({ page }) => {
   await mockGoogleMaps(page);
   await openDiscover(page);
-  await expect(page.getByLabel(/Demo Serendipity rating:/)).toHaveCount(6);
+  await expect(page.getByLabel(/Serendipity rating:/)).toHaveCount(6);
   await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).click();
   const preview = page.getByRole("article", { name: "Selected place" });
-  await expect(preview).toContainText("4.7/5 · 23 reviews · Serendipity demo");
+  await expect(preview).toContainText("4.7/5 · 23 reviewers · Serendipity");
   await expect(preview).toContainText("Go early, grab something warm");
   await page.getByRole("button", { name: "Close place preview" }).click();
   await page.getByRole("button", { name: "View Trinity Bellwoods Park", exact: true }).click();
-  await expect(preview).toContainText("4.4/5 · 31 reviews · Serendipity demo");
+  await expect(preview).toContainText("4.4/5 · 31 reviewers · Serendipity");
   await expect(preview.locator(".discovery-friend-note")).toHaveCount(0);
   await page.getByRole("button", { name: "Close place preview" }).click();
   await page.getByRole("button", { name: "View Toronto Music Garden", exact: true }).click();
-  await expect(preview).toContainText("Alex recommends this · Demo");
+  await expect(preview).toContainText("Alex recommends this");
 });
 
 for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 1280, height: 844 }]) {

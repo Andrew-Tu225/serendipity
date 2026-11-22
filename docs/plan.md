@@ -229,24 +229,24 @@ Ultimately, we want someone to open the app and think:
 
 ## Current implementation
 
-The Discover tab uses Google Maps JavaScript API, Advanced Markers, and cloud styling, with public
-Places API (New) autocomplete and selected-place details provided through FastAPI. It starts in
-Toronto; device location is requested only when the user taps the location button. Search supports
-specific places and cities globally, biased toward the current map center. Six independently authored
-Toronto places demonstrate custom category pins, illustrative five-point app ratings, and illustrated
-friends' reviews. Ratings and friend activity are labeled demo content, and Google search results do
-not claim app ratings or friend recommendations. Discover fills the phone above navigation, with its
-search, location button, and preview cards floating over the map.
+Discover fills the phone above navigation, with floating search, location controls, and place previews.
+Google supplies the basemap and global place/city search through FastAPI. App-reviewed Places come
+from PostgreSQL for the visible map area after initial load, panning, zooming, search, or geolocation.
+Every reviewed Place is eligible, including low ratings; recommendation ranking remains separate.
+Dense locations cluster rather than being dropped. Toronto is the initial camera position; location
+permission is requested only on tap.
 
-The intended browsing layer shows all app-reviewed Places in the visible area, highlighting those
-reviewed by friends. Friend avatars represent reviews and past visits. Google provides the basemap
-and location lookup; app data determines the social pins. The demo rating scale is provisional rather
-than a final decision on the production rating model.
+Visitors can browse public ratings and reviews without signing in. Signed-in viewers also see the
+Experiences of users they follow highlighted as friends. The app uses the existing directed-follow
+model and public Experience visibility. Each user's latest visit per Place contributes one rating
+(1–5 in half steps). Marker averages are displayed to one decimal.
 
-This iteration removes the prototype category/filter controls. Persistent Places, Bookmarks,
-Experiences, friendships, hidden-gem ranking, uploads, clustering, and discovery-by-category remain
-future work. The real social layer will determine which Places appear on the map; Google supplies
-the map and searchable place directory. Image storage is still undecided.
+Signed-in users can review an existing app Place or add a Place by choosing a map point and supplying
+a name and category. Review submission persists the Place, Experience, and taste update together,
+then refreshes the map. Google IDs optionally link provider searches to app records; provider names,
+addresses, and coordinates remain transient search data. Fake discovery pins are removed. No fixtures
+are inserted automatically. Friend-management UI, saving/bookmark UI, uploads, and category filters
+are still future work. Image storage remains undecided. See [discovery-data.md](discovery-data.md).
 
 ## 8. Open Questions and Ideas to Explore
 

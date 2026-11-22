@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { mockGoogleMaps } from "./helpers/google-maps";
+import { mockDiscovery } from "./helpers/discovery";
 
 const session = {
   auth0: { sub: "auth0|browser-test", name: "Alex", email: "alex@example.com" },
@@ -18,6 +19,7 @@ const session = {
 
 test("the Figma homepage remains available alongside authentication", async ({ page }) => {
   await mockGoogleMaps(page);
+  await mockDiscovery(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("What feels fun?");

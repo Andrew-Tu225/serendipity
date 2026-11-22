@@ -1,10 +1,13 @@
 'use client'
 
 import Image from 'next/image'
-import { useState, type ChangeEvent, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import potteryImage from './assets/pottery-workshop.png'
 import rooftopImage from './assets/rooftop-dinner.png'
 import DiscoverMap from '@/components/map/discover-map'
+import { ReviewComposer } from '@/components/experience/review-composer'
+import { mapPlace, type PlaceExperiences } from '@/types/discovery'
+import type { Coordinates, MapPlace } from '@/types/places'
 import { FriendAvatar } from '@/components/map/friend-avatar'
 
 type IconName =
@@ -51,15 +54,6 @@ function Icon({ name, size = 22, filled = false }: { name: IconName; size?: numb
 }
 
 const filters = ['For you', 'Food', 'Creative', 'Outdoors', 'Music']
-const experienceCriteria: Record<string, string[]> = {
-  Restaurants: ['Flavor', 'Service', 'Atmosphere'],
-  Hikes: ['Scenery', 'Physical effort', 'Difficulty'],
-  Creative: ['Creativity', 'Guidance', 'Hands-on'],
-  Nightlife: ['Energy', 'Music', 'Crowd'],
-  Wellness: ['Relaxation', 'Care', 'Value'],
-  Other: ['Novelty', 'Organization', 'Value'],
-}
-
 function App() {
   const [activeTab, setActiveTab] = useState('Home')
   const [discovered, setDiscovered] = useState(false)
@@ -68,40 +62,45 @@ function App() {
   const [saved, setSaved] = useState(false)
   const [sheet, setSheet] = useState<'post' | 'soon' | null>(null)
   const [posted, setPosted] = useState(false)
-  const [media, setMedia] = useState<{ url: string; type: string; name: string } | null>(null)
-  const [postCategory, setPostCategory] = useState('Restaurants')
-  const [sentiment, setSentiment] = useState('liked')
-  const [experienceRatings, setExperienceRatings] = useState<Record<string, number>>({ Flavor: 3, Service: 3, Atmosphere: 3 })
-  const [labels, setLabels] = useState(['date night'])
-  const [labelInput, setLabelInput] = useState('')
+  const [selectedPlace, setSelectedPlace] = useState<MapPlace | null>(null)
+  const [reviewTarget, setReviewTarget] = useState<MapPlace | null>(null)
+  const [reviewPoint, setReviewPoint] = useState<Coordinates | null>(null)
+  const [picking, setPicking] = useState(false)
+  const [reviewBusy, setReviewBusy] = useState(false)
+  const [reviewRevision, setReviewRevision] = useState(0)
+
+  const startReview = (place: MapPlace | null) => {
+    setReviewTarget(place)
+    setReviewPoint(null)
+    setPosted(false)
+    if (place?.app_id) {
+      setPicking(false)
+      setSheet('post')
+    } else {
+      setSheet(null)
+      setPicking(true)
+      setDiscovered(true)
+      setActiveTab('Discover')
+    }
+  }
+  const reviewSaved = (result: PlaceExperiences) => {
+    setSelectedPlace(mapPlace(result.place))
+    setReviewRevision((value) => value + 1)
+    setReviewBusy(false)
+    setSheet(null)
+    setPosted(true)
+    setActiveTab('Discover')
+  }
 
   const changeTab = (tab: string) => {
     if (tab === 'Add') {
-      setSheet('post')
+      startReview(null)
       return
     }
     setSheet(null)
+    setPicking(false)
     if (tab === 'Discover') setDiscovered(true)
     setActiveTab(tab)
-  }
-
-  const selectMedia = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (media) URL.revokeObjectURL(media.url)
-    setMedia({ url: URL.createObjectURL(file), type: file.type, name: file.name })
-  }
-
-  const chooseCategory = (category: string) => {
-    setPostCategory(category)
-    setExperienceRatings(Object.fromEntries(experienceCriteria[category].map((criterion) => [criterion, 3])))
-  }
-
-  const addLabel = () => {
-    const value = labelInput.trim().replace(/^#/, '')
-    if (!value || labels.includes(value)) return
-    setLabels((current) => [...current, value])
-    setLabelInput('')
   }
 
   const pageEyebrow = activeTab === 'Buddy' ? 'Your people' : activeTab === 'Profile' ? 'Your vibe' : activeTab === 'Discover' ? 'Around you' : 'Good morning, Mia'
@@ -129,7 +128,10 @@ function App() {
 
         <div className="app-content">
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>
-            {discovered && <DiscoverMap active={activeTab === 'Discover'} />}
+            {discovered && <DiscoverMap active={activeTab === 'Discover'} revision={reviewRevision}
+              selected={selectedPlace} onSelect={setSelectedPlace} onReview={startReview}
+              picking={picking} onCancelPick={() => setPicking(false)}
+              onPick={(point) => { setReviewPoint(point); setPicking(false); setSheet('post') }}/>}
           </div>
           {activeTab === 'Buddy' ? (
             <BuddyView />
@@ -183,10 +185,11 @@ function App() {
                 <button aria-label="Save rooftop supper"><Icon name="bookmark" size={18}/></button>
               </article>
 
-              {posted && <div className="toast"><Icon name="sparkle" size={16}/> Your experience was shared</div>}
             </>
           )}
         </div>
+
+        {posted && <div className="review-saved" role="status">Your experience was shared <button onClick={() => setPosted(false)} aria-label="Dismiss confirmation">×</button></div>}
 
         <nav className="bottom-nav" aria-label="Primary navigation">
           <NavButton label="Home" icon="home" active={activeTab === 'Home'} onClick={() => changeTab('Home')}/>
@@ -197,64 +200,20 @@ function App() {
         </nav>
 
         {sheet && (
-          <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}>
-            <section className="sheet" role="dialog" aria-modal="true" aria-label={sheet === 'post' ? 'Create a post' : 'Coming soon'}>
+          <div className="sheet-backdrop" onMouseDown={(event) => event.currentTarget === event.target && !reviewBusy && setSheet(null)}>
+            <section className="sheet" onKeyDown={(event) => {
+              if (event.key === 'Escape' && !reviewBusy) setSheet(null)
+              if (event.key === 'Tab') {
+                const fields = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]'))
+                const first = fields[0], last = fields[fields.length - 1]
+                if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+                if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+              }
+            }} role="dialog" aria-modal="true" aria-label={sheet === 'post' ? 'Create a post' : 'Coming soon'}>
               <div className="sheet-handle"/>
-              <button className="sheet-close" onClick={() => setSheet(null)} aria-label="Close"><Icon name="close" size={20}/></button>
+              <button autoFocus className="sheet-close" disabled={reviewBusy} onClick={() => setSheet(null)} aria-label="Close"><Icon name="close" size={20}/></button>
               {sheet === 'post' ? (
-                <>
-                  <p className="eyebrow">SHARE THE GOOD STUFF</p>
-                  <h2>Add an experience</h2>
-                  <div className="post-section category-section">
-                    <div className="form-title"><strong>Add to a list</strong><span>Pick the best fit</span></div>
-                    <div className="category-options">
-                      {Object.keys(experienceCriteria).map((category) => <button key={category} type="button" className={postCategory === category ? 'selected' : ''} onClick={() => chooseCategory(category)}>{category}</button>)}
-                    </div>
-                  </div>
-                  <div className="post-section sentiment-section">
-                    <div className="form-title"><strong>How was it?</strong><span>Your overall take</span></div>
-                    <div className="sentiment-options">
-                      <button type="button" className={sentiment === 'liked' ? 'selected' : ''} onClick={() => setSentiment('liked')}><i className="green"><Icon name="heart" size={19}/></i><span>I liked it</span></button>
-                      <button type="button" className={sentiment === 'okay' ? 'selected' : ''} onClick={() => setSentiment('okay')}><i className="yellow">—</i><span>It was okay</span></button>
-                      <button type="button" className={sentiment === 'disliked' ? 'selected' : ''} onClick={() => setSentiment('disliked')}><i className="red"><Icon name="close" size={19}/></i><span>I didn’t like it</span></button>
-                    </div>
-                  </div>
-                  <label className="media-picker">
-                    <input type="file" accept="image/*,video/*" onChange={selectMedia}/>
-                    {media ? (
-                      <div className="media-preview">
-                        {media.type.startsWith('video/') ? <video src={media.url} controls/> : <Image src={media.url} unoptimized width={96} height={96} alt="Selected upload preview"/>}
-                        <span>{media.name}</span>
-                      </div>
-                    ) : (
-                      <div className="media-empty">
-                        <span><Icon name="plus" size={23}/></span>
-                        <div><strong>Add photos or video</strong><small>Share the moment, not just the review</small></div>
-                      </div>
-                    )}
-                  </label>
-                  <label>What did you do?<input placeholder="e.g. Sunset pasta class"/></label>
-                  <div className="form-grid">
-                    <label>Who did you go with?
-                      <select defaultValue=""><option value="" disabled>Select people</option><option>Elena & James</option><option>Alex</option><option>My partner</option><option>Family</option><option>Went solo</option></select>
-                    </label>
-                    <label>Date visited<input type="date"/></label>
-                  </div>
-                  <div className="labels-field">
-                    <label>Labels</label>
-                    <div className="labels-input"><input value={labelInput} onChange={(event) => setLabelInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addLabel() } }} placeholder="Add a label"/><button type="button" onClick={addLabel}><Icon name="plus" size={16}/></button></div>
-                    <div className="added-labels">{labels.map((label) => <button key={label} type="button" onClick={() => setLabels((current) => current.filter((item) => item !== label))}>#{label} <Icon name="close" size={10}/></button>)}</div>
-                  </div>
-                  <label>Favorite parts<textarea placeholder="The dish, view, moment, or detail you loved..." rows={2}/></label>
-                  <label>Notes<textarea placeholder="Anything you want to remember for next time?" rows={2}/></label>
-                  <div className="rating-block">
-                    <div className="form-title"><strong>Rate this {postCategory.toLowerCase()} experience</strong><span>Criteria tailored to your list</span></div>
-                    {Object.entries(experienceRatings).map(([label, value]) => (
-                      <ScaleRating key={label} label={label} value={value} onChange={(rating) => setExperienceRatings((current) => ({ ...current, [label]: rating }))}/>
-                    ))}
-                  </div>
-                  <button className="primary-button" onClick={() => { setSheet(null); setActiveTab('Home'); setPosted(true); window.setTimeout(() => setPosted(false), 2800) }}>Share experience <Icon name="arrow" size={18}/></button>
-                </>
+                <ReviewComposer target={reviewTarget} point={reviewPoint} onSaved={reviewSaved} onBusy={setReviewBusy}/>
               ) : (
                 <div className="soon-state">
                   <span><Icon name="sparkle" size={28}/></span>

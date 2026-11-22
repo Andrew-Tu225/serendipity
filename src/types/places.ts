@@ -20,7 +20,11 @@ export interface PlaceDetails {
 }
 
 export interface MapPlace extends PlaceDetails {
-  source: "demo" | "google";
+  source: "google" | "app";
+  app_id?: string;
+  google_place_id?: string;
+  app_category?: import("./discovery").PlaceCategory;
+  friend_count?: number;
   category?: "Food" | "Culture" | "Outdoors";
   rating_summary?: { average: number; count: number };
   friend?: { name: string; note: string; review: string; variant: string };

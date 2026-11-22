@@ -35,6 +35,7 @@ class Place(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
+    google_place_id: Mapped[str | None] = mapped_column(String(255), unique=True)
     lat: Mapped[float] = mapped_column(Float, nullable=False)
     lng: Mapped[float] = mapped_column(Float, nullable=False)
     category: Mapped[str] = mapped_column(String(20), nullable=False)

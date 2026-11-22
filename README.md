@@ -112,7 +112,14 @@ to Google's `DEMO_MAP_ID`, which shows Google's default map style. Production re
 Map ID. Restart the frontend after environment changes; `NEXT_PUBLIC_*` values are bundled at build time.
 
 Search and details are available without login or a database. Demo friend activity is illustrative.
-There are no schema migrations for this feature. Photos, saving, social data, and filters are deferred.
+Run `npm install` for the marker clustering dependency and `cd backend && uv run alembic upgrade head`
+before using app-reviewed places. Migration 0003 links app Places to optional Google IDs; migration
+0002 supplies Places, Experiences, and follows. The map loads every app-reviewed Place in view from
+PostgreSQL. Visitors can browse public reviews; signed-in users can write reviews and see followed
+users highlighted. Use Add to name a new Place and choose its map point, or Write a review on an
+existing marker. An empty database has no pins until a review is submitted. No demo data is inserted
+automatically. Photos, saving UI, friend-management UI, and filters are deferred. See
+[the database discovery guide](docs/discovery-data.md).
 
 ### Application layers
 
@@ -147,7 +154,7 @@ uv run ruff format --check .
 
 The backend suite uses isolated SQLite databases and a mocked OIDC provider with real RSA-signed tokens. To also run PostgreSQL concurrency tests, set `TEST_DATABASE_URL` to a PostgreSQL SQLAlchemy URL and run pytest. Those tests create and remove their own unique schema, leaving application tables untouched. A separate disposable database is recommended for testing migrations.
 
-Browser tests mock the auth API, Google Maps SDK, and Places responses, and run a dedicated Next.js server on port 3039 with `.next-auth-test` output and dummy Maps credentials. Install Chromium once with `npx playwright install chromium`. `TEST_BASE_URL` can target an existing test server configured with a browser map key and Map ID. `SERENDIPITY_DIST_DIR` optionally isolates other Next.js builds from a running dev server.
+Browser tests mock the auth API, Google Maps SDK, Places responses, and discovery/review HTTP responses, and run a dedicated Next.js server on port 3039 with `.next-auth-test` output and dummy Maps credentials. Install Chromium once with `npx playwright install chromium`. `TEST_BASE_URL` can target an existing test server configured with a browser map key and Map ID. `SERENDIPITY_DIST_DIR` optionally isolates other Next.js builds from a running dev server.
 
 | Command | Description |
 |---------|-------------|

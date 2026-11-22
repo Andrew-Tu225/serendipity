@@ -37,21 +37,26 @@ UI components do not make ad hoc `fetch` calls or contain backend endpoint strin
 
 Discover loads the Maps JavaScript SDK only after the tab opens. Its client-side map adapter owns
 the Google map, geographic markers, location indicator, camera operations, and listener cleanup.
-React portals supply custom marker contents, including the shared illustrated friend avatars.
+React portals supply custom marker contents, including initials identifying followed users.
 Discover occupies the full phone area above navigation, with search and previews layered over the
-map. Its demo fixtures include provisional five-point app ratings and friends' review snippets.
+map. App-reviewed Places and friend snippets come from the discovery API; dense pins are clustered.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
 cancels pending search/details requests. Home, Buddy, and Profile keep their existing behavior.
 
 Place search follows `UI → placesClient → /api proxy → places router → PlacesService → GooglePlacesClient`.
 The integration uses Google Places API **New**, separate from the browser Maps SDK. No repository,
-database connection, tables, or commits are involved in this read-only provider flow. Future saved
-places and social features must use the normal repository/PostgreSQL layers.
-The intended discovery query will fetch app-reviewed Places for the visible map bounds, enriching
-them with app rating summaries and viewer-specific friend Experiences. Google search moves the
-camera or selects a provider Place; it does not determine the social marker set. Join provider results
-to app Places by Google Place ID, while preserving separate internal Place IDs. That query and its
-persistence are future integration work; the current browsing markers remain authored Toronto demos.
+database connection, tables, or commits are involved in this read-only provider flow.
+
+Discovery follows `UI → discoveryClient → discovery router → DiscoveryService → DiscoveryRepository
+→ PostgreSQL`. It queries every app-reviewed Place within visible bounds, paginates results, and
+returns latest-per-author ratings and viewer-specific followed-user snippets. Public browsing uses
+an optional session dependency; invalid/expired sessions are anonymous while database failures remain
+errors. Search results join to app Places only by an optional unique Google Place ID (migration 0003).
+App IDs remain separate from provider identifiers. The review form submits through the same typed
+client with a CSRF token; `CurrentUser` and `VerifiedMutation` protect writes. The discovery service
+creates an optional user-authored Place, then delegates to the existing Experience service to commit
+the Place, Experience, and taste update together. Repositories never commit. Public reviews and
+summaries use no-store headers, including on error. See [discovery-data.md](discovery-data.md).
 
 `GET /api/places/autocomplete` validates the text, UUID session token, and optional paired coordinates.
 `GET /api/places/{place_id}` validates the provider ID and session token. The service applies process-wide
@@ -62,8 +67,9 @@ unconfigured or failed provider requests return `503`. Every Places response, in
 `Cache-Control: no-store`. These public, read-only routes do not require authentication or CSRF.
 
 Google search results live only in component memory. They are not persisted, stored in browser
-storage, or cached by the backend. Demo places use independently authored data and fake friend
-activity, clearly labeled in the interface. No Google photos or reviews are fetched. Required map
+storage, or cached by the backend. App Places persist user-authored names and user-chosen map
+points, plus optional provider IDs. Google search names/addresses/coordinates are not copied into
+app records. Hard-coded demo discovery pins are removed. No Google photos or reviews are fetched. Required map
 attribution and returned provider attributions remain visible. See [discovery-map.md](discovery-map.md).
 
 ## Authentication flow
@@ -117,7 +123,7 @@ backend/app/services/experiences.py: ExperienceService.create_experience()
   → one commit
 ```
 
-The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. No HTTP endpoint calls it yet; a future `POST /api/experiences` will use `VerifiedMutation`.
+The log and its taste-profile increment commit together or not at all. `add_score` is an `INSERT ... ON CONFLICT DO UPDATE SET score = score + excluded.score`, so concurrent logs by the same user cannot lose an update. `POST /api/discovery/experiences` calls it through `DiscoveryService`, using `CurrentUser` and `VerifiedMutation`; a new Place participates in that same transaction.
 
 ## Adding a feature
 

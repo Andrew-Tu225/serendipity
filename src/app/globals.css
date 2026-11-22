@@ -337,6 +337,23 @@
 .discovery-preview-close { position: absolute; top: 4px; right: 4px; min-width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: #76548f; font-size: 23px; }
 .discovery-location-error { position: absolute; z-index: 3; top: calc(128px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; padding: 10px 12px; border-radius: 12px; background: #fffffff5; font-size: 12px; color: #805565; }
 .discovery-view button:focus-visible, .discovery-preview a:focus-visible { outline: 2px solid #76548f; outline-offset: 2px; }
+.discovery-data-status { position: absolute; z-index: 3; top: calc(128px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; padding: 10px 12px; border-radius: 12px; color: #654577; background: #fff; font-size: 12px; box-shadow: 0 4px 18px #36263f14; }
+.discovery-data-status button { margin: 5px 8px 0 0; padding: 4px 0; color: #654577; border: 0; background: transparent; text-decoration: underline; }
+.discovery-friend-avatar { display: grid; place-items: center; width: 42px; height: 42px; border: 3px solid #fff; border-radius: 50%; color: #fff; background: #76548f; box-shadow: 0 4px 12px #39284340; font-size: 14px; font-weight: 700; }
+.discovery-cluster { display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 8px; border: 3px solid white; border-radius: 50%; background: #76548f; color: white; box-shadow: 0 4px 15px #39284340; font-size: 15px; font-weight: 700; }
+.discovery-reviews { margin-top: 8px; }
+.discovery-review { padding: 8px 0; border-top: 1px solid #eee7f1; font-size: 11px; }
+.discovery-review small { margin-top: 3px; color: #87788f; }
+.discovery-reviews button { border: 0; padding: 6px 0; color: #654577; background: transparent; text-decoration: underline; }
+.discovery-preview .discovery-review-button { display: block; margin-top: 9px; padding: 9px 12px; border: 0; border-radius: 12px; color: white; background: #76548f; font-size: 12px; }
+.review-intro { margin: 8px 0 18px; color: #786780; font-size: 13px; }
+.review-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.review-form label { margin-top: 14px; }
+.review-form input, .review-form textarea, .review-form select { font-size: 16px; }
+.review-form .primary-button { margin-top: 20px; }
+.review-form fieldset:disabled, .sheet-close:disabled { opacity: .6; cursor: wait; }
+.review-saved { position: absolute; z-index: 25; left: 16px; right: 16px; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); padding: 12px; border-radius: 14px; background: #76548f; color: white; font-size: 12px; box-shadow: 0 5px 20px #39284330; }
+.review-saved button { float: right; border: 0; background: transparent; color: white; }
 
 .profile-view { padding-bottom: 8px; }
 .profile-card { padding: 19px 17px 15px; text-align: center; border: 1px solid #e8e0ec; border-radius: 24px; background: #fff; box-shadow: 0 12px 34px rgba(59, 41, 69, .08); }

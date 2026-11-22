@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MapHandle } from "@/lib/maps/google-map";
 import type { MapPlace } from "@/types/places";
-import { FriendAvatar } from "./friend-avatar";
 
 export function PlaceGlyph({ category }: { category?: string }) {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -23,15 +22,15 @@ export function PlaceMarker({ map, place, selected, onSelect }: {
   });
   const marker = useRef<ReturnType<MapHandle["marker"]> | null>(null);
   useEffect(() => {
-    marker.current = map.marker(place.location, element, `View ${place.display_name}`, () => onSelect(place));
+    marker.current = map.marker(place.location, element, `View ${place.display_name}`, () => onSelect(place), place.source === "app");
     return () => { marker.current?.remove(); marker.current = null; };
   }, [map, place, element, onSelect]);
   useEffect(() => { marker.current?.select(selected); }, [selected, map, place, element, onSelect]);
   return createPortal(<>
-    {place.friend ? <FriendAvatar variant={place.friend.variant}/> : <span className="discovery-pin-icon"><PlaceGlyph category={place.category}/></span>}
+    {place.friend ? <span className="discovery-friend-avatar" aria-label={`${place.friend.name} reviewed this place`}>{place.friend.name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("")}</span> : <span className="discovery-pin-icon"><PlaceGlyph category={place.category}/></span>}
     <span className="discovery-pin-label">{place.friend ? place.friend.name : place.display_name}</span>
-    {place.rating_summary && <span className="discovery-pin-rating" aria-label={`Demo Serendipity rating: ${place.rating_summary.average} out of 5`}>
-      ★ {place.rating_summary.average.toFixed(1)} · Demo
+    {place.rating_summary && <span className="discovery-pin-rating" aria-label={`Serendipity rating: ${place.rating_summary.average} out of 5`}>
+      ★ {place.rating_summary.average.toFixed(1)} · {place.rating_summary.count}
     </span>}
   </>, element);
 }

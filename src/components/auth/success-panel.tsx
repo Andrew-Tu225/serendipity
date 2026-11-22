@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, authClient } from "@/lib/api-client";
@@ -75,6 +77,7 @@ export function SuccessPanel() {
       {!loading && session && (
         <>
           <h1 className="text-3xl font-semibold tracking-tight">Successful</h1>
+          <Link href="/" className="mt-4 inline-block underline">Explore places</Link>
           <section aria-labelledby="auth0-heading" className="mt-8">
             <h2 id="auth0-heading" className="mb-3 text-lg font-medium">Auth0 payload</h2>
             <pre className="overflow-x-auto rounded-lg border border-zinc-300 bg-zinc-100 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-900">
