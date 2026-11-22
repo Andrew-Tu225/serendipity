@@ -109,19 +109,23 @@ function App() {
 
   return (
     <main className="min-h-dvh bg-[#ebe5f5] text-[#292333] sm:py-6">
-      <div className="app-shell">
-        <div className="status-bar" aria-hidden="true">
-          <span>9:41</span>
-          <div className="status-icons"><span className="signal"/><span className="wifi"/><span className="battery"/></div>
-        </div>
+      <div className={`app-shell${activeTab === 'Discover' ? ' is-discover' : ''}`}>
+        {activeTab !== 'Discover' && (
+          <>
+            <div className="status-bar" aria-hidden="true">
+              <span>9:41</span>
+              <div className="status-icons"><span className="signal"/><span className="wifi"/><span className="battery"/></div>
+            </div>
 
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">{pageEyebrow}</p>
-            <h1>{pageTitle}</h1>
-          </div>
-          <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>
-        </header>
+            <header className="topbar">
+              <div>
+                <p className="eyebrow">{pageEyebrow}</p>
+                <h1>{pageTitle}</h1>
+              </div>
+              <button className="round-button" aria-label="Notifications"><Icon name="bell" size={20}/><span className="notification-dot"/></button>
+            </header>
+          </>
+        )}
 
         <div className="app-content">
           <div className="discovery-mount" hidden={activeTab !== 'Discover'}>

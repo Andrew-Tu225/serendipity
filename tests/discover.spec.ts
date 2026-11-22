@@ -21,7 +21,7 @@ test("loads only on Discover, selects demo places, and preserves the map across 
   expect(loads()).toBe(0);
   await page.getByRole("button", { name: "Discover", exact: true }).click();
   await expect(page.getByRole("button", { name: "View St. Lawrence Market", exact: true })).toBeVisible();
-  await expect(page.getByText("Toronto · Demo friend activity")).toBeVisible();
+  await expect(page.getByText("Toronto · Demo ratings & friends")).toBeVisible();
   await expect(page.getByRole("button", { name: "Map filters" })).toHaveCount(0);
   await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).click();
   await expect(page.getByRole("article", { name: "Selected place" })).toContainText("Elena recommends this · Demo");
@@ -58,6 +58,9 @@ test("search uses a session token, keyboard selection, and the result viewport",
   await expect(page.getByRole("option")).toHaveAttribute("aria-selected", "true");
   await input.press("Enter");
   await expect(page.getByRole("article", { name: "Selected place" })).toContainText("A garden");
+  await expect(page.getByRole("article")).not.toContainText("Serendipity demo");
+  await expect(page.getByRole("article")).not.toContainText("Elena");
+  await expect(page.getByRole("button", { name: "View A garden", exact: true }).getByLabel(/Serendipity rating/)).toHaveCount(0);
   await expect(page.getByLabel("Interactive discovery map")).toHaveAttribute("data-bounds", JSON.stringify({ south: 43.63, west: -79.40, north: 43.65, east: -79.38 }));
   await expect(page.getByRole("button", { name: "View A garden", exact: true })).toHaveCount(1);
   await page.getByRole("button", { name: "Clear search" }).click();
@@ -189,16 +192,55 @@ test("Google authorization failures show a useful error", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("alert")).toContainText("Google Maps authorization failed");
 });
 
-for (const width of [390, 1280]) {
-  test(`map and preview fit a ${width}px viewport`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 844 });
+test("app-rated demo places include friends’ reviews and community-only ratings", async ({ page }) => {
+  await mockGoogleMaps(page);
+  await openDiscover(page);
+  await expect(page.getByLabel(/Demo Serendipity rating:/)).toHaveCount(6);
+  await page.getByRole("button", { name: "View St. Lawrence Market", exact: true }).click();
+  const preview = page.getByRole("article", { name: "Selected place" });
+  await expect(preview).toContainText("4.7/5 · 23 reviews · Serendipity demo");
+  await expect(preview).toContainText("Go early, grab something warm");
+  await page.getByRole("button", { name: "Close place preview" }).click();
+  await page.getByRole("button", { name: "View Trinity Bellwoods Park", exact: true }).click();
+  await expect(preview).toContainText("4.4/5 · 31 reviews · Serendipity demo");
+  await expect(preview.locator(".discovery-friend-note")).toHaveCount(0);
+  await page.getByRole("button", { name: "Close place preview" }).click();
+  await page.getByRole("button", { name: "View Toronto Music Garden", exact: true }).click();
+  await expect(preview).toContainText("Alex recommends this · Demo");
+});
+
+for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 1280, height: 844 }]) {
+  test(`map fills the phone above navigation at ${width}×${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
     await mockGoogleMaps(page);
     await openDiscover(page);
+    await expect(page.getByRole("heading", { name: "Discover", exact: true })).toHaveCount(0);
+    const shell = await page.locator(".app-shell").boundingBox();
+    const nav = await page.getByRole("navigation", { name: "Primary navigation" }).boundingBox();
+    const map = await page.getByLabel("Interactive discovery map").boundingBox();
+    const search = await page.getByRole("combobox").boundingBox();
+    const locate = await page.getByRole("button", { name: "Center on my location" }).boundingBox();
+    expect(map!.x).toBeCloseTo(shell!.x, 0);
+    expect(map!.y).toBeCloseTo(shell!.y, 0);
+    expect(map!.width).toBeCloseTo(shell!.width, 0);
+    expect(map!.y + map!.height).toBeCloseTo(nav!.y, 0);
+    expect(nav!.y + nav!.height).toBeCloseTo(shell!.y + shell!.height, 0);
+    expect(search!.y).toBeGreaterThan(map!.y);
+    expect(locate!.y).toBeGreaterThan(search!.y + search!.height);
+    // An uncovered patch of map must receive input directly, without an overlay intercepting it.
+    const uncovered = { x: map!.x + 5, y: map!.y + map!.height / 2 };
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.classList.contains("discovery-map"), uncovered)).toBe(true);
     await page.getByRole("button", { name: "View Art Gallery of Ontario", exact: true }).click();
     await expect(page.getByRole("article")).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
-    const map = await page.getByLabel("Interactive discovery map").boundingBox();
-    expect(map!.height).toBeGreaterThan(280);
+    const preview = await page.getByRole("article").boundingBox();
+    const add = await page.getByRole("button", { name: "Add a post" }).boundingBox();
+    const attribution = await page.getByLabel("Map attribution").boundingBox();
+    expect(preview!.y).toBeGreaterThan(locate!.y + locate!.height);
+    expect(preview!.y + preview!.height).toBeLessThan(attribution!.y);
+    expect(preview!.y + preview!.height).toBeLessThan(add!.y);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight)).toBe(false);
     await page.screenshot({ path: `test-results/discover-${width}.png`, fullPage: true });
+    await page.getByRole("button", { name: "Home", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "What feels fun?" })).toBeVisible();
   });
 }

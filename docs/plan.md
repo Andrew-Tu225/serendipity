@@ -233,8 +233,15 @@ The Discover tab uses Google Maps JavaScript API, Advanced Markers, and cloud st
 Places API (New) autocomplete and selected-place details provided through FastAPI. It starts in
 Toronto; device location is requested only when the user taps the location button. Search supports
 specific places and cities globally, biased toward the current map center. Six independently authored
-Toronto places demonstrate custom category pins and illustrated friend activity. Friend activity is
-labeled demo content, and Google search results do not claim friend recommendations.
+Toronto places demonstrate custom category pins, illustrative five-point app ratings, and illustrated
+friends' reviews. Ratings and friend activity are labeled demo content, and Google search results do
+not claim app ratings or friend recommendations. Discover fills the phone above navigation, with its
+search, location button, and preview cards floating over the map.
+
+The intended browsing layer shows all app-reviewed Places in the visible area, highlighting those
+reviewed by friends. Friend avatars represent reviews and past visits. Google provides the basemap
+and location lookup; app data determines the social pins. The demo rating scale is provisional rather
+than a final decision on the production rating model.
 
 This iteration removes the prototype category/filter controls. Persistent Places, Bookmarks,
 Experiences, friendships, hidden-gem ranking, uploads, clustering, and discovery-by-category remain

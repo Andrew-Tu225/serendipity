@@ -30,5 +30,8 @@ export function PlaceMarker({ map, place, selected, onSelect }: {
   return createPortal(<>
     {place.friend ? <FriendAvatar variant={place.friend.variant}/> : <span className="discovery-pin-icon"><PlaceGlyph category={place.category}/></span>}
     <span className="discovery-pin-label">{place.friend ? place.friend.name : place.display_name}</span>
+    {place.rating_summary && <span className="discovery-pin-rating" aria-label={`Demo Serendipity rating: ${place.rating_summary.average} out of 5`}>
+      ★ {place.rating_summary.average.toFixed(1)} · Demo
+    </span>}
   </>, element);
 }

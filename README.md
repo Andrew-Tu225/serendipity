@@ -91,6 +91,9 @@ Sessions expire after 8 hours; temporary login attempts expire after 10 minutes.
 
 ### Google discovery map
 
+Discover fills the phone above navigation, with floating search and place previews. The Next.js
+development badge is disabled to keep those controls clear; compile/runtime errors still surface.
+
 Discover uses Google Maps JavaScript API with custom Advanced Markers and public place search
 through FastAPI's Places API (New) integration. Set these values before starting the servers:
 

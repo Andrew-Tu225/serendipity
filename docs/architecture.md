@@ -38,6 +38,8 @@ UI components do not make ad hoc `fetch` calls or contain backend endpoint strin
 Discover loads the Maps JavaScript SDK only after the tab opens. Its client-side map adapter owns
 the Google map, geographic markers, location indicator, camera operations, and listener cleanup.
 React portals supply custom marker contents, including the shared illustrated friend avatars.
+Discover occupies the full phone area above navigation, with search and previews layered over the
+map. Its demo fixtures include provisional five-point app ratings and friends' review snippets.
 The tab remains mounted while hidden to preserve the map's camera and selected place; hiding it
 cancels pending search/details requests. Home, Buddy, and Profile keep their existing behavior.
 
@@ -45,6 +47,11 @@ Place search follows `UI → placesClient → /api proxy → places router → P
 The integration uses Google Places API **New**, separate from the browser Maps SDK. No repository,
 database connection, tables, or commits are involved in this read-only provider flow. Future saved
 places and social features must use the normal repository/PostgreSQL layers.
+The intended discovery query will fetch app-reviewed Places for the visible map bounds, enriching
+them with app rating summaries and viewer-specific friend Experiences. Google search moves the
+camera or selects a provider Place; it does not determine the social marker set. Join provider results
+to app Places by Google Place ID, while preserving separate internal Place IDs. That query and its
+persistence are future integration work; the current browsing markers remain authored Toronto demos.
 
 `GET /api/places/autocomplete` validates the text, UUID session token, and optional paired coordinates.
 `GET /api/places/{place_id}` validates the provider ID and session token. The service applies process-wide

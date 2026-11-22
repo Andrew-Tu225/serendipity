@@ -12,6 +12,11 @@ const sdk = String.raw`
       this.position = options.center;
       host.replaceChildren();
       host.style.background = '#e9e3ed';
+      const attribution = document.createElement('div');
+      attribution.setAttribute('aria-label', 'Map attribution');
+      attribution.style.cssText = 'position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;padding:4px 6px;font:10px Arial,sans-serif;color:#555;background:#ffffffb3';
+      attribution.innerHTML = '<span>Google</span><span>Map data · Terms</span>';
+      host.append(attribution);
       this.setCenter(options.center);
       this.setZoom(options.zoom);
       currentMap = this;

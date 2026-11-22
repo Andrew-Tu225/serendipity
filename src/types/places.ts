@@ -22,5 +22,6 @@ export interface PlaceDetails {
 export interface MapPlace extends PlaceDetails {
   source: "demo" | "google";
   category?: "Food" | "Culture" | "Outdoors";
-  friend?: { name: string; note: string; variant: string };
+  rating_summary?: { average: number; count: number };
+  friend?: { name: string; note: string; review: string; variant: string };
 }
