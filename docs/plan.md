@@ -256,12 +256,18 @@ then refreshes the map. Google IDs optionally link provider searches to app reco
 addresses, and coordinates remain transient search data. Fake discovery pins are removed. No fixtures
 are inserted automatically. Friend-management UI, saving/bookmark UI, uploads, and category filters
 are still future work. Image storage remains undecided. See [discovery-data.md](discovery-data.md).
+The social backend now supports directed follow management, public profiles and display-name search,
+Experience likes and flat editable comments, independent private saved reviews/Places, and a
+following feed of published Experiences. Saving a new Place can create its app record without a
+review. Profiles remain read-only and Auth0-managed; all Experiences and social read surfaces are
+public, while saves and the personalized feed require sign-in. No frontend integration is included.
+See [social-api.md](social-api.md) for contracts and the remaining social scope.
 Local development can opt into 24 London Places and labeled mock reviews using the repeatable seed
 script; a guarded reset script clears local application rows. See [local-demo-data.md](local-demo-data.md).
 
 ## 8. Open Questions and Ideas to Explore
 
-_These are intentionally unresolved and can be developed as the concept evolves._
+_Items marked implemented are settled decisions; the remaining questions can develop as the concept evolves._
 
 **Rating system**
 
@@ -271,10 +277,11 @@ _These are intentionally unresolved and can be developed as the concept evolves.
 
 **Social experience**
 
-- Are friendships mutual, or can users follow others?
+- Directed follows are implemented; a friend means someone the viewer follows, with no approval.
 - Should profiles resemble a personal experience diary?
-- Should there be a traditional activity feed alongside the map?
-- How should public versus friends-only reviews work?
+- A backend following feed exposes new reviews, ordered by publication time; feed UI is future work.
+- Reviews, profiles, likes, comments, and follower/following lists are public. Private accounts and
+  friends-only reviews are future work; saved Places and reviews remain private.
 
 **Map and discovery**
 
